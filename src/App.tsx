@@ -117,14 +117,14 @@ function TripPortal() {
             <span className="font-display font-extrabold text-base tracking-tight text-white group-hover:text-cyan-400 transition-colors">
               SEUL 2027
             </span>
-            <span className="hidden sm:inline-block xl:hidden 2xl:inline-block text-[11px] text-slate-400 ml-2 font-mono">
+            <span className="hidden sm:max-[1839px]:inline-block text-[11px] text-slate-400 ml-2 font-mono">
               4 Amici · Pietro (6 notti) + 3 (17 notti)
             </span>
           </div>
         </button>
 
         {/* Zone 2: Navigation Links */}
-        <nav className="hidden xl:flex items-center gap-3.5 2xl:gap-5 text-xs font-semibold text-slate-300">
+        <nav className="hidden min-[1840px]:flex items-center gap-4 text-xs font-semibold text-slate-300">
           <button
             onClick={() => setActiveTab('itinerary')}
             className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
@@ -318,7 +318,7 @@ function TripPortal() {
     </div>
 
     {/* Mobile Tab Navigation Bar */}
-      <div className="xl:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center overflow-x-auto gap-2 text-xs scrollbar-none">
+      <div className="min-[1840px]:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center overflow-x-auto gap-2 text-xs scrollbar-none">
         <button
           onClick={() => setActiveTab('itinerary')}
           className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
