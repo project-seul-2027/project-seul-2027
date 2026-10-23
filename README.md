@@ -18,6 +18,13 @@ Le foto sono salvate in Firestore (Firebase Storage richiede il piano a pagament
 - Se aggiorni `firestore.rules`, ripubblicalo in Firebase (Firestore → Regole → Pubblica): senza le regole nuove la galleria mostra "Operazione non consentita".
 - Piano gratuito (Spark): 1 GiB di spazio, circa 300–500 KB a foto → oltre 2000 foto; 50.000 letture al giorno. Ogni apertura della galleria legge fino a 48 miniature (e i commenti), e "Mostra altre foto" ne aggiunge altre 48.
 
+## Valigia e lista delle cose da portare
+
+Ogni partecipante ha la sua lista, salvata nel documento `packingLists/{uid}` di Firestore: la modifica solo il titolare. Con "Condividi lista" si sceglie chi può leggerla (sola lettura, elenco `sharedWith`) e gli altri possono copiare gli oggetti utili nella propria. La lista è visibile subito anche senza rete: una copia resta nel browser e, se è più recente di quella nel cloud, viene caricata appena possibile. L'etichetta in alto indica se la lista è salvata nel cloud o solo su quel dispositivo.
+
+- Come per la galleria, servono le regole aggiornate in `firestore.rules` (Firestore → Regole → Pubblica), altrimenti la lista resta solo sul dispositivo.
+- Il promemoria `.ics` (28 febbraio) si importa in Calendario/Promemoria; "Google Keep" copia il testo negli appunti da incollare nella nota.
+
 ## Linee della metro sulla mappa
 
 Nella scheda **Mappa** le linee metro (1–9, AREX, Gyeongui-Jungang, Suin-Bundang, Shinbundang e le altre linee dell'area di Seul, 24 in tutto) sono disegnate dal sito sopra la mappa Google, da cui sono state tolte le linee originali.

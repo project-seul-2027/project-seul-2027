@@ -122,7 +122,7 @@ export function getWmoCondition(code: number, isDay = 1): WeatherConditionInfo {
         theme: 'foggy',
         iconName: 'CloudFog',
         descriptionIt: 'Umidità elevata e visibilità ridotta al mattino',
-        activityTipIt: 'Consigliata una mascherina KF94 al mattino; la visibilità migliora nel pomeriggio.'
+        activityTipIt: 'La visibilità migliora nel pomeriggio; ideale per passeggiate riparate o musei.'
       };
     case 51:
     case 53:
@@ -308,9 +308,9 @@ export const SEOUL_MARCH_CLIMATE: MarchClimateProfile = {
       reasonIt: 'Cammineremo tra i 15.000 e i 22.000 passi al giorno tra scale della metro, salite a Bukchon e sentieri di Bukhansan.'
     },
     {
-      item: 'Mascherine KF94 o antipolvere',
+      item: 'Berretto termico o cappellino',
       importance: 'consigliato',
-      reasonIt: 'A marzo può manifestarsi qualche giornata di "Hwangsa" (vento con polveri gialle dal deserto dei Gobi); acquistabili comunque a pochi won nei convenience store CU/GS25.'
+      reasonIt: 'Utile per le serate all\'aperto o le passeggiate lungo il fiume Han quando le temperature scendono vicino allo zero.'
     },
     {
       item: 'Crema idratante viso e burrocacao',

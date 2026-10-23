@@ -17,13 +17,14 @@ import { GroupView } from './components/GroupView';
 import { WeatherView } from './components/WeatherView';
 import { WorldClockBar } from './components/WorldClockBar';
 import { SharedGalleryView } from './components/SharedGalleryView';
+import { PackingListView } from './components/PackingListView';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { useAuth } from './auth/AuthContext';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
-  CalendarDays, Map, Plane, Coins, BookOpen, FileText
+  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage
 } from 'lucide-react';
 
 /**
@@ -45,7 +46,7 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
+type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
 
 function TripPortal() {
   const { user, group, signOut } = useAuth();
@@ -168,6 +169,15 @@ function TripPortal() {
           >
             <Camera className="w-3.5 h-3.5 text-pink-400" />
             <span>Galleria Condivisa</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('packing')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'packing' ? 'text-teal-400 border-b-2 border-teal-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <Luggage className="w-3.5 h-3.5 text-teal-400" />
+            <span>Valigia & Oggetti</span>
           </button>
           <button
             onClick={() => setActiveTab('flights')}
@@ -353,6 +363,15 @@ function TripPortal() {
         >
           <Camera className="w-3.5 h-3.5" />
           <span>Galleria</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('packing')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'packing' ? 'bg-teal-500 text-slate-950 font-bold' : 'text-teal-300 bg-teal-950/30'
+          }`}
+        >
+          <Luggage className="w-3.5 h-3.5" />
+          <span>Valigia</span>
         </button>
         <button
           onClick={() => setActiveTab('flights')}
@@ -559,6 +578,10 @@ function TripPortal() {
               setActiveTab('itinerary');
             }}
           />
+        )}
+
+        {activeTab === 'packing' && (
+          <PackingListView />
         )}
 
         {activeTab === 'flights' && (
