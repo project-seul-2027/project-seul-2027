@@ -1,0 +1,8 @@
+{
+  "name": "Seul 2027 · Viaggio di Gruppo",
+  "description": "Portale interattivo per il viaggio di gruppo di 4 persone a Seul (2-19 marzo 2027): itinerario 17 notti, mappa interattiva con tappe e quartieri, logistica voli e scalo a Pechino, e budget tracker stile Splitwise.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

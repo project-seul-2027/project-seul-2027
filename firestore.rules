@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// Regole di sicurezza Firestore per Seul 2027.
+// Da incollare in: Console Firebase → Firestore Database → Regole → Pubblica.
+//
+// Chi può entrare: solo account Google con email verificata presente nel documento
+// config/access (campo "emails", array). Quel documento si modifica solo dalla console.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isParticipant() {
+      return signedIn()
+        && request.auth.token.email.lower()
+           in get(/databases/$(database)/documents/config/access).data.emails;
+    }
+
+    function isOwner(uid) {
+      return isParticipant() && request.auth.uid == uid;
+    }
+
+    function slots() {
+      return ['t1', 't2', 't3', 't4'];
+    }
+
+    function accommodations() {
+      return ['acc_a', 'acc_b', 'acc_c', 'acc_d'];
+    }
+
+    function shortString(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function validVote(value) {
+      return value == null || value in accommodations();
+    }
+
+    // Lista dei partecipanti: nessuno la legge o la scrive dall'app (si gestisce in console)
+    match /config/{docId} {
+      allow read, write: if false;
+    }
+
+    // Profilo completo (documenti, contatti di emergenza...): solo il titolare
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.id == uid
+        && request.resource.data.email == request.auth.token.email.lower()
+        && request.resource.data.size() <= 40
+        && validVote(request.resource.data.get('accommodationPreference', null));
+    }
+
+    // Dati condivisi con il gruppo
+    match /members/{uid} {
+      allow read: if isParticipant();
+      allow delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+             'id', 'travelerId', 'firstName', 'lastName', 'displayName',
+             'avatarUrl', 'phone', 'dietaryPreference', 'accommodationPreference'
+           ])
+        && request.resource.data.id == uid
+        && request.resource.data.travelerId in slots()
+        // il posto dichiarato deve appartenere a chi scrive (anche nella stessa scrittura)
+        && getAfter(/databases/$(database)/documents/slots/$(request.resource.data.travelerId)).data.uid == uid
+        && shortString(request.resource.data.firstName, 60)
+        && shortString(request.resource.data.lastName, 60)
+        && shortString(request.resource.data.displayName, 60)
+        && shortString(request.resource.data.avatarUrl, 500)
+        && shortString(request.resource.data.phone, 25)
+        && shortString(request.resource.data.dietaryPreference, 80)
+        && validVote(request.resource.data.accommodationPreference);
+    }
+
+    // Un posto per persona: si può solo occupare (se libero) o liberare (se è proprio)
+    match /slots/{slotId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && slotId in slots()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        // si può occupare solo il posto indicato nel proprio profilo condiviso
+        && getAfter(/databases/$(database)/documents/members/$(request.auth.uid)).data.travelerId == slotId;
+      allow delete: if isParticipant()
+        && resource.data.uid == request.auth.uid
+        && (
+          !existsAfter(/databases/$(database)/documents/members/$(request.auth.uid))
+          || getAfter(/databases/$(database)/documents/members/$(request.auth.uid)).data.travelerId != slotId
+        );
+      // nessun update: un posto occupato non si può "rubare"
+    }
+  }
+}
