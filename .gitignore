@@ -7,5 +7,5 @@ coverage/
 .env*
 !.env.example
 # Residui della vecchia versione con server (dati personali di prova)
-data/
-server.js
+/data/
+/server.js
