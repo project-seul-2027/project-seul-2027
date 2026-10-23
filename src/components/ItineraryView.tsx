@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ITINERARY_DAYS, ItineraryDay, MAP_LOCATIONS } from '../data/tripData';
 import { 
   Calendar, Clock, MapPin, Tag, ChevronDown, ChevronUp, 
@@ -7,12 +7,29 @@ import {
 
 interface ItineraryViewProps {
   onViewOnMap: (locationId: string, dayNumber?: number) => void;
+  /** Giorno da aprire e raggiungere con lo scroll (il nonce permette di richiedere lo stesso giorno più volte) */
+  focusDay?: { id: number; nonce: number } | null;
+  onFocusHandled?: () => void;
 }
 
-export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap }) => {
+export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focusDay, onFocusHandled }) => {
   const [activePhase, setActivePhase] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedDayId, setExpandedDayId] = useState<number | null>(1); // Day 1 expanded by default
+
+  // Arrivo da un altro tab (es. galleria): apre il giorno richiesto e ci scorre fino
+  useEffect(() => {
+    if (!focusDay) return;
+    setActivePhase('all');
+    setSearchQuery('');
+    setExpandedDayId(focusDay.id);
+    const timer = setTimeout(() => {
+      document.getElementById(`itinerary-day-${focusDay.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      onFocusHandled?.();
+    }, 80);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusDay?.nonce]);
 
   const phases = [
     { id: 'all', label: 'Tutti i 19 Giorni' },
@@ -84,7 +101,8 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap }) => 
           return (
             <div
               key={day.id}
-              className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+              id={`itinerary-day-${day.id}`}
+              className={`scroll-mt-48 rounded-2xl border transition-all duration-200 overflow-hidden ${
                 isSpecial
                   ? 'border-red-500/40 bg-gradient-to-r from-red-950/20 via-slate-900/90 to-slate-900/90 shadow-xl shadow-red-500/5'
                   : isBeijing

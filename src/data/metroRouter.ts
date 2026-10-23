@@ -86,17 +86,6 @@ export function haversineMeters(a: LatLng, b: LatLng): number {
 /** Raggio massimo (in metri) per raggiungere a piedi una stazione dall'alloggio */
 const MAX_ORIGIN_WALK_M = 1200;
 
-// ── Pesi del calcolo del percorso (1 unità di costo ≈ 1 fermata ≈ 2 minuti di viaggio) ──
-// Tarati su 300+ percorsi di prova (alloggi e posizioni GPS verso le tappe): con questi valori il
-// tempo reale medio scende e le camminate lunghe diminuiscono, a parità di cambi accettabili.
-/** Un cambio vale ~4 fermate: ~4 min tra le banchine più l'attesa del treno. */
-const TRANSFER_COST = 4.0;
-/** Un'unità di costo ogni 100 m a piedi in linea d'aria: a piedi si fa più fatica che in treno
- *  e il percorso reale tra le strade è ~25% più lungo della distanza in linea d'aria. */
-const WALK_METERS_PER_COST_UNIT = 100;
-/** Minuti stimati per ogni cambio linea nel tempo totale mostrato (spostamento + attesa). */
-const TRANSFER_MINUTES = 5;
-
 /** Raggio massimo (in metri) per considerare una posizione GPS "in prossimità della metro" */
 export const MAX_GPS_ORIGIN_WALK_M = 2400;
 
@@ -273,7 +262,7 @@ function getOrBuildGraph(network: MetroNetwork): BuiltMetroGraph {
 
   // 2. Crea gli archi di interscambio (tra linee diverse o rami della stessa linea nella stessa stazione)
   // Penalità bilanciata:
-  // - Cambio tra linee diverse: TRANSFER_COST (~4 fermate, evita cambi per risparmiare 1-2 fermate)
+  // - Cambio tra linee diverse: 5.5 (pari a ~5-6 fermate, evita cambi per risparmiare 1-2 fermate)
   // - Cambio navetta diramazione Linea 2 (Seongsu / Sindorim): 3.2
   // - Prosecuzione su diramazione passante della stessa linea (es. Linea 1 a Guro, Linea 5 a Gang동): 0.3
   for (const [, stNodes] of nodesByStation.entries()) {
@@ -298,7 +287,7 @@ function getOrBuildGraph(network: MetroNetwork): BuiltMetroGraph {
           // Cambio tra due linee diverse nella stessa stazione di interscambio
           addEdge(a.nodeId, {
             toNode: b.nodeId,
-            cost: TRANSFER_COST,
+            cost: 5.5,
             kind: 'transfer',
             lineId: b.lineId,
             chainIndex: b.chainIndex
@@ -634,8 +623,10 @@ export function computeMetroRoute(
     };
   }
 
-  // 3. Dijkstra bilanciato tra tempo in treno, cambi e camminata (vedi i pesi in cima al file)
-  const WALK_COST_DIVISOR = WALK_METERS_PER_COST_UNIT;
+  // 3. Dijkstra bilanciato tra meno cambi, meno fermate e distanza a piedi
+  // Costo camminata: 1 unità ogni 135 metri (~1,7 min a piedi), così una stazione a 500m diretta
+  // viene preferita rispetto a una a 250m che richiede un cambio di linea (costo 5.5).
+  const WALK_COST_DIVISOR = 135;
 
   const dist = new Map<string, number>();
   const prev = new Map<string, { fromNode: string; edge: GraphEdge }>();
@@ -898,7 +889,7 @@ export function computeMetroRoute(
   const totalTransfers = transfers.length;
   const totalWalkMeters = startWalkMeters + endWalkMeters;
   const rideMinutes = segments.reduce((acc, s) => acc + s.estimatedMinutes, 0);
-  const transferMinutes = totalTransfers * TRANSFER_MINUTES;
+  const transferMinutes = totalTransfers * 4; // ~4 min per cambio banchina
   const estimatedTotalMinutes = startWalkMinutes + rideMinutes + transferMinutes + endWalkMinutes;
 
   return {

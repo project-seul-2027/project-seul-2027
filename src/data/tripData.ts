@@ -136,6 +136,10 @@ export const TRIP_META = {
   pdfPath: `${import.meta.env.BASE_URL}assets/aistudio/Itinerario_Seul_2027_fb1043a9.pdf`
 };
 
+export const SKYSCANNER_FLIGHTS_URL =
+  'https://www.skyscanner.it/trasporti/voli/mila/sela/270301/270319/config/14476-2703011230--32690-1-12409-2703021140%7c12409-2703191310--32690-1-14476-2703200630?cabinclass=economy&adultsv2=1&outboundaltsenabled=false&inboundaltsenabled=false&ref=save2list';
+
+
 // 4 ALLOGGI A CONFRONTO (ENKO STAY, 2-19 MARZO, 4 PERSONE)
 const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroCost6Nights' | 'other3Cost17Nights'>[] = [
   {

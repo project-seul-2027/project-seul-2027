@@ -14,12 +14,16 @@ import { BudgetTrackerView } from './components/BudgetTrackerView';
 import { PracticalGuideView } from './components/PracticalGuideView';
 import { PdfViewerModal } from './components/PdfViewerModal';
 import { GroupView } from './components/GroupView';
+import { WeatherView } from './components/WeatherView';
+import { WorldClockBar } from './components/WorldClockBar';
+import { SharedGalleryView } from './components/SharedGalleryView';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { useAuth } from './auth/AuthContext';
 import { 
-  Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog
+  Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
+  CalendarDays, Map, Plane, Coins, BookOpen, FileText
 } from 'lucide-react';
 
 /**
@@ -41,7 +45,7 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'itinerary' | 'accommodations' | 'map' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
+type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
 
 function TripPortal() {
   const { user, group, signOut } = useAuth();
@@ -51,6 +55,8 @@ function TripPortal() {
   const [activeTab, setActiveTab] = useState<Tab>('itinerary');
   const [targetLocationId, setTargetLocationId] = useState<string | null>(null);
   const [targetDayFilter, setTargetDayFilter] = useState<number | null>(null);
+  // Giorno dell'itinerario da aprire (es. dal pulsante "Itinerario" della galleria)
+  const [focusItineraryDay, setFocusItineraryDay] = useState<{ id: number; nonce: number } | null>(null);
 
   // Countdown timer to 1 March 2027 10:00:00 CET
   const [timeLeft, setTimeLeft] = useState({
@@ -94,10 +100,12 @@ function TripPortal() {
 
   return (
     <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-50 bg-[#090d16]/95 border-b border-slate-800/80 backdrop-blur-md px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 2xl:gap-6">
-        {/* Zone 1: Brand Wordmark */}
-        <button
+      {/* Sticky Global Top Container con Header e Orologio Mondiale Live */}
+      <div className="sticky top-0 z-50 bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20">
+        {/* Top Bar */}
+        <header className="border-b border-slate-800/80 px-4 sm:px-8 py-3 flex items-center justify-between gap-4 2xl:gap-6">
+          {/* Zone 1: Brand Wordmark */}
+          <button
           onClick={() => { setActiveTab('itinerary'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex items-center gap-2.5 text-left group shrink-0"
         >
@@ -118,68 +126,93 @@ function TripPortal() {
         <nav className="hidden xl:flex items-center gap-3.5 2xl:gap-5 text-xs font-semibold text-slate-300">
           <button
             onClick={() => setActiveTab('itinerary')}
-            className={`whitespace-nowrap transition-colors hover:text-white ${
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
               activeTab === 'itinerary' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5' : ''
             }`}
           >
-            Itinerario Completo
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>Itinerario Completo</span>
           </button>
           <button
             onClick={() => setActiveTab('accommodations')}
-            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1 ${
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
               activeTab === 'accommodations' ? 'text-blue-400 border-b-2 border-blue-400 pb-0.5 font-bold' : ''
             }`}
           >
-            <Home className="w-3.5 h-3.5" />
+            <Home className="w-3.5 h-3.5 text-blue-400" />
             <span>4 Alloggi a Confronto</span>
           </button>
           <button
             onClick={() => setActiveTab('map')}
-            className={`whitespace-nowrap transition-colors hover:text-white ${
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
               activeTab === 'map' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5' : ''
             }`}
           >
-            Mappa Interattiva
+            <Map className="w-3.5 h-3.5" />
+            <span>Mappa Interattiva</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('weather')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'weather' ? 'text-amber-400 border-b-2 border-amber-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <CloudSun className="w-3.5 h-3.5 text-amber-400" />
+            <span>Meteo Seul</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('gallery')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'gallery' ? 'text-pink-400 border-b-2 border-pink-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5 text-pink-400" />
+            <span>Galleria Condivisa</span>
           </button>
           <button
             onClick={() => setActiveTab('flights')}
-            className={`whitespace-nowrap transition-colors hover:text-white ${
-              activeTab === 'flights' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5' : ''
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'flights' ? 'text-sky-400 border-b-2 border-sky-400 pb-0.5 font-bold' : ''
             }`}
           >
-            Voli & Scalo Pechino
+            <Plane className="w-3.5 h-3.5 text-sky-400" />
+            <span>Voli & Scalo Pechino</span>
           </button>
           <button
             onClick={() => setActiveTab('budget')}
-            className={`whitespace-nowrap transition-colors hover:text-white ${
-              activeTab === 'budget' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5' : ''
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'budget' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-0.5 font-bold' : ''
             }`}
           >
-            Preventivo (PDF)
+            <Coins className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Preventivo (PDF)</span>
           </button>
           <button
             onClick={() => setActiveTab('guide')}
-            className={`whitespace-nowrap transition-colors hover:text-white ${
-              activeTab === 'guide' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5' : ''
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'guide' ? 'text-indigo-400 border-b-2 border-indigo-400 pb-0.5 font-bold' : ''
             }`}
           >
-            Guida & Checklist
+            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Guida & Checklist</span>
           </button>
           <button
             onClick={() => setActiveTab('pdf')}
-            className={`whitespace-nowrap transition-colors hover:text-white ${
-              activeTab === 'pdf' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5' : ''
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'pdf' ? 'text-rose-400 border-b-2 border-rose-400 pb-0.5 font-bold' : ''
             }`}
           >
-            PDF Viaggio
+            <FileText className="w-3.5 h-3.5 text-rose-400" />
+            <span>PDF Viaggio</span>
           </button>
           <button
             onClick={() => setActiveTab('group')}
-            className={`whitespace-nowrap transition-colors hover:text-white ${
-              activeTab === 'group' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5' : ''
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'group' ? 'text-purple-400 border-b-2 border-purple-400 pb-0.5 font-bold' : ''
             }`}
           >
-            Partecipanti
+            <Users className="w-3.5 h-3.5 text-purple-400" />
+            <span>Partecipanti</span>
           </button>
         </nav>
 
@@ -270,72 +303,101 @@ function TripPortal() {
         </div>
       </header>
 
-      {/* Mobile Tab Navigation Bar */}
+      {/* Barra Orologio Mondiale Live (Italia, Seul, Pechino) - Visibile da qualunque pagina */}
+      <WorldClockBar />
+    </div>
+
+    {/* Mobile Tab Navigation Bar */}
       <div className="xl:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center overflow-x-auto gap-2 text-xs scrollbar-none">
         <button
           onClick={() => setActiveTab('itinerary')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
-            activeTab === 'itinerary' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'itinerary' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Itinerario
+          <CalendarDays className="w-3.5 h-3.5" />
+          <span>Itinerario</span>
         </button>
         <button
           onClick={() => setActiveTab('accommodations')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1 ${
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
             activeTab === 'accommodations' ? 'bg-blue-600 text-white font-bold' : 'text-blue-300 bg-blue-950/30'
           }`}
         >
-          <Home className="w-3 h-3" />
+          <Home className="w-3.5 h-3.5" />
           <span>4 Alloggi</span>
         </button>
         <button
           onClick={() => setActiveTab('map')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
-            activeTab === 'map' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'map' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Mappa
+          <Map className="w-3.5 h-3.5" />
+          <span>Mappa</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('weather')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'weather' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-amber-300 bg-amber-950/30'
+          }`}
+        >
+          <CloudSun className="w-3.5 h-3.5" />
+          <span>Meteo</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('gallery')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'gallery' ? 'bg-pink-500 text-slate-950 font-bold' : 'text-pink-300 bg-pink-950/30'
+          }`}
+        >
+          <Camera className="w-3.5 h-3.5" />
+          <span>Galleria</span>
         </button>
         <button
           onClick={() => setActiveTab('flights')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
-            activeTab === 'flights' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'flights' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Voli & Scalo
+          <Plane className="w-3.5 h-3.5" />
+          <span>Voli & Scalo</span>
         </button>
         <button
           onClick={() => setActiveTab('budget')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
-            activeTab === 'budget' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'budget' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Preventivo (PDF)
+          <Coins className="w-3.5 h-3.5" />
+          <span>Preventivo</span>
         </button>
         <button
           onClick={() => setActiveTab('guide')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
-            activeTab === 'guide' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'guide' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Guida
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Guida</span>
         </button>
         <button
           onClick={() => setActiveTab('pdf')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
-            activeTab === 'pdf' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'pdf' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          PDF
+          <FileText className="w-3.5 h-3.5" />
+          <span>PDF</span>
         </button>
         <button
           onClick={() => setActiveTab('group')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
-            activeTab === 'group' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400'
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'group' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Partecipanti
+          <Users className="w-3.5 h-3.5" />
+          <span>Partecipanti</span>
         </button>
       </div>
 
@@ -397,8 +459,8 @@ function TripPortal() {
             </div>
           </div>
 
-          {/* Quick Metrics Bar with 4 Accommodations trigger */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+          {/* Quick Metrics Bar with 4 Accommodations trigger and Weather widget */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
             <button
               onClick={() => setActiveTab('accommodations')}
               className="p-3 bg-blue-950/30 hover:bg-blue-900/40 rounded-xl border border-blue-500/40 text-left transition-colors group"
@@ -408,6 +470,17 @@ function TripPortal() {
                 <Home className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
               </div>
               <div className="text-sm sm:text-base font-bold text-white mt-0.5">4 Alloggi a Confronto</div>
+            </button>
+            <button
+              onClick={() => setActiveTab('weather')}
+              className="p-3 bg-amber-950/20 hover:bg-amber-900/30 rounded-xl border border-amber-500/40 text-left transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-amber-400 uppercase font-mono">Clima Viaggio (2-19 Mar)</span>
+                <CloudSun className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+              </div>
+              <div className="text-sm sm:text-base font-bold text-white mt-0.5">Meteo & Previsioni</div>
+              <div className="text-[10px] text-amber-300/80 font-mono mt-0.5">Live 7 Giorni + KMA Seul</div>
             </button>
             <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
               <span className="text-[10px] text-slate-500 uppercase font-mono">Partecipanti</span>
@@ -435,7 +508,11 @@ function TripPortal() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8">
         {activeTab === 'itinerary' && (
-          <ItineraryView onViewOnMap={handleViewOnMap} />
+          <ItineraryView
+            onViewOnMap={handleViewOnMap}
+            focusDay={focusItineraryDay}
+            onFocusHandled={() => setFocusItineraryDay(null)}
+          />
         )}
 
         {activeTab === 'accommodations' && (
@@ -463,6 +540,25 @@ function TripPortal() {
               }}
             />
           </div>
+        )}
+
+        {activeTab === 'weather' && (
+          <WeatherView
+            onNavigateToItinerary={() => {
+              setActiveTab('itinerary');
+              window.scrollTo({ top: 380, behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {activeTab === 'gallery' && (
+          <SharedGalleryView
+            onNavigateToMap={handleViewOnMap}
+            onNavigateToDay={(dayNumber) => {
+              setFocusItineraryDay({ id: dayNumber, nonce: Date.now() });
+              setActiveTab('itinerary');
+            }}
+          />
         )}
 
         {activeTab === 'flights' && (
@@ -509,6 +605,22 @@ function TripPortal() {
                 className="hover:text-cyan-400 transition-colors"
               >
                 Mappa & Calcolo Metro GPS
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => { setActiveTab('weather'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="hover:text-amber-400 transition-colors flex items-center gap-1"
+              >
+                <CloudSun className="w-3.5 h-3.5 text-amber-400" />
+                <span>Meteo Seul</span>
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => { setActiveTab('gallery'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="hover:text-pink-400 transition-colors flex items-center gap-1"
+              >
+                <Camera className="w-3.5 h-3.5 text-pink-400" />
+                <span>Galleria Condivisa</span>
               </button>
               <span>·</span>
               <button

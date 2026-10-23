@@ -1078,6 +1078,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               currentRoute={currentMetroRoute}
               onFitRoute={() => {
                 metroLayerRef.current?.fitActiveRoute();
+                metroLayerRef.current?.replayRouteAnimation();
+                revealMap();
+              }}
+              onReplayAnimation={() => {
+                metroLayerRef.current?.fitActiveRoute();
+                metroLayerRef.current?.replayRouteAnimation();
                 revealMap();
               }}
               onFocusPoint={handleFocusRoutePoint}

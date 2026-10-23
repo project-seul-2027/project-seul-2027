@@ -16,7 +16,8 @@ import {
   RotateCcw,
   LocateFixed,
   LocateOff,
-  Compass
+  Compass,
+  Play
 } from 'lucide-react';
 import { type LatLng, type MetroNetwork } from '../../data/seoulMetro';
 import { type MapLocation, getNaverMapSearchUrl } from '../../data/tripData';
@@ -57,6 +58,7 @@ interface MetroRoutePanelProps {
   onSelectDestination: (id: string) => void;
   currentRoute: MetroRouteResult | null;
   onFitRoute: () => void;
+  onReplayAnimation?: () => void;
   onFocusPoint: (latLng: LatLng, zoom?: number, stationKey?: string, lineId?: string) => void;
   geoState: LiveGeoState;
   onActivateRealGps: () => void;
@@ -78,6 +80,7 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
   onSelectDestination,
   currentRoute,
   onFitRoute,
+  onReplayAnimation,
   onFocusPoint,
   geoState,
   onActivateRealGps,
@@ -657,21 +660,32 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
                 </div>
               </div>
 
-              {/* Pulsanti rapidi Inquadra Tratta & Naver Map */}
+              {/* Pulsanti rapidi Inquadra Tratta, Rivedi Animazione & Naver Map */}
               <div className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={onFitRoute}
-                  className="flex-1 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
+                  className="flex-1 py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
                 >
-                  <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
-                  Inquadra intera tratta
+                  <Crosshair className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span>Inquadra tratta</span>
                 </button>
+                {onReplayAnimation && (
+                  <button
+                    type="button"
+                    onClick={onReplayAnimation}
+                    className="py-1.5 px-2.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/70 border border-cyan-500/40 text-cyan-200 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors shrink-0 whitespace-nowrap"
+                    title="Ridisegna con animazione fluida il percorso dall'origine alla destinazione sulla mappa"
+                  >
+                    <Play className="w-3 h-3 text-cyan-400 fill-cyan-400 shrink-0" />
+                    <span>Anima tratta</span>
+                  </button>
+                )}
                 <a
                   href={getNaverMapSearchUrl(currentRoute.destination)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-1.5 px-3 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors shrink-0"
+                  className="py-1.5 px-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors shrink-0 whitespace-nowrap"
                   title={
                     currentRoute.destination.koreanName
                       ? `Cerca "${currentRoute.destination.koreanName}" su Naver Map`

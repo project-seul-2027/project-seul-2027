@@ -11,6 +11,13 @@ Gli altri partecipanti vedono solo nome, posto, foto, telefono, preferenza alime
 
 ---
 
+## Galleria condivisa
+
+Le foto sono salvate in Firestore (Firebase Storage richiede il piano a pagamento), quindi tutti i partecipanti vedono le stesse foto in tempo reale. Prima di caricarle il sito le ridimensiona a 1600 px (JPEG) e crea una miniatura da circa 30 KB; la foto grande si scarica solo quando la si apre. Nei documenti non sono salvati nomi o avatar, solo gli uid: i nomi si ricavano dal profilo di ciascuno.
+
+- Se aggiorni `firestore.rules`, ripubblicalo in Firebase (Firestore → Regole → Pubblica): senza le regole nuove la galleria mostra "Operazione non consentita".
+- Piano gratuito (Spark): 1 GiB di spazio, circa 300–500 KB a foto → oltre 2000 foto; 50.000 letture al giorno. Ogni apertura della galleria legge fino a 48 miniature (e i commenti), e "Mostra altre foto" ne aggiunge altre 48.
+
 ## Linee della metro sulla mappa
 
 Nella scheda **Mappa** le linee metro (1–9, AREX, Gyeongui-Jungang, Suin-Bundang, Shinbundang e le altre linee dell'area di Seul, 24 in tutto) sono disegnate dal sito sopra la mappa Google, da cui sono state tolte le linee originali.
