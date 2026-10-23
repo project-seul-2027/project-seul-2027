@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { BrandIcon } from './components/BrandIcon';
 import { TRIP_META } from './data/tripData';
 import { OFFICIAL_METRO_SOURCES } from './data/seoulMetroOfficialData';
 import { ItineraryView } from './components/ItineraryView';
@@ -110,9 +111,7 @@ function TripPortal() {
           onClick={() => { setActiveTab('itinerary'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex items-center gap-2.5 text-left group shrink-0"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20 text-sm">
-            KR
-          </div>
+          <BrandIcon className="w-10 h-10" />
           <div className="whitespace-nowrap">
             <span className="font-display font-extrabold text-base tracking-tight text-white group-hover:text-cyan-400 transition-colors">
               SEUL 2027

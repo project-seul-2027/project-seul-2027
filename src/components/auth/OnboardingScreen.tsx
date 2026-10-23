@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrandIcon } from '../BrandIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { ProfileForm } from './ProfileForm';
 
@@ -11,9 +12,7 @@ export const OnboardingScreen: React.FC = () => {
     <div className="min-h-screen bg-[#090d16] text-slate-100 px-4 py-8 sm:py-12">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white text-sm">
-            KR
-          </div>
+          <BrandIcon className="w-10 h-10" />
           <span className="font-display font-extrabold text-white tracking-tight">SEUL 2027</span>
         </div>
 

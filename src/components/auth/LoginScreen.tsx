@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrandIcon } from '../BrandIcon';
 import { ShieldCheck, Wallet, Home, Users, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -30,9 +31,7 @@ export const LoginScreen: React.FC = () => {
 
       <div className="relative w-full max-w-md space-y-6">
         <div className="flex items-center gap-2.5 justify-center">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
-            KR
-          </div>
+          <BrandIcon className="w-12 h-12" />
           <div>
             <div className="font-display font-extrabold text-lg tracking-tight text-white leading-none">SEUL 2027</div>
             <div className="text-[11px] text-slate-400 font-mono">2 – 19 marzo · 4 persone · 17 notti</div>

@@ -1,0 +1,3 @@
+Redesign logo: Seoul skyline
+ - Update BrandIcon and the browser favicon with the new artwork
+ - Slightly enlarge the header logo 
