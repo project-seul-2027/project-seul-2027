@@ -208,3 +208,39 @@
   color: #94a3b8 !important;
   font-size: 10px !important;
 }
+
+/* Etichetta al passaggio del mouse sulle tappe */
+.leaflet-tooltip.poi-tooltip {
+  background: #0f172a;
+  color: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 6px 9px;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.55);
+  font-family: var(--font-sans);
+}
+.leaflet-tooltip-top.poi-tooltip::before {
+  border-top-color: #334155;
+}
+.poi-tip-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #67e8f9;
+}
+.poi-tip-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+.poi-tip-warn {
+  font-size: 10px;
+  color: #f87171;
+  margin-top: 2px;
+}
+.poi-tip-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}

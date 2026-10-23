@@ -56,6 +56,59 @@ function writeMetroPrefs(prefs: MetroPrefs) {
   }
 }
 
+const CATEGORY_STYLE: Record<string, { badge: string; ring: string; letter: string }> = {
+  alloggio: { badge: '#3b82f6', ring: 'rgba(59, 130, 246, 0.6)', letter: '🏠' },
+  nightlife: { badge: '#ec4899', ring: 'rgba(236, 72, 153, 0.5)', letter: '🍸' },
+  food: { badge: '#f59e0b', ring: 'rgba(245, 158, 11, 0.5)', letter: '🍜' },
+  cultura: { badge: '#8b5cf6', ring: 'rgba(139, 92, 246, 0.5)', letter: '🏯' },
+  natura: { badge: '#10b981', ring: 'rgba(16, 185, 129, 0.5)', letter: '🌲' },
+  gita: { badge: '#0ea5e9', ring: 'rgba(14, 165, 233, 0.5)', letter: '🚆' },
+  logistica: { badge: '#94a3b8', ring: 'rgba(148, 163, 184, 0.4)', letter: '✈️' }
+};
+
+function makeMarkerIcon(loc: MapLocation, isSelected: boolean): L.DivIcon {
+  const style = CATEGORY_STYLE[loc.category] ?? { badge: '#06b6d4', ring: 'rgba(6, 182, 212, 0.4)', letter: '📍' };
+  const isAccommodation = loc.category === 'alloggio';
+  const size = isSelected ? 38 : isAccommodation ? 34 : 30;
+  return L.divIcon({
+    className: 'custom-map-marker',
+    html: `
+      <div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: ${size}px;
+        height: ${size}px;
+        background-color: ${isAccommodation ? '#1e3a8a' : '#090d16'};
+        border: 2px solid ${style.badge};
+        border-radius: 50%;
+        box-shadow: 0 0 ${isSelected ? '16px' : '8px'} ${style.ring};
+        color: #ffffff;
+        font-size: ${isSelected ? '16px' : '13px'};
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+      ">
+        <span>${style.letter}</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  });
+}
+
+function poiTooltipHtml(loc: MapLocation): string {
+  const warn =
+    loc.id === 'valorant_masters_arena'
+      ? '<div class="poi-tip-warn">⚠️ Sede non ancora annunciata</div>'
+      : '';
+  return `<div class="poi-tip">
+    <div class="poi-tip-kicker">${loc.district} · ${loc.city}</div>
+    <div class="poi-tip-title">${loc.italianName}</div>
+    ${warn}
+    <div class="poi-tip-hint">Clicca per i dettagli</div>
+  </div>`;
+}
+
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   selectedLocationId,
   onSelectLocation,
@@ -71,6 +124,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentSelectedLoc, setCurrentSelectedLoc] = useState<MapLocation | null>(null);
   const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark');
+  // Letti dai listener dei segnaposto, che non devono ricrearsi a ogni cambio
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = currentSelectedLoc?.id ?? null;
+  const onSelectRef = useRef(onSelectLocation);
+  onSelectRef.current = onSelectLocation;
 
   // ── Linee metro ──
   const initialPrefs = useMemo(readMetroPrefs, []);
@@ -91,13 +149,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       const loc = MAP_LOCATIONS.find((l) => l.id === selectedLocationId);
       if (loc) {
         setCurrentSelectedLoc(loc);
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([loc.lat, loc.lng], 15, { animate: true });
-          const marker = markersRef.current[loc.id];
-          if (marker) {
-            marker.openPopup();
-          }
-        }
+        mapInstanceRef.current?.setView([loc.lat, loc.lng], 15, { animate: true });
       }
     }
   }, [selectedLocationId]);
@@ -272,141 +324,49 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   const selectedLineDef = selectedLine ? metroNetwork?.lines.find((l) => l.id === selectedLine) : undefined;
 
-  // Update Point of Interest Markers
+  // Segnaposto delle tappe: si ricreano solo quando cambiano i filtri (non a ogni click)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Clear old markers
     Object.values(markersRef.current).forEach((m) => m.remove());
     markersRef.current = {};
 
     filteredLocations.forEach((loc) => {
-      let badgeColor = '#06b6d4';
-      let ringColor = 'rgba(6, 182, 212, 0.4)';
-      let letter = '📍';
-
-      switch (loc.category) {
-        case 'alloggio':
-          badgeColor = '#3b82f6';
-          ringColor = 'rgba(59, 130, 246, 0.6)';
-          letter = '🏠';
-          break;
-        case 'nightlife':
-          badgeColor = '#ec4899';
-          ringColor = 'rgba(236, 72, 153, 0.5)';
-          letter = '🍸';
-          break;
-        case 'food':
-          badgeColor = '#f59e0b';
-          ringColor = 'rgba(245, 158, 11, 0.5)';
-          letter = '🍜';
-          break;
-        case 'cultura':
-          badgeColor = '#8b5cf6';
-          ringColor = 'rgba(139, 92, 246, 0.5)';
-          letter = '🏯';
-          break;
-        case 'natura':
-          badgeColor = '#10b981';
-          ringColor = 'rgba(16, 185, 129, 0.5)';
-          letter = '🌲';
-          break;
-        case 'gita':
-          badgeColor = '#0ea5e9';
-          ringColor = 'rgba(14, 165, 233, 0.5)';
-          letter = '🚆';
-          break;
-        case 'logistica':
-          badgeColor = '#94a3b8';
-          ringColor = 'rgba(148, 163, 184, 0.4)';
-          letter = '✈️';
-          break;
-      }
-
-      const isSelected = currentSelectedLoc?.id === loc.id;
-      const isAccommodation = loc.category === 'alloggio';
-
-      const customIcon = L.divIcon({
-        className: 'custom-map-marker',
-        html: `
-          <div style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: ${isSelected ? '38px' : isAccommodation ? '34px' : '30px'};
-            height: ${isSelected ? '38px' : isAccommodation ? '34px' : '30px'};
-            background-color: ${isAccommodation ? '#1e3a8a' : '#090d16'};
-            border: 2px solid ${badgeColor};
-            border-radius: 50%;
-            box-shadow: 0 0 ${isSelected ? '16px' : '8px'} ${ringColor};
-            color: #ffffff;
-            font-size: ${isSelected ? '16px' : '13px'};
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
-          ">
-            <span>${letter}</span>
-          </div>
-        `,
-        iconSize: [isSelected ? 38 : 30, isSelected ? 38 : 30],
-        iconAnchor: [isSelected ? 19 : 15, isSelected ? 19 : 15],
-        popupAnchor: [0, isSelected ? -22 : -18]
+      const marker = L.marker([loc.lat, loc.lng], {
+        icon: makeMarkerIcon(loc, selectedIdRef.current === loc.id)
       });
-
-      const marker = L.marker([loc.lat, loc.lng], { icon: customIcon });
-
-      const popupHtml = `
-        <div style="min-width: 230px; font-family: 'Plus Jakarta Sans', sans-serif;">
-          <div style="font-size: 11px; color: ${badgeColor}; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
-            ${loc.district} · ${loc.city}
-          </div>
-          <div style="font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">
-            ${loc.italianName}
-          </div>
-          ${loc.id === 'valorant_masters_arena' ? `
-            <div style="font-size: 11px; color: #f87171; background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.4); padding: 5px 8px; border-radius: 6px; margin-bottom: 6px; font-weight: 700; line-height: 1.3;">
-              ⚠️ ARENA NON ANCORA DECISA: Riot Games non ha ancora annunciato la sede ufficiale del torneo! Posizione indicativa.
-            </div>
-          ` : ''}
-          <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px; line-height: 1.4;">
-            ${loc.description}
-          </div>
-          ${loc.mustTry ? `<div style="font-size: 11px; color: #f59e0b; background: rgba(245,158,11,0.15); padding: 4px 8px; border-radius: 6px; margin-bottom: 6px; border: 1px solid rgba(245,158,11,0.3);">💡 Specialità: ${loc.mustTry}</div>` : ''}
-          ${loc.tips ? `<div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">ℹ️ ${loc.tips}</div>` : ''}
-          <div style="display: flex; gap: 8px; margin-top: 6px; border-top: 1px solid #334155; padding-top: 6px;">
-            <a href="https://map.naver.com/v5/search/${encodeURIComponent(loc.italianName)}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #38bdf8; text-decoration: none; font-weight: 600;">
-              Apri su Naver Map ↗
-            </a>
-            <span style="color: #475569;">·</span>
-            <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #94a3b8; text-decoration: none;">
-              Google Maps ↗
-            </a>
-          </div>
-        </div>
-      `;
-
-      marker.bindPopup(popupHtml);
-
-      marker.on('click', () => {
-        setCurrentSelectedLoc(loc);
-        onSelectLocation?.(loc);
+      // Passando sopra il segnaposto: solo un'etichetta con il nome
+      marker.bindTooltip(poiTooltipHtml(loc), {
+        direction: 'top',
+        offset: [0, -16],
+        className: 'poi-tooltip',
+        opacity: 1
       });
-
+      // Click: apre il riquadro di dettaglio in basso a sinistra (nessun popup)
+      marker.on('click', () => selectLocation(loc));
       marker.addTo(map);
       markersRef.current[loc.id] = marker;
     });
-  }, [filteredLocations, currentSelectedLoc, onSelectLocation]);
+  }, [filteredLocations]);
+
+  // Evidenzia il segnaposto selezionato senza ricrearlo
+  useEffect(() => {
+    Object.entries(markersRef.current).forEach(([id, marker]) => {
+      const loc = MAP_LOCATIONS.find((l) => l.id === id);
+      if (loc) marker.setIcon(makeMarkerIcon(loc, id === currentSelectedLoc?.id));
+    });
+  }, [currentSelectedLoc]);
+
+  /** Seleziona una tappa (o toglie la selezione con null): aggiorna il riquadro e il segnaposto. */
+  const selectLocation = (loc: MapLocation | null) => {
+    setCurrentSelectedLoc(loc);
+    onSelectRef.current?.(loc);
+  };
 
   const handleSelectLocation = (loc: MapLocation) => {
-    setCurrentSelectedLoc(loc);
-    onSelectLocation?.(loc);
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([loc.lat, loc.lng], 15, { animate: true });
-      const marker = markersRef.current[loc.id];
-      if (marker) {
-        marker.openPopup();
-      }
-    }
+    selectLocation(loc);
+    mapInstanceRef.current?.setView([loc.lat, loc.lng], 15, { animate: true });
   };
 
   const jumpToView = (viewName: 'seoul' | 'alloggi' | 'hongdae' | 'gite' | 'pechino' | 'tiananmen') => {
@@ -430,11 +390,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         mapInstanceRef.current.setView([39.9055, 116.3976], 15, { animate: true });
         setActiveCity('all');
         const tiananmen = MAP_LOCATIONS.find((l) => l.id === 'beijing_tiananmen');
-        if (tiananmen) {
-          setCurrentSelectedLoc(tiananmen);
-          const marker = markersRef.current[tiananmen.id];
-          if (marker) marker.openPopup();
-        }
+        if (tiananmen) selectLocation(tiananmen);
         break;
     }
   };
@@ -862,7 +818,15 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
         {/* Selected location detail banner on bottom overlay */}
         {currentSelectedLoc && (
-          <div className="absolute bottom-4 left-4 right-16 z-[400] bg-slate-900/95 border border-slate-700 rounded-2xl p-4 shadow-2xl backdrop-blur-md max-w-lg animate-in fade-in duration-150">
+          <div className="absolute bottom-4 left-4 right-16 z-[400] bg-slate-900/95 border border-slate-700 rounded-2xl p-4 pr-10 shadow-2xl backdrop-blur-md max-w-lg animate-in fade-in duration-150">
+            <button
+              onClick={() => selectLocation(null)}
+              className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Chiudi dettagli tappa"
+              title="Chiudi"
+            >
+              <X className="w-4 h-4" />
+            </button>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wide">
