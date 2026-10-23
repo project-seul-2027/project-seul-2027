@@ -42,8 +42,10 @@ export interface TravelerProfileInput {
   phone: string;
   emergencyContactName: string; // opzionale (stringa vuota)
   emergencyContactPhone: string; // opzionale (stringa vuota)
-  passportNumber: string; // opzionale (stringa vuota)
-  passportExpiry: string; // YYYY-MM-DD
+  /** Scelta obbligatoria: null finché non viene indicata (profili creati prima di questa scelta) */
+  hasPassport: boolean | null;
+  passportNumber: string; // opzionale, solo se hasPassport (stringa vuota altrimenti)
+  passportExpiry: string; // YYYY-MM-DD, obbligatoria solo se hasPassport (stringa vuota altrimenti)
   ketaStatus: KetaStatus;
   travelInsurance: string; // opzionale: compagnia + n. polizza
   dietaryPreference: string;
@@ -110,6 +112,7 @@ export function validateProfileInput(raw: unknown): ValidationResult {
   const phone = str(src.phone, 25);
   const emergencyContactName = str(src.emergencyContactName, 80);
   const emergencyContactPhone = str(src.emergencyContactPhone, 25);
+  const hasPassport = src.hasPassport === true ? true : src.hasPassport === false ? false : null;
   const passportNumber = str(src.passportNumber, 20).toUpperCase();
   const passportExpiry = str(src.passportExpiry, 10);
   const ketaStatus = str(src.ketaStatus, 40) as KetaStatus;
@@ -146,11 +149,15 @@ export function validateProfileInput(raw: unknown): ValidationResult {
     errors.emergencyContactName = 'Indica anche il nome della persona da contattare.';
   }
 
-  if (passportNumber && !/^[A-Z0-9]{5,20}$/.test(passportNumber)) {
-    errors.passportNumber = 'Il numero di passaporto contiene solo lettere e cifre.';
-  }
-  if (!isValidDate(passportExpiry)) {
-    errors.passportExpiry = 'Inserisci la data di scadenza del passaporto.';
+  if (hasPassport === null) {
+    errors.hasPassport = 'Indica se hai il passaporto.';
+  } else if (hasPassport) {
+    if (passportNumber && !/^[A-Z0-9]{5,20}$/.test(passportNumber)) {
+      errors.passportNumber = 'Il numero di passaporto contiene solo lettere e cifre.';
+    }
+    if (!isValidDate(passportExpiry)) {
+      errors.passportExpiry = 'Inserisci la data di scadenza del passaporto.';
+    }
   }
 
   if (!(KETA_STATUS_OPTIONS as readonly string[]).includes(ketaStatus)) {
@@ -176,8 +183,10 @@ export function validateProfileInput(raw: unknown): ValidationResult {
       phone,
       emergencyContactName,
       emergencyContactPhone,
-      passportNumber,
-      passportExpiry,
+      hasPassport: hasPassport === true,
+      // Senza passaporto non si salvano numero e scadenza
+      passportNumber: hasPassport ? passportNumber : '',
+      passportExpiry: hasPassport ? passportExpiry : '',
       ketaStatus,
       travelInsurance,
       dietaryPreference,

@@ -93,6 +93,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
     phone: account?.phone ?? '',
     emergencyContactName: account?.emergencyContactName ?? '',
     emergencyContactPhone: account?.emergencyContactPhone ?? '',
+    // Profili creati prima di questa domanda: si deduce dalla scadenza se c'è, altrimenti va indicato
+    hasPassport: account?.hasPassport ?? (account?.passportExpiry ? true : null),
     passportNumber: account?.passportNumber ?? '',
     passportExpiry: account?.passportExpiry ?? '',
     ketaStatus: account?.ketaStatus ?? 'Da verificare',
@@ -302,6 +304,41 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         title="Documenti"
         subtitle="Visibili solo a te: servono come promemoria per Corea e transito a Pechino."
       >
+        <Field label="Possiedi un passaporto?" htmlFor="pf-haspp" required error={errors.hasPassport}>
+          <div id="pf-haspp" role="radiogroup" className="grid grid-cols-2 gap-2">
+            {[
+              { value: true, label: 'Sì, ce l\'ho' },
+              { value: false, label: 'No' }
+            ].map((opt) => {
+              const active = form.hasPassport === opt.value;
+              return (
+                <button
+                  key={String(opt.value)}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => set('hasPassport', opt.value)}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                    active
+                      ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200'
+                      : 'bg-slate-950 border-slate-700 text-slate-300 hover:border-slate-500'
+                  } ${errors.hasPassport && !active ? 'border-red-500/70' : ''}`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
+        {form.hasPassport === false && (
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            Per entrare in Corea e transitare a Pechino serve il passaporto: se non ce l'hai, richiedilo al più presto
+            (i tempi possono essere lunghi). Ti chiederemo la scadenza solo se rispondi di sì.
+          </p>
+        )}
+
+        {form.hasPassport === true && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Scadenza passaporto"
@@ -333,6 +370,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
               className={`${inputClass} ${errorClass('passportNumber')} font-mono uppercase`}
             />
           </Field>
+        </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="K-ETA (autorizzazione ingresso Corea)" htmlFor="pf-keta" required error={errors.ketaStatus}>
             <select
               id="pf-keta"
