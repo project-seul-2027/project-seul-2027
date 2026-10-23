@@ -284,6 +284,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'acc_a',
     name: 'Alloggio A: Myeongdong / City Hall',
     italianName: 'Alloggio A: Myeongdong / City Hall',
+    koreanName: '시청역',
     district: 'Myeongdong & City Hall',
     city: 'Seul',
     category: 'alloggio',
@@ -298,6 +299,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'acc_b',
     name: 'Alloggio B: Stazione di Seul',
     italianName: 'Alloggio B: Stazione di Seul',
+    koreanName: '서울역',
     district: 'Stazione di Seul',
     city: 'Seul',
     category: 'alloggio',
@@ -312,6 +314,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'acc_c',
     name: 'Alloggio C: Mapo Capernaum',
     italianName: 'Alloggio C: Mapo Capernaum (Gongdeok)',
+    koreanName: '마포역',
     district: 'Mapo / Gongdeok',
     city: 'Seul',
     category: 'alloggio',
@@ -326,6 +329,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'acc_d',
     name: 'Alloggio D: Sinseol-dong',
     italianName: 'Alloggio D: Sinseol-dong (Kimsfamily)',
+    koreanName: '신설동역',
     district: 'Sinseol-dong & Dongdaemun',
     city: 'Seul',
     category: 'alloggio',
@@ -339,9 +343,24 @@ export const MAP_LOCATIONS: MapLocation[] = [
 
   // Hongdae & Ovest
   {
+    id: 'hongdae_district',
+    name: 'Quartiere di Hongdae (Hongik Univ.)',
+    italianName: 'Hongdae (Vita Notturna, Busker & Club)',
+    koreanName: '홍대입구역',
+    district: 'Hongdae & Mapo',
+    city: 'Seul',
+    category: 'nightlife',
+    lat: 37.5563,
+    lng: 126.9236,
+    dayNumbers: [1, 2, 4, 12, 16],
+    description: 'Il cuore pulsante giovanile di Seul attorno alla Hongik University: artisti di strada, club, pocha, negozi streetwear e barbecue aperti fino all\'alba.',
+    tips: 'Snodo diretto tra Linea 2, AREX per l\'aeroporto e Gyeongui-Jungang.'
+  },
+  {
     id: 'mangwon_market',
     name: 'Mercato Tradizionale di Mangwon',
     italianName: 'Mercato Tradizionale di Mangwon',
+    koreanName: '망원시장',
     district: 'Mapo & Ovest',
     city: 'Seul',
     category: 'food',
@@ -355,6 +374,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'sinchon',
     name: 'Quartiere Universitario di Sinchon',
     italianName: 'Sinchon (Pocha & Locali Studenti)',
+    koreanName: '신촌',
     district: 'Sinchon & Mapo',
     city: 'Seul',
     category: 'nightlife',
@@ -370,6 +390,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'valorant_masters_arena',
     name: 'Valorant Masters Seoul 2027 (Venue TBD)',
     italianName: 'Valorant Masters Seoul 2027 (Arena Da Annunciare)',
+    koreanName: '상암 e스타디움',
     district: 'Sede in Attesa di Annuncio',
     city: 'Seul',
     category: 'cultura',
@@ -386,6 +407,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'gyeongbokgung',
     name: 'Palazzo Reale Gyeongbokgung',
     italianName: 'Palazzo Reale Gyeongbokgung',
+    koreanName: '경복궁',
     district: 'Jongno & Centro Storico',
     city: 'Seul',
     category: 'cultura',
@@ -399,6 +421,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'bukchon_hanok',
     name: 'Villaggio Tradizionale Bukchon Hanok',
     italianName: 'Villaggio Bukchon Hanok',
+    koreanName: '북촌한옥마을',
     district: 'Jongno & Centro Storico',
     city: 'Seul',
     category: 'cultura',
@@ -412,6 +435,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'insadong',
     name: 'Via Tradizionale di Insadong',
     italianName: 'Via Culturale di Insadong',
+    koreanName: '인사동',
     district: 'Jongno & Centro Storico',
     city: 'Seul',
     category: 'food',
@@ -427,6 +451,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'seongsu_dong',
     name: 'Distretto Creativo di Seongsu-dong',
     italianName: 'Seongsu-dong (Concept District)',
+    koreanName: '성수동',
     district: 'Seongsu & Est',
     city: 'Seul',
     category: 'cultura',
@@ -440,6 +465,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'seoul_forest',
     name: 'Parco Seoul Forest',
     italianName: 'Parco Naturale Seoul Forest',
+    koreanName: '서울숲',
     district: 'Seongsu & Est',
     city: 'Seul',
     category: 'natura',
@@ -453,6 +479,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'kondae_konkuk',
     name: 'Via dei Sapori di Konkuk (Kondae)',
     italianName: 'Kondae (Quartiere Studentesco)',
+    koreanName: '건대맛의거리',
     district: 'Seongsu & Est',
     city: 'Seul',
     category: 'nightlife',
@@ -468,6 +495,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'itaewon',
     name: 'Quartiere Internazionale di Itaewon',
     italianName: 'Itaewon & Hannam-dong',
+    koreanName: '이태원',
     district: 'Itaewon & Namsan',
     city: 'Seul',
     category: 'nightlife',
@@ -481,6 +509,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'namsan_tower',
     name: 'Torre N Seoul & Monte Namsan',
     italianName: 'Monte Namsan & Torre N Seoul',
+    koreanName: 'N서울타워',
     district: 'Itaewon & Namsan',
     city: 'Seul',
     category: 'natura',
@@ -494,6 +523,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'myeongdong',
     name: 'Via Pedonale di Myeongdong',
     italianName: 'Myeongdong (Street Food & Cosmetici)',
+    koreanName: '명동',
     district: 'Jongno & Centro Storico',
     city: 'Seul',
     category: 'food',
@@ -509,6 +539,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'gwangjang_market',
     name: 'Mercato Storico di Gwangjang',
     italianName: 'Mercato Storico di Gwangjang',
+    koreanName: '광장시장',
     district: 'Jongno & Centro Storico',
     city: 'Seul',
     category: 'food',
@@ -522,6 +553,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'cheonggyecheon',
     name: 'Torrente Urbano Cheonggyecheon',
     italianName: 'Fiume Cheonggyecheon',
+    koreanName: '청계천',
     district: 'Jongno & Centro Storico',
     city: 'Seul',
     category: 'natura',
@@ -535,6 +567,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'ddp_dongdaemun',
     name: 'Dongdaemun Design Plaza (DDP)',
     italianName: 'Dongdaemun Design Plaza (DDP)',
+    koreanName: '동대문디자인플라자',
     district: 'Dongdaemun',
     city: 'Seul',
     category: 'cultura',
@@ -548,6 +581,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'national_museum',
     name: 'Museo Nazionale della Corea',
     italianName: 'Museo Nazionale della Corea',
+    koreanName: '국립중앙박물관',
     district: 'Yongsan',
     city: 'Seul',
     category: 'cultura',
@@ -563,6 +597,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'coex_starfield',
     name: 'Biblioteca Starfield (COEX Mall)',
     italianName: 'Biblioteca Starfield COEX',
+    koreanName: '별마당도서관',
     district: 'Gangnam',
     city: 'Seul',
     category: 'cultura',
@@ -576,6 +611,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'bongeunsa_temple',
     name: 'Tempio Buddista Bongeunsa',
     italianName: 'Tempio Buddista Bongeunsa',
+    koreanName: '봉은사',
     district: 'Gangnam',
     city: 'Seul',
     category: 'cultura',
@@ -589,6 +625,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'gangnam_district',
     name: 'Viale Principale di Gangnam',
     italianName: 'Gangnam Boulevard',
+    koreanName: '강남역',
     district: 'Gangnam',
     city: 'Seul',
     category: 'nightlife',
@@ -604,6 +641,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'yeouido_hangang_park',
     name: 'Parco Yeouido sul Fiume Han',
     italianName: 'Parco del Fiume Han (Yeouido)',
+    koreanName: '여의도한강공원',
     district: 'Fiume Han',
     city: 'Seul',
     category: 'natura',
@@ -617,6 +655,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'bukhansan_national_park',
     name: 'Parco Nazionale del Bukhansan',
     italianName: 'Parco Nazionale del Bukhansan',
+    koreanName: '북한산국립공원',
     district: 'Nord Seul',
     city: 'Seul',
     category: 'natura',
@@ -630,6 +669,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'olive_young_flagship',
     name: 'Mega Store Olive Young (K-Beauty)',
     italianName: 'Olive Young Flagship Store',
+    koreanName: '올리브영 명동타운',
     district: 'Shopping & Skincare',
     city: 'Seul',
     category: 'food',
@@ -645,6 +685,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'incheon_chinatown_wolmido',
     name: 'Incheon: Chinatown Storica & Wolmido',
     italianName: 'Gita a Incheon (Chinatown & Wolmido)',
+    koreanName: '인천 차이나타운',
     district: 'Incheon',
     city: 'Dintorni / Gite',
     category: 'gita',
@@ -658,6 +699,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'suwon_hwaseong',
     name: 'Fortezza UNESCO di Hwaseong (Suwon)',
     italianName: 'Fortezza di Suwon (UNESCO)',
+    koreanName: '수원화성',
     district: 'Suwon',
     city: 'Dintorni / Gite',
     category: 'gita',
@@ -671,6 +713,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'suwon_ingyedong',
     name: 'Polo Ristoranti Ingye-dong (Suwon)',
     italianName: 'Ingye-dong (Ristoranti Suwon)',
+    koreanName: '인계동',
     district: 'Suwon',
     city: 'Dintorni / Gite',
     category: 'nightlife',
@@ -684,6 +727,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'dmz_imjingak',
     name: 'Zona Demilitarizzata DMZ & Imjingak',
     italianName: 'Confine DMZ & Parco di Imjingak',
+    koreanName: '임진각',
     district: 'Confine Nord Corea',
     city: 'Dintorni / Gite',
     category: 'gita',
@@ -699,6 +743,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'incheon_airport',
     name: 'Aeroporto Internazionale di Incheon (ICN)',
     italianName: 'Aeroporto di Incheon (ICN)',
+    koreanName: '인천국제공항',
     district: 'Incheon Airport',
     city: 'Seul',
     category: 'logistica',
@@ -712,6 +757,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'beijing_airport_t3',
     name: 'Aeroporto Pechino Capitale T3 (PEK)',
     italianName: 'Pechino Capitale T3 (PEK)',
+    koreanName: '北京首都国际机场T3',
     district: 'Aeroporto Pechino',
     city: 'Pechino',
     category: 'logistica',
@@ -725,6 +771,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'beijing_dongzhimen',
     name: 'Stazione Dongzhimen (Pechino)',
     italianName: 'Stazione Dongzhimen (Pechino)',
+    koreanName: '东直门站',
     district: 'Centro Pechino',
     city: 'Pechino',
     category: 'logistica',
@@ -738,6 +785,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'beijing_qianmen',
     name: 'Via Storica Pedonale di Qianmen',
     italianName: 'Via Pedonale di Qianmen & Dashilar',
+    koreanName: '前门大街',
     district: 'Centro Storico Pechino',
     city: 'Pechino',
     category: 'food',
@@ -751,7 +799,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'beijing_tiananmen',
     name: 'Tiananmen Square (Piazza Tiananmen)',
     italianName: 'Piazza Tiananmen',
-    koreanName: 'Tiananmen Square / 天安门广场',
+    koreanName: '天安门广场',
     district: 'Dongcheng, Centro Storico Pechino',
     city: 'Pechino',
     category: 'cultura',
@@ -766,6 +814,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     id: 'mxp_terminal1',
     name: 'Milano Malpensa Terminal 1 (MXP)',
     italianName: 'Milano Malpensa T1 (MXP)',
+    koreanName: 'Malpensa T1',
     district: 'Partenze T1',
     city: 'Milano',
     category: 'logistica',
@@ -776,6 +825,32 @@ export const MAP_LOCATIONS: MapLocation[] = [
     tips: 'Raggiungibile autonomamente con mezzi propri o treno ordinario.'
   }
 ];
+
+/**
+ * Restituisce l'URL di ricerca ottimale per Naver Map.
+ * Risolve il problema delle ricerche con nomi in italiano che fallivano su Naver Map:
+ * 1. Se è presente `koreanName` (in Hangul), usa direttamente il nome coreano ufficiale riconosciuto istantaneamente da Naver
+ * 2. Se in Corea del Sud ma senza Hangul, passa le coordinate GPS esatte lat,lng
+ * 3. Fallback al nome inglese o alle coordinate
+ */
+export function getNaverMapSearchUrl(location: {
+  koreanName?: string;
+  name?: string;
+  italianName?: string;
+  lat: number;
+  lng: number;
+  city?: string;
+}): string {
+  if (location.koreanName && location.koreanName.trim()) {
+    const cleanKo = location.koreanName.split('/')[0].trim();
+    return `https://map.naver.com/p/search/${encodeURIComponent(cleanKo)}`;
+  }
+  // Se le coordinate sono in Corea del Sud, Naver Map apre e centra il punto esatto
+  if (location.lat >= 33 && location.lat <= 39 && location.lng >= 124 && location.lng <= 132) {
+    return `https://map.naver.com/p/search/${location.lat},${location.lng}`;
+  }
+  return `https://map.naver.com/p/search/${encodeURIComponent(location.name || `${location.lat},${location.lng}`)}`;
+}
 
 export const FLIGHTS_SCHEDULE: FlightLeg[] = [
   {

@@ -146,6 +146,24 @@
   text-shadow: 0 0 3px #020617, 0 0 3px #020617, 0 0 2px #020617;
 }
 
+.leaflet-tooltip.metro-route-node-label {
+  background: rgba(15, 23, 42, 0.94);
+  color: #f8fafc;
+  border: 1px solid #38bdf8;
+  border-radius: 8px;
+  padding: 3px 7px;
+  font: 700 11px/1.2 var(--font-sans);
+  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+}
+.leaflet-tooltip.metro-route-node-label::before {
+  display: none;
+}
+.leaflet-tooltip.metro-route-transfer-label {
+  border-color: #f59e0b;
+  color: #fde68a;
+}
+
 .metro-popup {
   min-width: 200px;
   font-family: var(--font-sans);

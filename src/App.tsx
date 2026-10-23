@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TRIP_META } from './data/tripData';
+import { OFFICIAL_METRO_SOURCES } from './data/seoulMetroOfficialData';
 import { ItineraryView } from './components/ItineraryView';
 import { InteractiveMap } from './components/InteractiveMap';
 import { AccommodationsView } from './components/AccommodationsView';
@@ -485,43 +486,74 @@ function TripPortal() {
 
       <GoogleAuthModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
 
-      {/* Editorial Footer */}
+      {/* Editorial Footer + Fonti Ufficiali Rete Metropolitana */}
       <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-8 px-4 sm:px-8 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-300">Seul 2027</span>
-            <span>·</span>
-            <span>Viaggio in Corea del Sud per 4 amici (2 - 19 marzo 2027)</span>
+        <div className="max-w-7xl mx-auto space-y-5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-300">Seul 2027</span>
+              <span>·</span>
+              <span>Viaggio in Corea del Sud per 4 amici (2 - 19 marzo 2027)</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={() => setActiveTab('accommodations')}
+                className="hover:text-blue-400 transition-colors"
+              >
+                4 Alloggi a Confronto
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => setActiveTab('map')}
+                className="hover:text-cyan-400 transition-colors"
+              >
+                Mappa & Calcolo Metro GPS
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => setActiveTab('pdf')}
+                className="hover:text-cyan-400 transition-colors"
+              >
+                PDF Aggiornato
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => { setActiveTab('guide'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="hover:text-cyan-400 transition-colors"
+              >
+                Checklist
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => { setActiveTab('budget'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="hover:text-cyan-400 transition-colors"
+              >
+                Preventivo (PDF)
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setActiveTab('accommodations')}
-              className="hover:text-blue-400 transition-colors"
-            >
-              4 Alloggi a Confronto
-            </button>
-            <span>·</span>
-            <button
-              onClick={() => setActiveTab('pdf')}
-              className="hover:text-cyan-400 transition-colors"
-            >
-              PDF Aggiornato
-            </button>
-            <span>·</span>
-            <button
-              onClick={() => { setActiveTab('guide'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="hover:text-cyan-400 transition-colors"
-            >
-              Checklist
-            </button>
-            <span>·</span>
-            <button
-              onClick={() => { setActiveTab('budget'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="hover:text-cyan-400 transition-colors"
-            >
-              Preventivo (PDF)
-            </button>
+          <div className="pt-4 border-t border-slate-900 flex flex-col lg:flex-row lg:items-center justify-between gap-2 text-[11px] text-slate-500">
+            <span>
+              Fonti ufficiali dati trasporti e metropolitana di Seul (orari, frequenze, tariffe T-money/Climate Card e tracciati):
+            </span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {OFFICIAL_METRO_SOURCES.map((src, idx) => (
+                <React.Fragment key={src.id}>
+                  {idx > 0 && <span aria-hidden="true">·</span>}
+                  <a
+                    href={src.officialUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-cyan-400 underline transition-colors"
+                    title={`${src.organizationIt} (${src.organizationKo}) — ${src.roleIt}`}
+                  >
+                    {src.organizationEn} ({src.organizationKo})
+                  </a>
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         </div>
       </footer>
