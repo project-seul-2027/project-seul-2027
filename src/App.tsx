@@ -419,7 +419,7 @@ function TripPortal() {
     {!isDesktop && <WorldClockBar />}
 
     {/* Mobile Tab Navigation Bar */}
-      <div className="hidden lg:flex min-[1840px]:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 items-center overflow-x-auto gap-2 text-xs scrollbar-none">
+      <div className="hidden lg:max-[1839.9px]:flex bg-slate-900 border-b border-slate-800 px-3 py-2 items-center overflow-x-auto gap-2 text-xs scrollbar-none">
         <button
           onClick={() => setActiveTab('itinerary')}
           className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
