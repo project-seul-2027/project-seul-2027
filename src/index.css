@@ -289,3 +289,72 @@
   color: #94a3b8;
   margin-top: 2px;
 }
+
+/* ------------------------------------------------------------------ */
+/* App su telefono (PWA installata e browser mobile)                   */
+/* ------------------------------------------------------------------ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Barre di schede scorrevoli senza barra di scorrimento visibile */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Foglio "Altro" che sale dal basso */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-sheet-up {
+  animation: sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (max-width: 1023.98px) {
+  /* iPhone ingrandisce la pagina quando si tocca un campo con testo sotto i 16px: lo evitiamo */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Notifiche in basso: sopra la barra di navigazione dell'app */
+  .fixed.bottom-6 {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom)) !important;
+  }
+  .fixed.bottom-6.right-6 {
+    right: 1rem !important;
+    left: 1rem !important;
+  }
+
+  /* Pulsanti più comodi da toccare */
+  button,
+  a,
+  select {
+    touch-action: manipulation;
+  }
+}
+
+/* App installata: niente selezione accidentale del testo sui controlli */
+@media (display-mode: standalone) {
+  button,
+  nav {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

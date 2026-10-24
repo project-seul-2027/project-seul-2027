@@ -25,6 +25,16 @@ Ogni partecipante ha la sua lista, salvata nel documento `packingLists/{uid}` di
 - Come per la galleria, servono le regole aggiornate in `firestore.rules` (Firestore → Regole → Pubblica), altrimenti la lista resta solo sul dispositivo.
 - Il promemoria `.ics` (28 febbraio) si importa in Calendario/Promemoria; "Google Keep" copia il testo negli appunti da incollare nella nota.
 
+## App per Android e iPhone
+
+Il sito è anche un'app installabile (PWA): si apre a schermo intero dall'icona sulla home, ha una barra di navigazione in basso e funziona anche senza rete con i dati già visti (itinerario, valigia, galleria). Gli aggiornamenti arrivano da soli a ogni push, senza passare dagli store.
+
+- **Android (Chrome):** apri il sito → menu ⋮ → **Installa app**, oppure il pulsante "Installa" che compare nel sito.
+- **iPhone/iPad (Safari):** apri il sito → **Condividi** → **Aggiungi alla schermata Home**. Da Chrome su iPhone non si può installare.
+- Al primo avvio dell'app installata bisogna accedere di nuovo con Google.
+
+File coinvolti: `public/manifest.webmanifest` (nome, colori, icone), `public/icons/` (icone), `public/sw.js` (service worker per l'uso offline), `src/pwa.ts` (registrazione e pulsante "Installa").
+
 ## Linee della metro sulla mappa
 
 Nella scheda **Mappa** le linee metro (1–9, AREX, Gyeongui-Jungang, Suin-Bundang, Shinbundang e le altre linee dell'area di Seul, 24 in tutto) sono disegnate dal sito sopra la mappa Google, da cui sono state tolte le linee originali.

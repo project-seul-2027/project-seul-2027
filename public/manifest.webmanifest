@@ -1,0 +1,25 @@
+{
+  "name": "Seul 2027 · Viaggio di Gruppo",
+  "short_name": "Seul 2027",
+  "description": "Itinerario, mappa con metro, meteo, galleria condivisa, valigia e preventivo del viaggio a Seul (2–19 marzo 2027).",
+  "lang": "it",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "categories": ["travel"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Mappa e metro", "short_name": "Mappa", "url": "./?tab=map", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Galleria condivisa", "short_name": "Galleria", "url": "./?tab=gallery", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Valigia", "short_name": "Valigia", "url": "./?tab=packing", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

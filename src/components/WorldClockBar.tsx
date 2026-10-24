@@ -164,7 +164,7 @@ export const WorldClockBar: React.FC = () => {
                 <span className="text-sm select-none shrink-0">🇮🇹</span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-bold text-white text-[11px] sm:text-xs truncate">
+                    <span className="hidden min-[460px]:inline font-bold text-white text-[11px] sm:text-xs truncate">
                       Italia
                     </span>
                     {romeData.isDay ? (
@@ -194,7 +194,7 @@ export const WorldClockBar: React.FC = () => {
                 <span className="text-sm select-none shrink-0">🇰🇷</span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-bold text-cyan-300 text-[11px] sm:text-xs truncate">
+                    <span className="hidden min-[460px]:inline font-bold text-cyan-300 text-[11px] sm:text-xs truncate">
                       Seul
                     </span>
                     {seoulData.isDay ? (
@@ -231,7 +231,7 @@ export const WorldClockBar: React.FC = () => {
                 <span className="text-sm select-none shrink-0">🇨🇳</span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-bold text-white text-[11px] sm:text-xs truncate">
+                    <span className="hidden min-[460px]:inline font-bold text-white text-[11px] sm:text-xs truncate">
                       Pechino
                     </span>
                     {beijingData.isDay ? (

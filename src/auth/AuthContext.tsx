@@ -51,6 +51,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const accountRef = useRef<UserAccount | null>(null);
   accountRef.current = account;
 
+  // Ritorno da un accesso con reindirizzamento (usato se la finestra di Google è bloccata)
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    authApi.completeRedirectSignIn().catch((err) => setAuthError((err as Error).message));
+  }, []);
+
   // Stato di accesso Firebase → carica (o prepara) il profilo
   useEffect(() => {
     if (!isFirebaseConfigured) return;

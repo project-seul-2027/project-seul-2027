@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrandIcon } from './components/BrandIcon';
 import { TRIP_META } from './data/tripData';
 import { OFFICIAL_METRO_SOURCES } from './data/seoulMetroOfficialData';
@@ -23,9 +23,10 @@ import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { useAuth } from './auth/AuthContext';
+import { useInstallPrompt, useMediaQuery } from './pwa';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
-  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage
+  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus
 } from 'lucide-react';
 
 /**
@@ -49,12 +50,94 @@ export default function App() {
 
 type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
 
+const ALL_TABS: Tab[] = ['itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'flights', 'budget', 'guide', 'pdf', 'group'];
+
+/** Schede per la navigazione da telefono: le prime 4 nella barra in basso, le altre in "Altro". */
+const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: string; tint: string }[] = [
+  { id: 'itinerary', label: 'Itinerario', icon: CalendarDays, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
+  { id: 'map', label: 'Mappa', icon: Map, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
+  { id: 'gallery', label: 'Galleria', icon: Camera, active: 'text-pink-400', tint: 'bg-pink-500/15 border-pink-500/40 text-pink-300' },
+  { id: 'packing', label: 'Valigia', icon: Luggage, active: 'text-teal-400', tint: 'bg-teal-500/15 border-teal-500/40 text-teal-300' },
+  { id: 'accommodations', label: '4 Alloggi', icon: Home, active: 'text-blue-400', tint: 'bg-blue-500/15 border-blue-500/40 text-blue-300' },
+  { id: 'weather', label: 'Meteo', icon: CloudSun, active: 'text-amber-400', tint: 'bg-amber-500/15 border-amber-500/40 text-amber-300' },
+  { id: 'flights', label: 'Voli & Scalo', icon: Plane, active: 'text-sky-400', tint: 'bg-sky-500/15 border-sky-500/40 text-sky-300' },
+  { id: 'budget', label: 'Preventivo', icon: Coins, active: 'text-emerald-400', tint: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
+  { id: 'guide', label: 'Guida', icon: BookOpen, active: 'text-indigo-400', tint: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300' },
+  { id: 'pdf', label: 'PDF', icon: FileText, active: 'text-rose-400', tint: 'bg-rose-500/15 border-rose-500/40 text-rose-300' },
+  { id: 'group', label: 'Partecipanti', icon: Users, active: 'text-purple-400', tint: 'bg-purple-500/15 border-purple-500/40 text-purple-300' }
+];
+const PRIMARY_MOBILE_TABS = MOBILE_TABS.slice(0, 4);
+const MORE_MOBILE_TABS = MOBILE_TABS.slice(4);
+
+/** Scheda iniziale dall'indirizzo (?tab=map), usata anche dalle scorciatoie dell'app installata. */
+function initialTab(): Tab {
+  if (typeof window === 'undefined') return 'itinerary';
+  const fromUrl = new URLSearchParams(window.location.search).get('tab');
+  return fromUrl && (ALL_TABS as string[]).includes(fromUrl) ? (fromUrl as Tab) : 'itinerary';
+}
+
 function TripPortal() {
   const { user, group, signOut } = useAuth();
   const currentUser = user!;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('itinerary');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isInstallHelpOpen, setIsInstallHelpOpen] = useState(false);
+  const install = useInstallPrompt();
+  const [installBannerHidden, setInstallBannerHidden] = useState(() => {
+    try {
+      return localStorage.getItem('seoul2027_install_banner_hidden') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const stickyRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Porta in vista l'inizio del contenuto della scheda (sotto l'intestazione fissa)
+  const scrollToContent = () => {
+    const main = mainRef.current;
+    if (!main) return;
+    const offset = (stickyRef.current?.offsetHeight ?? 0) + 8;
+    const top = main.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  };
+
+  // Navigazione da telefono: cambia scheda e riparte dall'alto, come in un'app
+  const goToTab = (tab: Tab) => {
+    setIsMoreOpen(false);
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
+
+  const handleInstall = async () => {
+    if (install.canPrompt) await install.promptInstall();
+    else setIsInstallHelpOpen(true);
+  };
+
+  const hideInstallBanner = () => {
+    setInstallBannerHidden(true);
+    try {
+      localStorage.setItem('seoul2027_install_banner_hidden', '1');
+    } catch {
+      // archiviazione non disponibile: il banner tornerà al prossimo avvio
+    }
+  };
+
+  // Chiude il menu "Altro" con Esc
+  useEffect(() => {
+    if (!isMoreOpen && !isInstallHelpOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMoreOpen(false);
+        setIsInstallHelpOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isMoreOpen, isInstallHelpOpen]);
   const [targetLocationId, setTargetLocationId] = useState<string | null>(null);
   const [targetDayFilter, setTargetDayFilter] = useState<number | null>(null);
   // Giorno dell'itinerario da aprire (es. dal pulsante "Itinerario" della galleria)
@@ -97,15 +180,18 @@ function TripPortal() {
       setTargetDayFilter(dayNumber);
     }
     setActiveTab('map');
-    window.scrollTo({ top: 380, behavior: 'smooth' });
+    requestAnimationFrame(scrollToContent);
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">
       {/* Sticky Global Top Container con Header e Orologio Mondiale Live */}
-      <div className="sticky top-0 z-50 bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20">
+      <div
+        ref={stickyRef}
+        className="sticky top-0 z-50 bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20 pt-[env(safe-area-inset-top)]"
+      >
         {/* Top Bar */}
-        <header className="border-b border-slate-800/80 px-4 sm:px-8 py-3 flex items-center justify-between gap-4 2xl:gap-6">
+        <header className="border-b border-slate-800/80 px-4 sm:px-8 py-2.5 lg:py-3 flex items-center justify-between gap-4 2xl:gap-6">
           {/* Zone 1: Brand Wordmark */}
           <button
           onClick={() => { setActiveTab('itinerary'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -287,6 +373,19 @@ function TripPortal() {
                   <Users className="w-3.5 h-3.5" />
                   Partecipanti ({group.length}/4)
                 </button>
+                {!install.standalone && (
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      handleInstall();
+                    }}
+                    className="w-full text-left p-2 rounded-lg hover:bg-slate-800 text-slate-300 flex items-center gap-1.5"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    Installa l'app sul telefono
+                  </button>
+                )}
                 <button
                   role="menuitem"
                   onClick={() => {
@@ -312,12 +411,15 @@ function TripPortal() {
         </div>
       </header>
 
-      {/* Barra Orologio Mondiale Live (Italia, Seul, Pechino) - Visibile da qualunque pagina */}
-      <WorldClockBar />
+      {/* Barra Orologio Mondiale Live (Italia, Seul, Pechino): fissa su computer */}
+      {isDesktop && <WorldClockBar />}
     </div>
 
+    {/* Su telefono gli orologi scorrono via con la pagina, così resta più spazio per i contenuti */}
+    {!isDesktop && <WorldClockBar />}
+
     {/* Mobile Tab Navigation Bar */}
-      <div className="min-[1840px]:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center overflow-x-auto gap-2 text-xs scrollbar-none">
+      <div className="hidden lg:flex min-[1840px]:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 items-center overflow-x-auto gap-2 text-xs scrollbar-none">
         <button
           onClick={() => setActiveTab('itinerary')}
           className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
@@ -420,11 +522,15 @@ function TripPortal() {
       </div>
 
       {/* Hero Atmosphere Section */}
-      <div className="relative border-b border-slate-800/80 bg-gradient-to-b from-slate-900 via-slate-900/60 to-transparent py-8 sm:py-12 px-4 sm:px-8">
+      <div
+        className={`relative border-b border-slate-800/80 bg-gradient-to-b from-slate-900 via-slate-900/60 to-transparent py-6 sm:py-12 px-4 sm:px-8 ${
+          activeTab === 'itinerary' ? '' : 'hidden lg:block'
+        }`}
+      >
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400 font-mono">
                 <span className="text-cyan-400">Corea del Sud</span>
                 <span aria-hidden="true">·</span>
                 <span>2 - 19 Marzo 2027</span>
@@ -524,7 +630,33 @@ function TripPortal() {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8">
+      <main ref={mainRef} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8">
+        {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
+        {!isDesktop && !install.standalone && !installBannerHidden && (install.canPrompt || install.needsIosInstructions) && (
+          <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30">
+            <img src="./icons/icon-192.png" alt="" className="w-11 h-11 rounded-xl shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-white">Installa Seul 2027</div>
+              <div className="text-[11px] text-slate-400 leading-snug">Icona sulla home, schermo intero e consultabile anche offline.</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleInstall}
+              className="px-3 py-2 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold shrink-0"
+            >
+              Installa
+            </button>
+            <button
+              type="button"
+              onClick={hideInstallBanner}
+              aria-label="Chiudi"
+              className="p-1.5 -mr-1 rounded-lg text-slate-500 hover:text-white shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {activeTab === 'itinerary' && (
           <ItineraryView
             onViewOnMap={handleViewOnMap}
@@ -564,7 +696,7 @@ function TripPortal() {
           <WeatherView
             onNavigateToItinerary={() => {
               setActiveTab('itinerary');
-              window.scrollTo({ top: 380, behavior: 'smooth' });
+              requestAnimationFrame(scrollToContent);
             }}
           />
         )}
@@ -691,6 +823,204 @@ function TripPortal() {
           </div>
         </div>
       </footer>
+
+      {/* ============================================================ */}
+      {/* Barra di navigazione in basso (telefono e tablet piccoli)     */}
+      {/* ============================================================ */}
+      <nav
+        aria-label="Navigazione principale"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-[60] bg-[#0b111d]/95 backdrop-blur-lg border-t border-slate-800/90 pb-[env(safe-area-inset-bottom)]"
+      >
+        <div className="grid grid-cols-5 max-w-xl mx-auto">
+          {PRIMARY_MOBILE_TABS.map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id && !isMoreOpen;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => goToTab(t.id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative flex flex-col items-center justify-center gap-1 h-16 text-[10.5px] font-semibold transition-colors ${
+                  isActive ? t.active : 'text-slate-400 active:text-slate-200'
+                }`}
+              >
+                {isActive && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-current" />}
+                <Icon className={`w-[22px] h-[22px] ${isActive ? 'scale-110' : ''} transition-transform`} />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+          {(() => {
+            const inMore = MORE_MOBILE_TABS.some((t) => t.id === activeTab);
+            const current = MORE_MOBILE_TABS.find((t) => t.id === activeTab);
+            const isActive = isMoreOpen || inMore;
+            const Icon = !isMoreOpen && current ? current.icon : LayoutGrid;
+            return (
+              <button
+                type="button"
+                onClick={() => setIsMoreOpen((v) => !v)}
+                aria-expanded={isMoreOpen}
+                className={`relative flex flex-col items-center justify-center gap-1 h-16 text-[10.5px] font-semibold transition-colors ${
+                  isActive ? (current && !isMoreOpen ? current.active : 'text-white') : 'text-slate-400'
+                }`}
+              >
+                {isActive && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-current" />}
+                <Icon className="w-[22px] h-[22px]" />
+                <span className="max-w-[70px] truncate">{!isMoreOpen && current ? current.label : 'Altro'}</span>
+              </button>
+            );
+          })()}
+        </div>
+      </nav>
+
+      {/* Foglio "Altro": tutte le altre sezioni */}
+      {isMoreOpen && (
+        <div className="lg:hidden fixed inset-0 z-[55]" role="dialog" aria-modal="true" aria-label="Altre sezioni">
+          <button
+            type="button"
+            aria-label="Chiudi"
+            onClick={() => setIsMoreOpen(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-slate-900 border-t border-slate-700/80 shadow-2xl pb-[calc(4.75rem+env(safe-area-inset-bottom))] animate-sheet-up">
+            <div className="mx-auto mt-2.5 mb-3 h-1 w-10 rounded-full bg-slate-700" />
+            <div className="px-4 pb-2 flex items-center justify-between">
+              <span className="text-sm font-bold text-white font-display">Tutte le sezioni</span>
+              <span className="text-[11px] text-slate-500 font-mono">Seul 2027</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5 px-4">
+              {MORE_MOBILE_TABS.map((t) => {
+                const Icon = t.icon;
+                const isActive = activeTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => goToTab(t.id)}
+                    className={`flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-2xl border text-xs font-semibold transition-colors ${
+                      isActive ? t.tint : 'bg-slate-950/60 border-slate-800 text-slate-300 active:bg-slate-800'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 ${isActive ? '' : t.active}`} />
+                    <span>{t.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 px-4 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMoreOpen(false);
+                  setIsProfileOpen(true);
+                }}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs font-semibold text-slate-300"
+              >
+                <UserCog className="w-4 h-4 text-cyan-400" />
+                Il mio profilo
+              </button>
+              {!install.standalone ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMoreOpen(false);
+                    handleInstall();
+                  }}
+                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 text-xs font-semibold text-cyan-300"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Installa l'app
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMoreOpen(false);
+                    signOut();
+                  }}
+                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs font-semibold text-red-300"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Esci
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Istruzioni di installazione (iPhone/iPad, o browser senza installazione automatica) */}
+      {isInstallHelpOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Installa l'app">
+          <button
+            type="button"
+            aria-label="Chiudi"
+            onClick={() => setIsInstallHelpOpen(false)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          />
+          <div className="relative w-full sm:max-w-md bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <img src="./icons/icon-192.png" alt="" className="w-12 h-12 rounded-xl" />
+              <div className="flex-1">
+                <div className="font-bold text-white">Installa Seul 2027</div>
+                <div className="text-xs text-slate-400">Si apre a schermo intero come un'app, anche senza rete.</div>
+              </div>
+              <button type="button" onClick={() => setIsInstallHelpOpen(false)} aria-label="Chiudi" className="p-1.5 rounded-lg text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {install.needsIosInstructions ? (
+              <ol className="space-y-3 text-sm text-slate-200">
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center shrink-0">1</span>
+                  <span>
+                    Apri il sito in <strong>Safari</strong> (da Chrome su iPhone non si può installare).
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center shrink-0">2</span>
+                  <span className="flex flex-wrap items-center gap-1">
+                    Tocca <Share className="w-4 h-4 text-sky-400 inline" /> <strong>Condividi</strong> nella barra in basso.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center shrink-0">3</span>
+                  <span className="flex flex-wrap items-center gap-1">
+                    Scegli <SquarePlus className="w-4 h-4 text-sky-400 inline" /> <strong>Aggiungi alla schermata Home</strong>, poi <strong>Aggiungi</strong>.
+                  </span>
+                </li>
+              </ol>
+            ) : (
+              <ol className="space-y-3 text-sm text-slate-200">
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center shrink-0">1</span>
+                  <span>
+                    Su Android apri il sito con <strong>Chrome</strong>, tocca il menu <strong>⋮</strong> in alto a destra.
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center shrink-0">2</span>
+                  <span>
+                    Scegli <strong>Installa app</strong> (o <strong>Aggiungi a schermata Home</strong>).
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center shrink-0">3</span>
+                  <span>Al primo avvio accedi di nuovo con Google: l'app installata ha un accesso suo.</span>
+                </li>
+              </ol>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsInstallHelpOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold text-slate-200"
+            >
+              Ho capito
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

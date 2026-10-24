@@ -1,6 +1,13 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  connectFirestoreEmulator,
+  type Firestore
+} from 'firebase/firestore';
 import { firebaseConfig, isFirebaseConfigured as configFilled } from './config';
 
 // Solo per prove in locale con gli emulatori Firebase: VITE_USE_FIREBASE_EMULATORS=true
@@ -20,7 +27,19 @@ if (isFirebaseConfigured) {
   );
   auth = getAuth(app);
   auth.languageCode = 'it';
-  db = getFirestore(app);
+  if (useEmulators) {
+    db = getFirestore(app);
+  } else {
+    // Copia locale dei dati (IndexedDB): l'app mostra itinerario, valigia e galleria anche senza rete
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      });
+    } catch (err) {
+      console.warn('Cache offline di Firestore non disponibile, uso quella in memoria:', err);
+      db = getFirestore(app);
+    }
+  }
 
   if (useEmulators) {
     connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });

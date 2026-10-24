@@ -864,30 +864,32 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </button>
 
           {/* Segmented control Esplora vs Calcola Percorso Metro */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+          <div className="grid grid-cols-2 sm:flex w-full sm:w-auto items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
             <button
               type="button"
               onClick={() => setMapMode('explore')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap shrink-0 ${
                 mapMode === 'explore'
                   ? 'bg-cyan-500 text-slate-950 shadow-sm font-bold'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
               <Layers className="w-4 h-4" />
-              <span>Esplora Mappa & Legenda</span>
+              <span className="sm:hidden">Esplora mappa</span>
+              <span className="hidden sm:inline">Esplora Mappa & Legenda</span>
             </button>
             <button
               type="button"
               onClick={() => setMapMode('route')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap shrink-0 ${
                 mapMode === 'route'
                   ? 'bg-cyan-500 text-slate-950 shadow-sm font-bold'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
               <Route className="w-4 h-4" />
-              <span>Calcola Percorso Metro</span>
+              <span className="sm:hidden">Percorso metro</span>
+              <span className="hidden sm:inline">Calcola Percorso Metro</span>
             </button>
           </div>
 

@@ -14,6 +14,8 @@ import {
   deleteUser,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   type User
 } from 'firebase/auth';
@@ -90,6 +92,25 @@ export const authApi = {
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
       await signInWithPopup(firebase().auth, provider);
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? '';
+      // App installata o browser che non permette la finestra di Google: si passa al reindirizzamento
+      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+        try {
+          await signInWithRedirect(firebase().auth, provider);
+          return;
+        } catch (redirectErr) {
+          throw friendlyAuthError(redirectErr);
+        }
+      }
+      throw friendlyAuthError(err);
+    }
+  },
+
+  /** Esito di un accesso con reindirizzamento (null se non ce n'è uno in corso). */
+  async completeRedirectSignIn(): Promise<void> {
+    try {
+      await getRedirectResult(firebase().auth);
     } catch (err) {
       throw friendlyAuthError(err);
     }
