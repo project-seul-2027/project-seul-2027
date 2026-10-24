@@ -81,6 +81,9 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  // Foto appena scattata con la fotocamera: va confermata prima di compilare luogo, giorno e didascalia
+  const [cameraPending, setCameraPending] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Filtri e Ricerca
   const [filterLocation, setFilterLocation] = useState<string>('all');
@@ -377,6 +380,21 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     }
   };
 
+  // Foto scattata con la fotocamera del telefono: apre il modal in attesa di conferma
+  const handleCameraCapture = (file: File) => {
+    resetUploadForm();
+    setIsUploadOpen(true);
+    setCameraPending(true);
+    void handleFileSelect(file);
+  };
+
+  // Scatta di nuovo: chiude l'anteprima e riapre la fotocamera
+  const retakeCameraPhoto = () => {
+    resetUploadForm();
+    setCameraPending(false);
+    cameraInputRef.current?.click();
+  };
+
   // Inserimento tag @nome
   const handleInsertTag = (name: string) => {
     const tag = `@${name} `;
@@ -395,6 +413,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     setSelectedDayNumber('');
     setCaptionText('');
     setUploadError(null);
+    setCameraPending(false);
   };
 
   // Pubblicazione nuova foto
@@ -610,6 +629,29 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
               <Upload className="w-4 h-4" />
               <span>Carica Nuova Foto</span>
             </button>
+
+            {/* Solo smartphone: apre direttamente la fotocamera del telefono */}
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="md:hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 font-bold text-xs shadow-lg shadow-black/20 transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Scatta Foto</span>
+            </button>
+
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) handleCameraCapture(file);
+              }}
+            />
           </div>
         </div>
 
@@ -1545,6 +1587,37 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
               )}
             </div>
 
+            {/* Conferma della foto scattata con la fotocamera */}
+            {cameraPending && previewDataUrl && (
+              <div className="p-4 rounded-2xl bg-slate-950 border border-cyan-500/40 space-y-3">
+                <div>
+                  <p className="text-sm font-bold text-white">La foto ti convince?</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Se la accetti passiamo a luogo, giorno e didascalia, come per le foto della galleria. Altrimenti la riscatti.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCameraPending(false)}
+                    className="px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Accetta</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={retakeCameraPhoto}
+                    className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Riscatta</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!(cameraPending && previewDataUrl) && (<>
             {/* Selezione Luogo (con opzione Scrittura Personalizzata) */}
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-300">
@@ -1665,6 +1738,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                 <span>{isPublishing ? 'Pubblico…' : isCompressing ? 'Ottimizzo la foto…' : 'Pubblica nella Bacheca Condivisa'}</span>
               </button>
             </div>
+            </>)}
           </div>
         </div>,
         document.body
