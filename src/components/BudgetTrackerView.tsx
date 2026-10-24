@@ -73,41 +73,41 @@ export const BudgetTrackerView: React.FC = () => {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto scrollbar-none">
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center border-b border-slate-800 pb-3">
         <button
           onClick={() => setActiveTab('estimates')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-all ${
+          className={`px-2 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center leading-tight transition-all ${
             activeTab === 'estimates'
               ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
           <Calculator className="w-3.5 h-3.5" />
-          <span>Preventivo (PDF)</span>
+          <span>Preventivo</span>
         </button>
 
         <button
           onClick={() => setActiveTab('saver_tips')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-all ${
+          className={`px-2 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center leading-tight transition-all ${
             activeTab === 'saver_tips'
               ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
           <PiggyBank className="w-3.5 h-3.5" />
-          <span>Guida Risparmio & Low-Cost</span>
+          <span>Risparmio</span>
         </button>
 
         <button
           onClick={() => setActiveTab('converter')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 whitespace-nowrap transition-all ${
+          className={`px-2 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center leading-tight transition-all ${
             activeTab === 'converter'
               ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
           <ArrowRightLeft className="w-3.5 h-3.5" />
-          <span>Convertitore Valute</span>
+          <span>Convertitore</span>
         </button>
       </div>
 
@@ -309,17 +309,17 @@ export const BudgetTrackerView: React.FC = () => {
 
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
               <label className="text-xs text-slate-400 font-medium block">Inserisci importo da convertire:</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 min-w-0">
                 <input
                   type="number"
                   value={convertAmount || ''}
                   onChange={(e) => setConvertAmount(Number(e.target.value))}
-                  className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono text-base focus:outline-none focus:border-cyan-500"
+                  className="w-full sm:flex-1 min-w-0 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono text-base focus:outline-none focus:border-cyan-500"
                 />
                 <select
                   value={convertFrom}
                   onChange={(e) => setConvertFrom(e.target.value as any)}
-                  className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-bold text-xs focus:outline-none focus:border-cyan-500"
+                  className="w-full sm:w-auto px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-bold text-xs focus:outline-none focus:border-cyan-500"
                 >
                   <option value="KRW">KRW · Won (₩)</option>
                   <option value="EUR">EUR · Euro (€)</option>
@@ -328,47 +328,44 @@ export const BudgetTrackerView: React.FC = () => {
               </div>
             </div>
 
-            {/* Results Grid */}
-            <div className="grid grid-cols-3 gap-3 text-center">
-              {/* EUR */}
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-[10px] text-slate-500 uppercase font-semibold">Euro (EUR)</div>
-                <div className="text-base sm:text-lg font-bold font-mono text-cyan-400 mt-1">
-                  {convertFrom === 'EUR'
-                    ? convertAmount.toFixed(2)
-                    : convertFrom === 'KRW'
-                    ? (convertAmount / rates.KRW).toFixed(2)
-                    : (convertAmount / rates.CNY).toFixed(2)}{' '}
-                  €
+            {/* Risultati: sopra 1 miliardo il numero si abbrevia (es. 673 Mrd €), il valore intero resta nel suggerimento */}
+            {(() => {
+              const eurVal = convertFrom === 'EUR' ? convertAmount : convertFrom === 'KRW' ? convertAmount / rates.KRW : convertAmount / rates.CNY;
+              const krwVal = convertFrom === 'KRW' ? convertAmount : convertFrom === 'EUR' ? convertAmount * rates.KRW : (convertAmount / rates.CNY) * rates.KRW;
+              const cnyVal = convertFrom === 'CNY' ? convertAmount : convertFrom === 'EUR' ? convertAmount * rates.CNY : (convertAmount / rates.KRW) * rates.CNY;
+              const fmt = (v: number, dec: number, sign: string) => {
+                if (!Number.isFinite(v)) return '—';
+                const full = `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v)} ${sign}`;
+                const short = Math.abs(v) >= 1e9
+                  ? `${new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 }).format(v / 1e9)} mld ${sign}`
+                  : full;
+                return { full, short };
+              };
+              const cells = [
+                { label: 'Euro (EUR)', color: 'text-cyan-400', v: fmt(eurVal, 2, '€') },
+                { label: 'Won (KRW)', color: 'text-amber-400', v: fmt(krwVal, 0, '₩') },
+                { label: 'Yuan (CNY)', color: 'text-purple-400', v: fmt(cnyVal, 2, '¥') }
+              ];
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-left sm:text-center">
+                  {cells.map((c) => (
+                    <div key={c.label} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 sm:block min-w-0">
+                      <div className="text-[10px] text-slate-500 uppercase font-semibold shrink-0">{c.label}</div>
+                      {typeof c.v === 'string' ? (
+                        <div className={`text-[15px] sm:text-base xl:text-lg font-bold font-mono ${c.color} text-right sm:text-center sm:mt-1 min-w-0`}>{c.v}</div>
+                      ) : (
+                        <div
+                          title={c.v.full}
+                          className={`${c.v.short.length > 11 ? 'text-sm sm:text-[13px] xl:text-sm' : 'text-[15px] sm:text-base xl:text-lg'} font-bold font-mono ${c.color} text-right sm:text-center sm:mt-1 min-w-0 whitespace-nowrap`}
+                        >
+                          {c.v.short}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              {/* KRW */}
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-[10px] text-slate-500 uppercase font-semibold">Won (KRW)</div>
-                <div className="text-base sm:text-lg font-bold font-mono text-amber-400 mt-1">
-                  {convertFrom === 'KRW'
-                    ? Math.round(convertAmount).toLocaleString('it-IT')
-                    : convertFrom === 'EUR'
-                    ? Math.round(convertAmount * rates.KRW).toLocaleString('it-IT')
-                    : Math.round((convertAmount / rates.CNY) * rates.KRW).toLocaleString('it-IT')}{' '}
-                  ₩
-                </div>
-              </div>
-
-              {/* CNY */}
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <div className="text-[10px] text-slate-500 uppercase font-semibold">Yuan (CNY)</div>
-                <div className="text-base sm:text-lg font-bold font-mono text-purple-400 mt-1">
-                  {convertFrom === 'CNY'
-                    ? convertAmount.toFixed(1)
-                    : convertFrom === 'EUR'
-                    ? (convertAmount * rates.CNY).toFixed(1)
-                    : ((convertAmount / rates.KRW) * rates.CNY).toFixed(1)}{' '}
-                  ¥
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}
