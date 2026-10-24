@@ -25,6 +25,20 @@ Ogni partecipante ha la sua lista, salvata nel documento `packingLists/{uid}` di
 - Come per la galleria, servono le regole aggiornate in `firestore.rules` (Firestore → Regole → Pubblica), altrimenti la lista resta solo sul dispositivo.
 - Il promemoria `.ics` (28 febbraio) si importa in Calendario/Promemoria; "Google Keep" copia il testo negli appunti da incollare nella nota.
 
+## Spese di gruppo
+
+La sezione **Spese** tiene traccia di chi anticipa per gli altri. Ogni spesa è un documento `expenses/{id}` di Firestore, letto da tutti i partecipanti in tempo reale:
+
+- importo in €, ₩ o ¥, convertito in euro con il cambio del momento (salvato nella spesa); i calcoli sono in centesimi, senza errori di arrotondamento;
+- chi ha pagato e come si divide: parti uguali tra le persone scelte oppure importi esatti;
+- per ogni quota, se è già stata restituita: la segna chi la doveva o chi ha pagato;
+- **Saldi**: quanto deve ciascuno a ciascuno, al netto per coppia; "Salda" chiude in un colpo tutte le quote aperte tra due persone;
+- **Riepilogo**: per persona quanto ha pagato, la sua quota, quanto deve ancora, quanto ha restituito, quanto deve ricevere e quanto ha ricevuto.
+
+Aggiunge spese chiunque nel gruppo; modifica ed elimina solo chi l'ha creata o chi l'ha pagata. Senza rete le spese restano visibili e le modifiche partono al ritorno della connessione.
+
+- Servono le regole aggiornate in `firestore.rules` (Firestore → Regole → Pubblica), altrimenti compare "Operazione non consentita".
+
 ## App per Android e iPhone
 
 Il sito è anche un'app installabile (PWA): si apre a schermo intero dall'icona sulla home, ha una barra di navigazione in basso e funziona anche senza rete con i dati già visti (itinerario, valigia, galleria). Gli aggiornamenti arrivano da soli a ogni push, senza passare dagli store.

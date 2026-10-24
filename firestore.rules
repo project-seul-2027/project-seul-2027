@@ -1,0 +1,286 @@
+rules_version = '2';
+
+// Regole di sicurezza Firestore per Seul 2027.
+// Da incollare in: Console Firebase → Firestore Database → Regole → Pubblica.
+//
+// Chi può entrare: solo account Google con email verificata presente nel documento
+// config/access (campo "emails", array). Quel documento si modifica solo dalla console.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isParticipant() {
+      return signedIn()
+        && request.auth.token.email.lower()
+           in get(/databases/$(database)/documents/config/access).data.emails;
+    }
+
+    function isOwner(uid) {
+      return isParticipant() && request.auth.uid == uid;
+    }
+
+    function slots() {
+      return ['t1', 't2', 't3', 't4'];
+    }
+
+    function accommodations() {
+      return ['acc_a', 'acc_b', 'acc_c', 'acc_d'];
+    }
+
+    function shortString(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function validVote(value) {
+      return value == null || value in accommodations();
+    }
+
+    // Lista dei partecipanti: nessuno la legge o la scrive dall'app (si gestisce in console)
+    match /config/{docId} {
+      allow read, write: if false;
+    }
+
+    // Profilo completo (documenti, contatti di emergenza...): solo il titolare
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.id == uid
+        && request.resource.data.email == request.auth.token.email.lower()
+        && request.resource.data.size() <= 40
+        && validVote(request.resource.data.get('accommodationPreference', null));
+    }
+
+    // Dati condivisi con il gruppo
+    match /members/{uid} {
+      allow read: if isParticipant();
+      allow delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+             'id', 'travelerId', 'firstName', 'lastName', 'displayName',
+             'avatarUrl', 'phone', 'dietaryPreference', 'accommodationPreference'
+           ])
+        && request.resource.data.id == uid
+        && request.resource.data.travelerId in slots()
+        // il posto dichiarato deve appartenere a chi scrive (anche nella stessa scrittura)
+        && getAfter(/databases/$(database)/documents/slots/$(request.resource.data.travelerId)).data.uid == uid
+        && shortString(request.resource.data.firstName, 60)
+        && shortString(request.resource.data.lastName, 60)
+        && shortString(request.resource.data.displayName, 60)
+        && shortString(request.resource.data.avatarUrl, 500)
+        && shortString(request.resource.data.phone, 25)
+        && shortString(request.resource.data.dietaryPreference, 80)
+        && validVote(request.resource.data.accommodationPreference);
+    }
+
+    // Un posto per persona: si può solo occupare (se libero) o liberare (se è proprio)
+    match /slots/{slotId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && slotId in slots()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        // si può occupare solo il posto indicato nel proprio profilo condiviso
+        && getAfter(/databases/$(database)/documents/members/$(request.auth.uid)).data.travelerId == slotId;
+      allow delete: if isParticipant()
+        && resource.data.uid == request.auth.uid
+        && (
+          !existsAfter(/databases/$(database)/documents/members/$(request.auth.uid))
+          || getAfter(/databases/$(database)/documents/members/$(request.auth.uid)).data.travelerId != slotId
+        );
+      // nessun update: un posto occupato non si può "rubare"
+    }
+
+    // ------------------------------------------------------------------
+    // Galleria condivisa
+    // ------------------------------------------------------------------
+
+    function validDay(data) {
+      return !('dayNumber' in data) || (data.dayNumber is int && data.dayNumber >= 0 && data.dayNumber <= 30);
+    }
+
+    function optionalShortString(data, field, max) {
+      return !(field in data) || shortString(data[field], max);
+    }
+
+    // Un "mi piace" può aggiungere o togliere solo l'uid di chi scrive
+    function onlyMyLikeChanged(before, after) {
+      return after.toSet().difference(before.toSet()).hasOnly([request.auth.uid])
+        && before.toSet().difference(after.toSet()).hasOnly([request.auth.uid]);
+    }
+
+    // Foto: metadati + miniatura + like. Nomi e avatar non si salvano (si ricavano dall'uid).
+    match /gallery/{photoId} {
+      allow read: if isParticipant();
+
+      allow create: if isParticipant()
+        && request.resource.data.keys().hasOnly([
+             'uploaderId', 'caption', 'taggedSlots', 'locationName', 'locationId', 'dayNumber', 'dayLabel',
+             'thumb', 'width', 'height', 'originalSizeKb', 'compressedSizeKb', 'likes', 'createdAt'
+           ])
+        && request.resource.data.keys().hasAll([
+             'uploaderId', 'caption', 'taggedSlots', 'locationName',
+             'thumb', 'width', 'height', 'originalSizeKb', 'compressedSizeKb', 'likes', 'createdAt'
+           ])
+        && request.resource.data.uploaderId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && shortString(request.resource.data.caption, 500)
+        && shortString(request.resource.data.locationName, 120)
+        && request.resource.data.locationName.size() > 0
+        && optionalShortString(request.resource.data, 'locationId', 60)
+        && optionalShortString(request.resource.data, 'dayLabel', 120)
+        && validDay(request.resource.data)
+        && shortString(request.resource.data.thumb, 150000)
+        && request.resource.data.width is number
+        && request.resource.data.height is number
+        && request.resource.data.originalSizeKb is number
+        && request.resource.data.compressedSizeKb is number
+        && request.resource.data.taggedSlots is list
+        && request.resource.data.taggedSlots.size() <= 4
+        && request.resource.data.taggedSlots.hasOnly(slots())
+        && request.resource.data.likes is list
+        && request.resource.data.likes.hasOnly([request.auth.uid])
+        // la foto grande viene scritta insieme ai metadati
+        && existsAfter(/databases/$(database)/documents/galleryImages/$(photoId));
+
+      // Chiunque nel gruppo può solo aggiungere/togliere il proprio like
+      allow update: if isParticipant()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+        && request.resource.data.likes is list
+        && request.resource.data.likes.size() <= 10
+        && onlyMyLikeChanged(resource.data.likes, request.resource.data.likes);
+
+      // Elimina solo l'autore
+      allow delete: if isParticipant() && resource.data.uploaderId == request.auth.uid;
+    }
+
+    // Foto a piena qualità (letta solo quando si apre la foto)
+    match /galleryImages/{photoId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && request.resource.data.keys().hasOnly(['uploaderId', 'data'])
+        && request.resource.data.uploaderId == request.auth.uid
+        && request.resource.data.data is string
+        && request.resource.data.data.size() > 100
+        && request.resource.data.data.size() <= 900000
+        && existsAfter(/databases/$(database)/documents/gallery/$(photoId))
+        && getAfter(/databases/$(database)/documents/gallery/$(photoId)).data.uploaderId == request.auth.uid;
+      allow delete: if isParticipant() && resource.data.uploaderId == request.auth.uid;
+      // nessun update
+    }
+
+    // Commenti: li scrive e li cancella chi li ha scritti; l'autore della foto può cancellare quelli sotto la sua foto
+    match /galleryComments/{commentId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && request.resource.data.keys().hasOnly(['photoId', 'authorId', 'text', 'createdAt'])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.photoId is string
+        && shortString(request.resource.data.text, 400)
+        && request.resource.data.text.size() > 0
+        && exists(/databases/$(database)/documents/gallery/$(request.resource.data.photoId));
+      allow delete: if isParticipant()
+        && (
+          resource.data.authorId == request.auth.uid
+          || get(/databases/$(database)/documents/gallery/$(resource.data.photoId)).data.uploaderId == request.auth.uid
+        );
+      // nessun update
+    }
+
+    // ------------------------------------------------------------------
+    // Valigia personale
+    // ------------------------------------------------------------------
+
+    function validPackingList(data, uid) {
+      return data.keys().hasOnly(['ownerId', 'ownerName', 'ownerSlot', 'updatedAt', 'sharedWith', 'items'])
+        && data.keys().hasAll(['ownerId', 'ownerName', 'updatedAt', 'sharedWith', 'items'])
+        && data.ownerId == uid
+        && shortString(data.ownerName, 60)
+        && optionalShortString(data, 'ownerSlot', 4)
+        && data.updatedAt is number
+        && data.sharedWith is list
+        && data.sharedWith.size() <= 3
+        && !(uid in data.sharedWith)
+        && data.items is list
+        && data.items.size() <= 300;
+    }
+
+    // Una lista per persona (packingLists/{uid}): la scrive solo il titolare.
+    // La leggono lui e gli amici il cui uid è in `sharedWith` (sola lettura).
+    match /packingLists/{uid} {
+      allow read: if isParticipant()
+        && (request.auth.uid == uid || request.auth.uid in resource.data.sharedWith);
+      allow create, update: if isOwner(uid) && validPackingList(request.resource.data, uid);
+      allow delete: if isOwner(uid);
+    }
+
+    // ------------------------------------------------------------------
+    // Spese di gruppo (chi ha pagato, quote di ciascuno, quote restituite)
+    // ------------------------------------------------------------------
+
+    // Posto (t1…t4) di chi scrive, dal suo profilo condiviso
+    function mySlot() {
+      return get(/databases/$(database)/documents/members/$(request.auth.uid)).data.travelerId;
+    }
+
+    function validExpense(d) {
+      return d.keys().hasOnly([
+               'title', 'category', 'date', 'currency', 'originalAmount', 'rate', 'amountCents',
+               'paidBy', 'shares', 'splitMode', 'repaid', 'note', 'createdBy', 'createdAt', 'updatedAt'
+             ])
+        && d.keys().hasAll([
+               'title', 'category', 'date', 'currency', 'originalAmount', 'rate', 'amountCents',
+               'paidBy', 'shares', 'splitMode', 'repaid', 'note', 'createdBy', 'createdAt', 'updatedAt'
+             ])
+        && shortString(d.title, 80) && d.title.size() > 0
+        && d.category in ['food', 'transport', 'lodging', 'activity', 'shopping', 'other']
+        && d.date is string && d.date.matches('^20[0-9]{2}-[01][0-9]-[0-3][0-9]$')
+        && d.currency in ['EUR', 'KRW', 'CNY']
+        && d.originalAmount is number && d.originalAmount > 0
+        && d.rate is number && d.rate > 0
+        && d.amountCents is int && d.amountCents > 0 && d.amountCents <= 10000000
+        && d.paidBy in slots()
+        && d.shares is map && d.shares.size() > 0 && d.shares.keys().hasOnly(slots())
+        && d.splitMode in ['equal', 'exact']
+        && d.repaid is map && d.repaid.keys().hasOnly(slots())
+        && shortString(d.note, 300);
+    }
+
+    // Tutti i partecipanti leggono e aggiungono spese.
+    // Modifica ed eliminazione: chi l'ha creata o chi l'ha pagata.
+    // Gli altri possono solo segnare restituita (o non restituita) la propria quota.
+    match /expenses/{expenseId} {
+      allow read: if isParticipant();
+
+      allow create: if isParticipant()
+        && validExpense(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.repaid.size() == 0;
+
+      allow update: if isParticipant()
+        && validExpense(request.resource.data)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && (
+          resource.data.createdBy == request.auth.uid
+          || resource.data.paidBy == mySlot()
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['repaid', 'updatedAt'])
+            && request.resource.data.repaid.diff(resource.data.repaid).affectedKeys().hasOnly([mySlot()])
+          )
+        );
+
+      allow delete: if isParticipant()
+        && (resource.data.createdBy == request.auth.uid || resource.data.paidBy == mySlot());
+    }
+  }
+}
