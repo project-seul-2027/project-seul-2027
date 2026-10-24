@@ -41,6 +41,13 @@ import {
 } from '../services/galleryService';
 import { MAP_LOCATIONS, ITINERARY_DAYS, type MapLocation } from '../data/tripData';
 import { useAuth } from '../auth/AuthContext';
+import {
+  savePendingCamera,
+  markPendingAccepted,
+  loadPendingCamera,
+  clearPendingCamera,
+  hasResumeFlag
+} from '../services/pendingCamera';
 
 /** Foto caricate alla volta (ogni miniatura pesa ~30 KB); "Mostra altre" ne aggiunge altrettante */
 const PAGE_SIZE = 48;
@@ -385,6 +392,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     resetUploadForm();
     setIsUploadOpen(true);
     setCameraPending(true);
+    void savePendingCamera(file, false);
     void handleFileSelect(file);
   };
 
@@ -392,8 +400,39 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   const retakeCameraPhoto = () => {
     resetUploadForm();
     setCameraPending(false);
+    void clearPendingCamera();
     cameraInputRef.current?.click();
   };
+
+  // Ritorno dalla fotocamera: il telefono può aver ricaricato l'app, quindi ripristina foto e modal
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!hasResumeFlag()) return;
+      const pending = await loadPendingCamera();
+      if (!pending || !active) return;
+      setIsUploadOpen(true);
+      setCameraPending(!pending.accepted);
+      await handleFileSelect(pending.file);
+    })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Chiudendo il modal la foto in attesa viene scartata
+  const wasUploadOpen = useRef(false);
+  useEffect(() => {
+    if (isUploadOpen) {
+      wasUploadOpen.current = true;
+      return;
+    }
+    if (wasUploadOpen.current) {
+      wasUploadOpen.current = false;
+      void clearPendingCamera();
+    }
+  }, [isUploadOpen]);
 
   // Inserimento tag @nome
   const handleInsertTag = (name: string) => {
@@ -1599,7 +1638,10 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setCameraPending(false)}
+                    onClick={() => {
+                      setCameraPending(false);
+                      void markPendingAccepted();
+                    }}
                     className="px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                   >
                     <CheckCircle2 className="w-4 h-4" />
