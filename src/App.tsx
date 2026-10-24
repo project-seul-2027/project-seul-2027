@@ -216,7 +216,7 @@ function TripPortal() {
         </button>
 
         {/* Zone 2: Navigation Links */}
-        <nav className="hidden min-[1840px]:flex items-center gap-4 text-xs font-semibold text-slate-300">
+        <nav className="hidden min-[1840px]:flex items-center gap-3.5 text-xs font-semibold text-slate-300">
           <button
             onClick={() => setActiveTab('itinerary')}
             className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
@@ -224,7 +224,7 @@ function TripPortal() {
             }`}
           >
             <CalendarDays className="w-3.5 h-3.5" />
-            <span>Itinerario Completo</span>
+            <span>Itinerario</span>
           </button>
           <button
             onClick={() => setActiveTab('accommodations')}
@@ -233,7 +233,7 @@ function TripPortal() {
             }`}
           >
             <Home className="w-3.5 h-3.5 text-blue-400" />
-            <span>4 Alloggi a Confronto</span>
+            <span>4 Alloggi</span>
           </button>
           <button
             onClick={() => setActiveTab('map')}
@@ -242,7 +242,7 @@ function TripPortal() {
             }`}
           >
             <Map className="w-3.5 h-3.5" />
-            <span>Mappa Interattiva</span>
+            <span>Mappa</span>
           </button>
           <button
             onClick={() => setActiveTab('weather')}
@@ -251,7 +251,7 @@ function TripPortal() {
             }`}
           >
             <CloudSun className="w-3.5 h-3.5 text-amber-400" />
-            <span>Meteo Seul</span>
+            <span>Meteo</span>
           </button>
           <button
             onClick={() => setActiveTab('gallery')}
@@ -260,7 +260,7 @@ function TripPortal() {
             }`}
           >
             <Camera className="w-3.5 h-3.5 text-pink-400" />
-            <span>Galleria Condivisa</span>
+            <span>Galleria</span>
           </button>
           <button
             onClick={() => setActiveTab('packing')}
@@ -269,7 +269,7 @@ function TripPortal() {
             }`}
           >
             <Luggage className="w-3.5 h-3.5 text-teal-400" />
-            <span>Valigia & Oggetti</span>
+            <span>Valigia</span>
           </button>
           <button
             onClick={() => setActiveTab('expenses')}
@@ -287,7 +287,7 @@ function TripPortal() {
             }`}
           >
             <Plane className="w-3.5 h-3.5 text-sky-400" />
-            <span>Voli & Scalo Pechino</span>
+            <span>Voli & Scalo</span>
           </button>
           <button
             onClick={() => setActiveTab('budget')}
@@ -296,7 +296,7 @@ function TripPortal() {
             }`}
           >
             <Coins className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Preventivo (PDF)</span>
+            <span>Preventivo</span>
           </button>
           <button
             onClick={() => setActiveTab('guide')}
@@ -305,7 +305,7 @@ function TripPortal() {
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Guida & Checklist</span>
+            <span>Guida</span>
           </button>
           <button
             onClick={() => setActiveTab('pdf')}
@@ -314,7 +314,7 @@ function TripPortal() {
             }`}
           >
             <FileText className="w-3.5 h-3.5 text-rose-400" />
-            <span>PDF Viaggio</span>
+            <span>PDF</span>
           </button>
           <button
             onClick={() => setActiveTab('group')}
