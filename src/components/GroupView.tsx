@@ -40,7 +40,9 @@ const MemberSheet: React.FC<{ member: GroupMember; color: string; onClose: () =>
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const shown = OPTIONAL_SHARE_FIELDS.filter((k) => member.shared.includes(k));
+  // I profili salvati prima dei campi condivisi non hanno `shared`: va trattato come lista vuota
+  const sharedList = member.shared ?? [];
+  const shown = OPTIONAL_SHARE_FIELDS.filter((k) => sharedList.includes(k));
   const hidden = OPTIONAL_SHARE_FIELDS.length - shown.length;
 
   return (
@@ -150,16 +152,21 @@ export const GroupView: React.FC = () => {
           return (
             <div
               key={slot.id}
-              className={`p-5 rounded-2xl border bg-slate-900/80 space-y-4 ${
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpenId(member.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setOpenId(member.id);
+                }
+              }}
+              aria-label={`Dettagli di ${member.firstName} ${member.lastName}`}
+              className={`p-5 rounded-2xl border bg-slate-900/80 space-y-4 cursor-pointer hover:border-cyan-500/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 ${
                 isMe ? 'border-cyan-500/50 ring-1 ring-cyan-500/20' : 'border-slate-800'
               }`}
             >
-              <button
-                type="button"
-                onClick={() => setOpenId(member.id)}
-                className="w-full flex items-center gap-3 text-left rounded-xl hover:bg-slate-800/40 -m-1 p-1 transition-colors"
-                aria-label={`Dettagli di ${member.firstName} ${member.lastName}`}
-              >
+              <div className="flex items-center gap-3">
                 {member.avatarUrl ? (
                   <img
                     src={member.avatarUrl}
@@ -186,14 +193,18 @@ export const GroupView: React.FC = () => {
                     {member.displayName !== `${member.firstName} ${member.lastName}` && ` · “${member.displayName}”`}
                   </div>
                 </div>
-              </button>
+              </div>
 
               <dl className="grid gap-2 text-xs">
                 <div className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                   <dt className="sr-only">Telefono</dt>
                   <dd className="flex items-center gap-2 flex-wrap">
-                    <a href={`tel:${member.phone}`} className="font-mono text-slate-200 hover:text-cyan-300">
+                    <a
+                      href={`tel:${member.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-mono text-slate-200 hover:text-cyan-300"
+                    >
                       {member.phone}
                     </a>
                     {waNumber && (
@@ -201,6 +212,7 @@ export const GroupView: React.FC = () => {
                         href={`https://wa.me/${waNumber}`}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
                       >
                         <MessageCircle className="w-3 h-3" />
