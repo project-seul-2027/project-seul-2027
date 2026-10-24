@@ -50,6 +50,7 @@ import {
   setResumeFlag
 } from '../services/pendingCamera';
 import { CameraCaptureModal } from './CameraCaptureModal';
+import { isIos } from '../pwa';
 
 /** Foto caricate alla volta (ogni miniatura pesa ~30 KB); "Mostra altre" ne aggiunge altrettante */
 const PAGE_SIZE = 48;
@@ -94,6 +95,8 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   const [cameraPending, setCameraPending] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // Il telefono ha chiuso l'app durante lo scatto con l'app Fotocamera e la foto non è arrivata
+  const [cameraLostNotice, setCameraLostNotice] = useState(false);
 
   // Filtri e Ricerca
   const [filterLocation, setFilterLocation] = useState<string>('all');
@@ -406,8 +409,14 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     cameraInputRef.current?.click();
   };
 
-  // Fotocamera dentro l'app (preferita): non si esce dalla pagina; ripiego sulla fotocamera di sistema
+  // iPhone: la fotocamera di sistema si apre dentro l'app senza chiuderla, quindi si usa quella (zoom, HDR, notte).
+  // Android: la fotocamera di sistema può far chiudere l'app e perdere la foto, quindi si usa quella interna.
   const openCamera = () => {
+    setCameraLostNotice(false);
+    if (isIos()) {
+      openSystemCamera();
+      return;
+    }
     const hasLiveCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
     if (hasLiveCamera) setIsCameraOpen(true);
     else openSystemCamera();
@@ -439,8 +448,9 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
       if (!hasResumeFlag()) return;
       const pending = await loadPendingCamera();
       if (!pending) {
-        // L'app è stata chiusa durante lo scatto e la foto non è arrivata: nulla da ripristinare
+        // L'app è stata chiusa durante lo scatto e la foto non è arrivata: lo si spiega all'utente
         await clearPendingCamera();
+        if (active) setCameraLostNotice(true);
         return;
       }
       if (!active) return;
@@ -737,6 +747,25 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                   openSystemCamera();
                 }}
               />
+            )}
+
+            {cameraLostNotice && (
+              <div className="basis-full md:hidden p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <p className="flex-1">
+                  Il telefono ha chiuso l'app mentre usavi l'app Fotocamera e la foto non è arrivata. Riprova con
+                  "Scatta Foto" e usa la fotocamera dentro l'app, oppure scatta con la fotocamera del telefono e poi
+                  caricala con "Carica Nuova Foto".
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setCameraLostNotice(false)}
+                  aria-label="Chiudi avviso"
+                  className="p-1 rounded-md hover:bg-amber-500/10"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -1,36 +1,91 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, RefreshCw, X } from 'lucide-react';
+import { Loader2, RefreshCw, Smartphone, X, Zap, ZapOff } from 'lucide-react';
 
 interface CameraCaptureModalProps {
-  /** Foto scattata (JPEG a piena risoluzione della fotocamera) */
+  /** Foto scattata (JPEG) */
   onCapture: (file: File) => void;
   onClose: () => void;
-  /** Ripiego: apre la fotocamera di sistema del telefono */
+  /** Apre l'app Fotocamera di sistema (su Android può chiudere l'app durante lo scatto) */
   onUseSystemCamera: () => void;
 }
 
+/** Zoom digitale usato quando la fotocamera non espone lo zoom ottico/hardware */
+const DIGITAL_ZOOM_MAX = 4;
+/** Oltre questo valore lo zoom hardware è solo ingrandimento e peggiora la foto */
+const HARDWARE_ZOOM_CAP = 10;
+
+type ZoomMode = 'hardware' | 'digital';
+
+interface CameraCaps {
+  zoom?: { min: number; max: number; step?: number };
+  torch?: boolean;
+  focusMode?: string[];
+}
+
+interface ImageCaptureLike {
+  takePhoto(): Promise<Blob>;
+}
+
+const touchDistance = (touches: React.TouchList) =>
+  Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+
+/** Fotogramma dal video, con ritaglio centrale per lo zoom digitale */
+function grabFrame(video: HTMLVideoElement, digitalZoom: number): Promise<Blob | null> {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const sw = vw / digitalZoom;
+  const sh = vh / digitalZoom;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sw);
+  canvas.height = Math.round(sh);
+  canvas.getContext('2d')?.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+}
+
 /**
- * Fotocamera dentro l'app: l'anteprima è un <video> nella pagina, quindi non si esce mai dall'app.
- * Con la fotocamera di sistema Android/iOS possono chiudere l'app durante lo scatto e al ritorno
- * la foto andrebbe persa.
+ * Fotocamera dentro l'app, usata su Android: con l'app Fotocamera di sistema Android può chiudere
+ * l'app durante lo scatto e la foto andrebbe persa. Offre zoom (pizzico, pulsanti e cursore),
+ * flash, tocco per mettere a fuoco e foto a piena risoluzione dove il telefono lo permette.
  */
 export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCapture, onClose, onUseSystemCamera }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
+  const [zoomMode, setZoomMode] = useState<ZoomMode>('digital');
+  const [zoomMin, setZoomMin] = useState(1);
+  const [zoomMax, setZoomMax] = useState(DIGITAL_ZOOM_MAX);
+  const [zoom, setZoom] = useState(1);
+
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [focusSupported, setFocusSupported] = useState(false);
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number; key: number } | null>(null);
+
+  // Avvio della fotocamera (e riavvio quando si cambia tra posteriore e frontale)
   useEffect(() => {
     let cancelled = false;
     setReady(false);
     setError(null);
+    setTorchOn(false);
 
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1440 } },
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1920 },
+            height: { ideal: 1440 },
+            // chiede l'accesso allo zoom della fotocamera dove il browser lo supporta
+            zoom: true,
+          } as MediaTrackConstraints,
           audio: false,
         });
         if (cancelled) {
@@ -38,11 +93,30 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           return;
         }
         streamRef.current = stream;
+        const track = stream.getVideoTracks()[0];
+        trackRef.current = track;
+
         const video = videoRef.current;
         if (video) {
           video.srcObject = stream;
           await video.play().catch(() => undefined);
         }
+
+        const caps = (track.getCapabilities?.() ?? {}) as CameraCaps;
+        const settings = track.getSettings() as MediaTrackSettings & { zoom?: number };
+        if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+          setZoomMode('hardware');
+          setZoomMin(caps.zoom.min);
+          setZoomMax(Math.min(caps.zoom.max, HARDWARE_ZOOM_CAP));
+          setZoom(settings.zoom ?? caps.zoom.min);
+        } else {
+          setZoomMode('digital');
+          setZoomMin(1);
+          setZoomMax(DIGITAL_ZOOM_MAX);
+          setZoom(1);
+        }
+        setTorchSupported(!!caps.torch);
+        setFocusSupported(Array.isArray(caps.focusMode) && caps.focusMode.includes('single-shot'));
         setReady(true);
       } catch (err) {
         if (cancelled) return;
@@ -61,6 +135,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      trackRef.current = null;
     };
   }, [facing]);
 
@@ -72,42 +147,172 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const takePhoto = () => {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          setError('Scatto non riuscito, riprova.');
-          return;
-        }
-        onCapture(new File([blob], `foto-${Date.now()}.jpg`, { type: 'image/jpeg' }));
-      },
-      'image/jpeg',
-      0.92
-    );
+  const applyZoom = useCallback(
+    (value: number) => {
+      const next = Math.round(Math.min(zoomMax, Math.max(zoomMin, value)) * 10) / 10;
+      setZoom(next);
+      if (zoomMode === 'hardware') {
+        trackRef.current
+          ?.applyConstraints({ advanced: [{ zoom: next } as MediaTrackConstraintSet] })
+          .catch(() => undefined);
+      }
+    },
+    [zoomMin, zoomMax, zoomMode]
+  );
+
+  const toggleTorch = () => {
+    const next = !torchOn;
+    trackRef.current
+      ?.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] })
+      .then(() => setTorchOn(next))
+      .catch(() => undefined);
   };
+
+  // Tocco sull'anteprima: messa a fuoco in quel punto (dove il telefono lo supporta)
+  const onPreviewTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!focusSupported || !ready) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    setFocusPoint({ x: e.clientX - rect.left, y: e.clientY - rect.top, key: Date.now() });
+    trackRef.current
+      ?.applyConstraints({
+        advanced: [{ focusMode: 'single-shot', pointsOfInterest: [{ x, y }] } as MediaTrackConstraintSet],
+      })
+      .catch(() => undefined);
+  };
+
+  useEffect(() => {
+    if (!focusPoint) return;
+    const id = window.setTimeout(() => setFocusPoint(null), 900);
+    return () => window.clearTimeout(id);
+  }, [focusPoint]);
+
+  const takePhoto = async () => {
+    const video = videoRef.current;
+    const track = trackRef.current;
+    if (!video || !video.videoWidth || busy) return;
+    setBusy(true);
+    try {
+      let blob: Blob | null = null;
+      // Foto a piena risoluzione del sensore (Android Chrome), con lo zoom hardware già applicato
+      const ImageCaptureCtor = (window as unknown as { ImageCapture?: new (t: MediaStreamTrack) => ImageCaptureLike })
+        .ImageCapture;
+      const canUseFullRes = zoomMode === 'hardware' || zoom === 1;
+      if (ImageCaptureCtor && track && canUseFullRes) {
+        try {
+          blob = await new ImageCaptureCtor(track).takePhoto();
+        } catch {
+          blob = null;
+        }
+      }
+      if (!blob) blob = await grabFrame(video, zoomMode === 'digital' ? zoom : 1);
+      if (!blob) {
+        setError('Scatto non riuscito, riprova.');
+        return;
+      }
+      onCapture(new File([blob], `foto-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' }));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Pulsanti rapidi di zoom (0.5× compare solo se il telefono ha il grandangolo)
+  const zoomPresets = Array.from(
+    new Set([zoomMin < 1 ? zoomMin : null, 1, 2, 5, 10].filter((v): v is number => v !== null && v >= zoomMin && v <= zoomMax))
+  );
+  const nearestPreset = zoomPresets.reduce((a, b) => (Math.abs(b - zoom) < Math.abs(a - zoom) ? b : a), zoomPresets[0] ?? 1);
+  const formatZoom = (z: number) => `${Number.isInteger(z) ? z : z.toFixed(1)}×`;
+
+  const previewTransform = [
+    facing === 'user' ? 'scaleX(-1)' : '',
+    zoomMode === 'digital' && zoom !== 1 ? `scale(${zoom})` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Fotocamera"
-      className="fixed inset-0 z-[10001] bg-black flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-0 z-[10001] bg-black flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] select-none"
     >
-      <div className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+      {/* Barra superiore */}
+      <div className="shrink-0 flex items-center justify-between px-4 py-3">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Chiudi fotocamera"
+          className="w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-2">
+          {torchSupported && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              aria-label={torchOn ? 'Spegni flash' : 'Accendi flash'}
+              aria-pressed={torchOn}
+              className={`w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-all ${
+                torchOn ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'
+              }`}
+            >
+              {torchOn ? <Zap className="w-5 h-5" /> : <ZapOff className="w-5 h-5" />}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onUseSystemCamera}
+            className="h-11 px-3.5 rounded-full bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>App Fotocamera</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Anteprima: pizzica per lo zoom, tocca per mettere a fuoco */}
+      <div
+        className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+        style={{ touchAction: 'none' }}
+        onClick={onPreviewTap}
+        onTouchStart={(e) => {
+          if (e.touches.length === 2) pinchRef.current = { dist: touchDistance(e.touches), zoom };
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length === 2 && pinchRef.current) {
+            applyZoom(pinchRef.current.zoom * (touchDistance(e.touches) / pinchRef.current.dist));
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (e.touches.length < 2) pinchRef.current = null;
+        }}
+      >
         <video
           ref={videoRef}
           playsInline
           muted
           autoPlay
-          className="max-w-full max-h-full w-full h-full object-contain"
-          style={{ transform: facing === 'user' ? 'scaleX(-1)' : undefined }}
+          className="w-full h-full object-contain"
+          style={{ transform: previewTransform || undefined }}
         />
+
+        {focusPoint && (
+          <span
+            key={focusPoint.key}
+            className="pointer-events-none absolute w-16 h-16 -ml-8 -mt-8 rounded-full border-2 border-amber-300 animate-ping"
+            style={{ left: focusPoint.x, top: focusPoint.y }}
+          />
+        )}
+
+        {ready && (
+          <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/60 text-white text-xs font-mono">
+            {formatZoom(zoom)}
+          </span>
+        )}
 
         {!ready && !error && (
           <div className="absolute inset-0 flex items-center justify-center gap-2 text-slate-300 text-sm">
@@ -116,47 +321,76 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         )}
 
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center bg-black/80">
             <p className="text-sm text-slate-200 max-w-xs">{error}</p>
             <button
               type="button"
-              onClick={onUseSystemCamera}
+              onClick={(e) => {
+                e.stopPropagation();
+                onUseSystemCamera();
+              }}
               className="px-4 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs"
             >
-              Usa la fotocamera del telefono
+              Usa l'app Fotocamera
             </button>
           </div>
         )}
       </div>
 
-      <div className="shrink-0 px-6 py-5 flex items-center justify-between bg-black/90">
+      {/* Controlli zoom */}
+      {ready && zoomPresets.length > 1 && (
+        <div className="shrink-0 px-6 pt-3 space-y-3">
+          <div className="flex items-center justify-center gap-2">
+            {zoomPresets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => applyZoom(preset)}
+                className={`min-w-[44px] h-9 px-2 rounded-full text-xs font-bold font-mono transition-colors ${
+                  preset === nearestPreset && Math.abs(zoom - preset) < 0.05
+                    ? 'bg-amber-400 text-slate-950'
+                    : 'bg-white/10 text-white'
+                }`}
+              >
+                {formatZoom(preset)}
+              </button>
+            ))}
+          </div>
+          <input
+            type="range"
+            min={zoomMin}
+            max={zoomMax}
+            step={0.1}
+            value={zoom}
+            onChange={(e) => applyZoom(Number(e.target.value))}
+            aria-label="Zoom"
+            className="w-full accent-amber-400"
+          />
+        </div>
+      )}
+
+      {/* Scatto e cambio fotocamera */}
+      <div className="shrink-0 px-8 py-5 flex items-center justify-between">
         <button
           type="button"
-          onClick={onClose}
-          aria-label="Chiudi fotocamera"
-          className="w-12 h-12 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center active:scale-95 transition-transform"
+          onClick={() => setFacing((f) => (f === 'environment' ? 'user' : 'environment'))}
+          aria-label="Cambia fotocamera"
+          className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-95 transition-transform"
         >
-          <X className="w-5 h-5" />
+          <RefreshCw className="w-5 h-5" />
         </button>
 
         <button
           type="button"
           onClick={takePhoto}
-          disabled={!ready}
+          disabled={!ready || busy}
           aria-label="Scatta foto"
-          className="w-[72px] h-[72px] rounded-full border-4 border-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
+          className="w-[76px] h-[76px] rounded-full border-4 border-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
         >
-          <span className="w-14 h-14 rounded-full bg-white" />
+          {busy ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <span className="w-[60px] h-[60px] rounded-full bg-white" />}
         </button>
 
-        <button
-          type="button"
-          onClick={() => setFacing((f) => (f === 'environment' ? 'user' : 'environment'))}
-          aria-label="Cambia fotocamera"
-          className="w-12 h-12 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center active:scale-95 transition-transform"
-        >
-          <RefreshCw className="w-5 h-5" />
-        </button>
+        <span className="w-12 h-12" aria-hidden="true" />
       </div>
     </div>,
     document.body
