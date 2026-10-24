@@ -12,6 +12,7 @@ import { InteractiveMap } from './components/InteractiveMap';
 import { AccommodationsView } from './components/AccommodationsView';
 import { FlightsAndLayoverView } from './components/FlightsAndLayoverView';
 import { BudgetTrackerView } from './components/BudgetTrackerView';
+import { ExpensesView } from './components/ExpensesView';
 import { PracticalGuideView } from './components/PracticalGuideView';
 import { PdfViewerModal } from './components/PdfViewerModal';
 import { hasResumeFlag } from './services/pendingCamera';
@@ -27,7 +28,7 @@ import { useAuth } from './auth/AuthContext';
 import { useInstallPrompt, useMediaQuery, useUpdateAvailable, BUILD_ID } from './pwa';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
-  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus
+  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus, Wallet
 } from 'lucide-react';
 
 /**
@@ -49,9 +50,9 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
+type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
 
-const ALL_TABS: Tab[] = ['itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'flights', 'budget', 'guide', 'pdf', 'group'];
+const ALL_TABS: Tab[] = ['itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group'];
 
 /** Schede per la navigazione da telefono: le prime 4 nella barra in basso, le altre in "Altro". */
 const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: string; tint: string }[] = [
@@ -59,6 +60,7 @@ const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: st
   { id: 'map', label: 'Mappa', icon: Map, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
   { id: 'gallery', label: 'Galleria', icon: Camera, active: 'text-pink-400', tint: 'bg-pink-500/15 border-pink-500/40 text-pink-300' },
   { id: 'packing', label: 'Valigia', icon: Luggage, active: 'text-teal-400', tint: 'bg-teal-500/15 border-teal-500/40 text-teal-300' },
+  { id: 'expenses', label: 'Spese', icon: Wallet, active: 'text-emerald-400', tint: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
   { id: 'accommodations', label: '4 Alloggi', icon: Home, active: 'text-blue-400', tint: 'bg-blue-500/15 border-blue-500/40 text-blue-300' },
   { id: 'weather', label: 'Meteo', icon: CloudSun, active: 'text-amber-400', tint: 'bg-amber-500/15 border-amber-500/40 text-amber-300' },
   { id: 'flights', label: 'Voli & Scalo', icon: Plane, active: 'text-sky-400', tint: 'bg-sky-500/15 border-sky-500/40 text-sky-300' },
@@ -270,6 +272,15 @@ function TripPortal() {
             <span>Valigia & Oggetti</span>
           </button>
           <button
+            onClick={() => setActiveTab('expenses')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'expenses' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Spese</span>
+          </button>
+          <button
             onClick={() => setActiveTab('flights')}
             className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
               activeTab === 'flights' ? 'text-sky-400 border-b-2 border-sky-400 pb-0.5 font-bold' : ''
@@ -478,6 +489,15 @@ function TripPortal() {
         >
           <Luggage className="w-3.5 h-3.5" />
           <span>Valigia</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('expenses')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'expenses' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-emerald-300 bg-emerald-950/30'
+          }`}
+        >
+          <Wallet className="w-3.5 h-3.5" />
+          <span>Spese</span>
         </button>
         <button
           onClick={() => setActiveTab('flights')}
@@ -739,6 +759,8 @@ function TripPortal() {
         {activeTab === 'packing' && (
           <PackingListView />
         )}
+
+        {activeTab === 'expenses' && <ExpensesView />}
 
         {activeTab === 'flights' && (
           <FlightsAndLayoverView />
