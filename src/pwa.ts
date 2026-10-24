@@ -113,6 +113,7 @@ export function useMediaQuery(query: string): boolean {
  */
 export function useUpdateAvailable() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [newVersion, setNewVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (!import.meta.env.PROD) return;
@@ -122,8 +123,11 @@ export function useUpdateAvailable() {
       try {
         const res = await fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
-        const data = (await res.json()) as { build?: string };
-        if (!cancelled && data.build && data.build !== BUILD_ID) setUpdateAvailable(true);
+        const data = (await res.json()) as { build?: string; version?: string };
+        if (!cancelled && data.build && data.build !== BUILD_ID) {
+          setUpdateAvailable(true);
+          setNewVersion(data.version ?? null);
+        }
       } catch {
         // offline o file assente: nessun avviso
       }
@@ -153,5 +157,5 @@ export function useUpdateAvailable() {
     window.location.reload();
   };
 
-  return { updateAvailable, applyUpdate };
+  return { updateAvailable, newVersion, applyUpdate };
 }

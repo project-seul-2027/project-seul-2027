@@ -18,6 +18,8 @@ import { PdfViewerModal } from './components/PdfViewerModal';
 import { hasResumeFlag } from './services/pendingCamera';
 import { GroupView } from './components/GroupView';
 import { WeatherView } from './components/WeatherView';
+import { ChangelogView } from './components/ChangelogView';
+import { APP_VERSION } from './data/changelog';
 import { WorldClockBar } from './components/WorldClockBar';
 import { SharedGalleryView } from './components/SharedGalleryView';
 import { PackingListView } from './components/PackingListView';
@@ -28,7 +30,7 @@ import { useAuth } from './auth/AuthContext';
 import { useInstallPrompt, useMediaQuery, useUpdateAvailable, BUILD_ID } from './pwa';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
-  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus, Wallet
+  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus, Wallet, History
 } from 'lucide-react';
 
 /**
@@ -50,9 +52,9 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group';
+type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
 
-const ALL_TABS: Tab[] = ['itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group'];
+const ALL_TABS: Tab[] = ['itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
 
 /** Schede per la navigazione da telefono: le prime 4 nella barra in basso, le altre in "Altro". */
 const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: string; tint: string }[] = [
@@ -67,7 +69,8 @@ const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: st
   { id: 'budget', label: 'Preventivo', icon: Coins, active: 'text-emerald-400', tint: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
   { id: 'guide', label: 'Guida', icon: BookOpen, active: 'text-indigo-400', tint: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300' },
   { id: 'pdf', label: 'PDF', icon: FileText, active: 'text-rose-400', tint: 'bg-rose-500/15 border-rose-500/40 text-rose-300' },
-  { id: 'group', label: 'Partecipanti', icon: Users, active: 'text-purple-400', tint: 'bg-purple-500/15 border-purple-500/40 text-purple-300' }
+  { id: 'group', label: 'Partecipanti', icon: Users, active: 'text-purple-400', tint: 'bg-purple-500/15 border-purple-500/40 text-purple-300' },
+  { id: 'changelog', label: 'Changelog', icon: History, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' }
 ];
 const PRIMARY_MOBILE_TABS = MOBILE_TABS.slice(0, 4);
 const MORE_MOBILE_TABS = MOBILE_TABS.slice(4);
@@ -92,7 +95,7 @@ function TripPortal() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isInstallHelpOpen, setIsInstallHelpOpen] = useState(false);
   const install = useInstallPrompt();
-  const { updateAvailable, applyUpdate } = useUpdateAvailable();
+  const { updateAvailable, newVersion, applyUpdate } = useUpdateAvailable();
   const [installBannerHidden, setInstallBannerHidden] = useState(() => {
     try {
       return localStorage.getItem('seoul2027_install_banner_hidden') === '1';
@@ -325,6 +328,15 @@ function TripPortal() {
             <Users className="w-3.5 h-3.5 text-purple-400" />
             <span>Partecipanti</span>
           </button>
+          <button
+            onClick={() => setActiveTab('changelog')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'changelog' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <History className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Novità</span>
+          </button>
         </nav>
 
         {/* Zone 3: Group Status & Actions (No login/accounts) */}
@@ -544,6 +556,15 @@ function TripPortal() {
           <Users className="w-3.5 h-3.5" />
           <span>Partecipanti</span>
         </button>
+        <button
+          onClick={() => setActiveTab('changelog')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'changelog' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <History className="w-3.5 h-3.5" />
+          <span>Changelog</span>
+        </button>
       </div>
 
       {/* Hero Atmosphere Section */}
@@ -661,7 +682,7 @@ function TripPortal() {
           className="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[90] mx-auto max-w-md flex items-center gap-3 rounded-2xl border border-emerald-400/50 bg-emerald-950/95 px-4 py-3 shadow-2xl backdrop-blur"
         >
           <div className="flex-1 min-w-0 text-xs text-emerald-100 leading-snug">
-            <div className="font-bold text-white">Nuova versione disponibile</div>
+            <div className="font-bold text-white">Nuova versione disponibile{newVersion ? ` · v${newVersion}` : ''}</div>
             Aggiorna per vedere le ultime novità.
           </div>
           <button
@@ -779,6 +800,8 @@ function TripPortal() {
         )}
 
         {activeTab === 'group' && <GroupView />}
+
+        {activeTab === 'changelog' && <ChangelogView />}
       </main>
 
       <GoogleAuthModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
@@ -792,7 +815,14 @@ function TripPortal() {
               <span>·</span>
               <span>Viaggio in Corea del Sud per 4 amici (2 - 19 marzo 2027)</span>
               <span>·</span>
-              <span className="font-mono text-slate-600" title="Versione dell'app in uso">v. {BUILD_ID}</span>
+              <button
+                type="button"
+                onClick={() => goToTab('changelog')}
+                className="font-mono text-slate-500 hover:text-cyan-300 transition-colors"
+                title={`Apri il changelog · build ${BUILD_ID}`}
+              >
+                {APP_VERSION ? `v${APP_VERSION}` : `v. ${BUILD_ID}`}
+              </button>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
