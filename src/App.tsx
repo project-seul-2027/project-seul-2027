@@ -14,6 +14,7 @@ import { FlightsAndLayoverView } from './components/FlightsAndLayoverView';
 import { BudgetTrackerView } from './components/BudgetTrackerView';
 import { PracticalGuideView } from './components/PracticalGuideView';
 import { PdfViewerModal } from './components/PdfViewerModal';
+import { hasResumeFlag } from './services/pendingCamera';
 import { GroupView } from './components/GroupView';
 import { WeatherView } from './components/WeatherView';
 import { WorldClockBar } from './components/WorldClockBar';
@@ -73,7 +74,10 @@ const MORE_MOBILE_TABS = MOBILE_TABS.slice(4);
 function initialTab(): Tab {
   if (typeof window === 'undefined') return 'itinerary';
   const fromUrl = new URLSearchParams(window.location.search).get('tab');
-  return fromUrl && (ALL_TABS as string[]).includes(fromUrl) ? (fromUrl as Tab) : 'itinerary';
+  if (fromUrl && (ALL_TABS as string[]).includes(fromUrl)) return fromUrl as Tab;
+  // Ritorno dall'app Fotocamera: riapri la galleria con la foto da confermare
+  if (hasResumeFlag()) return 'gallery';
+  return 'itinerary';
 }
 
 function TripPortal() {
