@@ -11,11 +11,11 @@ export const FlightsAndLayoverView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Navigation Sub-Tabs & Direct Skyscanner Action */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-3">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2">
           <button
             onClick={() => setActiveTab('flights')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center justify-center sm:justify-start gap-2 transition-all min-w-0 ${
               activeTab === 'flights'
                 ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -27,7 +27,7 @@ export const FlightsAndLayoverView: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('beijing_guide')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center justify-center sm:justify-start gap-2 transition-all min-w-0 ${
               activeTab === 'beijing_guide'
                 ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -39,7 +39,7 @@ export const FlightsAndLayoverView: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('malpensa')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold flex items-center justify-center sm:justify-start gap-2 transition-all min-w-0 ${
               activeTab === 'malpensa'
                 ? 'bg-slate-700 text-white shadow-lg'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -55,7 +55,7 @@ export const FlightsAndLayoverView: React.FC = () => {
           href={SKYSCANNER_FLIGHTS_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-sky-200 bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/40 hover:border-sky-400 shadow-md shadow-sky-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] group"
+          className="inline-flex w-full sm:w-auto justify-center items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-sky-200 bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/40 hover:border-sky-400 shadow-md shadow-sky-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] group"
           title="Apri i voli selezionati su Skyscanner in una nuova scheda"
         >
           <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
@@ -78,7 +78,7 @@ export const FlightsAndLayoverView: React.FC = () => {
                   <Plane className="w-3.5 h-3.5 text-sky-400 transform rotate-45" />
                   Skyscanner · Voli Selezionati
                 </span>
-                <span className="text-[11px] text-slate-300 font-mono bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800">
+                <span className="text-[11px] text-slate-300 font-mono bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800 max-w-full break-words leading-relaxed">
                   Air China · Milano (MXP) ⇄ Seul (ICN) via Pechino
                 </span>
               </div>

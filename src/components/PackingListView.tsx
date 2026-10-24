@@ -597,17 +597,17 @@ export const PackingListView: React.FC = () => {
 
       {/* Selezione Scheda: "La mia Valigia" vs "Valigie Condivise con Me" */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
           <button
             onClick={() => setActiveSubTab('my_list')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`w-full sm:w-auto min-w-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeSubTab === 'my_list'
                 ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
             }`}
           >
-            <Luggage className="w-4 h-4" />
-            <span>La mia Valigia</span>
+            <Luggage className="w-4 h-4 shrink-0" />
+            <span className="text-left leading-tight">La mia Valigia</span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
               activeSubTab === 'my_list' ? 'bg-slate-950/30 text-slate-900' : 'bg-slate-800 text-slate-400'
             }`}>
@@ -617,14 +617,14 @@ export const PackingListView: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('shared_lists')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`w-full sm:w-auto min-w-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeSubTab === 'shared_lists'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>Valigie Condivise con Me</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="text-left leading-tight">Valigie Condivise con Me</span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
               activeSubTab === 'shared_lists' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
             }`}>
@@ -634,10 +634,10 @@ export const PackingListView: React.FC = () => {
         </div>
 
         {activeSubTab === 'my_list' && (
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setIsAddCustomOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              className="w-full sm:w-auto justify-center px-3 py-2.5 sm:py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Aggiungi Oggetto</span>
@@ -686,7 +686,7 @@ export const PackingListView: React.FC = () => {
           )}
 
           {/* Barra di Filtri Categoria & Ricerca */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between min-w-0">
             {/* Pillole Categoria */}
             <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none text-xs">
               <button
@@ -722,8 +722,8 @@ export const PackingListView: React.FC = () => {
             </div>
 
             {/* Ricerca e Filtro Stato */}
-            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-              <div className="relative w-full md:w-48">
+            <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-auto md:justify-end min-w-0">
+              <div className="relative col-span-2 md:col-span-1 md:w-48 min-w-0">
                 <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -737,9 +737,9 @@ export const PackingListView: React.FC = () => {
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500 font-mono"
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2 sm:px-2.5 py-2 sm:py-1.5 text-[11px] sm:text-xs text-slate-300 focus:outline-none focus:border-teal-500 font-mono min-w-0 w-full"
               >
-                <option value="all">🎒🧳✈️ Tutti i bagagli</option>
+                <option value="all">🎒🧳✈️ Tutti</option>
                 <option value="backpack">🎒 Solo Zaino</option>
                 <option value="cabin">🧳 Solo Valigia a mano</option>
                 <option value="checked">✈️ Solo Valigia da stiva</option>
@@ -748,7 +748,7 @@ export const PackingListView: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500"
+                className="bg-slate-950 border border-slate-800 rounded-lg px-2 sm:px-2.5 py-2 sm:py-1.5 text-[11px] sm:text-xs text-slate-300 focus:outline-none focus:border-teal-500 min-w-0 w-full"
               >
                 <option value="all">Tutti gli stati</option>
                 <option value="unpacked">Da mettere in valigia</option>
