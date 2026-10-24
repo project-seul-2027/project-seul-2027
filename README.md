@@ -39,6 +39,16 @@ Aggiunge spese chiunque nel gruppo; modifica ed elimina solo chi l'ha creata o c
 
 - Servono le regole aggiornate in `firestore.rules` (Firestore → Regole → Pubblica), altrimenti compare "Operazione non consentita".
 
+## Changelog e numeri di versione
+
+La scheda **Changelog** (in "Altro" sul telefono, "Novità"/"Changelog" nel menu su computer, oppure toccando il numero di versione nel piè di pagina) elenca gli aggiornamenti pubblicati su GitHub. **Ogni commit è una versione**, e il numero finale sale di 1 a ogni commit, senza limite: 1.0.0, 1.0.1, … 1.0.9, poi dal commit `3a0f64a` (1.1.0) si prosegue con 1.1.1, 1.1.2, … 1.1.10, 1.1.20 e così via.
+
+- L'elenco si crea da solo dalla cronologia git: `scripts/generate-changelog.mjs` gira a ogni `npm run dev` e `npm run build` e scrive `src/data/changelog.generated.json` (ignorato da git, non va modificato). Se il clone è parziale (come quello di GitHub Actions) lo script scarica da solo il resto della cronologia, quindi a ogni push il Changelog si aggiorna e il numero di versione compare nel piè di pagina e nell'avviso "Nuova versione disponibile".
+- **Titolo e punti elenco** vengono dal messaggio del commit: la prima riga è il titolo, le righe che iniziano con `- ` diventano voci. Conviene scrivere messaggi chiari, perché sono quello che si legge nella pagina.
+- **Per iniziare la serie successiva** (per esempio 1.2.0) aggiungi una riga all'elenco `RELEASES` in `scripts/generate-changelog.mjs` con l'hash del commit che deve diventare 1.2.0: da lì si riparte da 1.2.0, 1.2.1, …
+- Senza cronologia git (copia scaricata come zip) il sito funziona lo stesso e la scheda mostra un avviso.
+- Se la storia viene riscritta (rebase con force push) i numeri si ricalcolano: lo stesso commit può cambiare numero.
+
 ## App per Android e iPhone
 
 Il sito è anche un'app installabile (PWA): si apre a schermo intero dall'icona sulla home, ha una barra di navigazione in basso e funziona anche senza rete con i dati già visti (itinerario, valigia, galleria). Gli aggiornamenti arrivano da soli a ogni push, senza passare dagli store.
