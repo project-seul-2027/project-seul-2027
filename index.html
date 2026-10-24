@@ -27,13 +27,12 @@
       #splash { position: fixed; inset: 0; z-index: 2147483000; background: #090d16; display: flex; align-items: center; justify-content: center; overflow: hidden; height: 100vh; height: 100dvh; opacity: 1; transition: opacity 0.42s ease; }
       #splash.sp-out { opacity: 0; pointer-events: none; }
       #splash .sp-stage { position: relative; width: 26vmin; height: 26vmin; }
-      #splash .sp-icon { position: absolute; inset: 0; width: 100%; height: 100%; display: block; will-change: transform, opacity; backface-visibility: hidden; transform: translateZ(0); animation: sp-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both, sp-zoom 0.62s cubic-bezier(0.7, 0, 0.6, 1) 1.3s both; }
-      #splash .sp-plane { position: absolute; left: 0; top: 30vh; width: 14vmin; height: 5.25vmin; will-change: transform; backface-visibility: hidden; animation: sp-fly 1.1s cubic-bezier(0.45, 0, 0.3, 1) 0.2s both; }
-      #splash .sp-plane svg { width: 100%; height: 100%; display: block; overflow: visible; }
-      #splash .sp-trail { position: absolute; right: 88%; top: 50%; width: 26vmin; height: 2px; margin-top: -1px; border-radius: 2px; background: linear-gradient(90deg, rgba(103, 232, 249, 0), rgba(103, 232, 249, 0.75)); transform-origin: right center; }
+      #splash .sp-icon { position: absolute; inset: 0; width: 100%; height: 100%; display: block; will-change: transform, opacity; backface-visibility: hidden; transform: translateZ(0); animation: sp-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+      #splash .sp-plane { position: absolute; left: 0; top: calc(50% + 21vmin); width: 11vmin; height: 4.1vmin; margin-top: -2vmin; opacity: 0.92; will-change: transform; backface-visibility: hidden; animation: sp-fly 1.25s cubic-bezier(0.4, 0, 0.35, 1) 0.45s both; }
+      #splash .sp-plane svg { width: 100%; height: 100%; display: block; overflow: visible; transform: scaleX(-1); }
+      #splash .sp-trail { position: absolute; right: 88%; top: 50%; width: 20vmin; height: 2px; margin-top: -1px; border-radius: 2px; background: linear-gradient(90deg, rgba(103, 232, 249, 0), rgba(103, 232, 249, 0.75)); transform-origin: right center; }
       @keyframes sp-in { from { transform: scale(0.86); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-      @keyframes sp-zoom { from { transform: scale(1); } to { transform: scale(var(--sp-full, 6)); } }
-      @keyframes sp-fly { from { transform: translate3d(-22vw, 0, 0); } to { transform: translate3d(118vw, 0, 0); } }
+      @keyframes sp-fly { from { transform: translate3d(-24vw, 0, 0); } to { transform: translate3d(112vw, 0, 0); } }
       @media (prefers-reduced-motion: reduce) {
         #splash .sp-plane { display: none; }
         #splash .sp-icon { animation: sp-fade 0.25s ease both; }
@@ -104,12 +103,6 @@
         var root = document.getElementById('splash');
         if (!root) return;
         var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        function setFull() {
-          var w = window.innerWidth, h = window.innerHeight;
-          root.style.setProperty('--sp-full', (Math.max(w, h) * 1.15 / (0.26 * Math.min(w, h))).toFixed(2));
-        }
-        setFull();
-        window.addEventListener('resize', setFull);
         var appReady = false, animDone = false, finished = false;
         function finish() {
           if (finished || !appReady || !animDone) return;

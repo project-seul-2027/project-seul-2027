@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, RefreshCw, ScanSearch, Smartphone, X, Zap, ZapOff } from 'lucide-react';
-import { estimateMagnification, frameContrast, verdictFromEstimate, type GrayFrame } from '../services/lensProbe';
+import { assignLenses, estimateMagnification, frameContrast, type GrayFrame } from '../services/lensProbe';
 
 interface CameraCaptureModalProps {
   /** Foto scattata (JPEG) */
@@ -20,7 +20,9 @@ const ULTRA_DEFAULT_MAG = 0.5;
 /** Zoom massimo mostrato quando si può passare a un teleobiettivo dedicato */
 const TELE_DISPLAY_CAP = 30;
 
-const LENS_INFO_KEY = 'seul2027_lens_info_v1';
+// v2: le misure della v1 davano per scontato che l'obiettivo aperto di default fosse il principale (sbagliato su alcuni telefoni)
+const LENS_INFO_KEY = 'seul2027_lens_info_v2';
+const MAIN_LENS_KEY = 'seul2027_main_lens_v2';
 const ASPECT_KEY = 'seul2027_camera_aspect';
 
 type ZoomMode = 'hardware' | 'digital';
@@ -83,6 +85,23 @@ function loadLensInfo(): Record<string, LensInfo> {
     return raw ? (JSON.parse(raw) as Record<string, LensInfo>) : {};
   } catch {
     return {};
+  }
+}
+
+function loadMainOverride(): string | null {
+  try {
+    return localStorage.getItem(MAIN_LENS_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveMainOverride(id: string | null): void {
+  try {
+    if (id) localStorage.setItem(MAIN_LENS_KEY, id);
+    else localStorage.removeItem(MAIN_LENS_KEY);
+  } catch {
+    /* ignora */
   }
 }
 
@@ -284,6 +303,8 @@ async function probeFrame(deviceId: string | null, portrait: boolean, alive: () 
  */
 export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCapture, onClose, onUseSystemCamera }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  // Stessa ripresa, attenuata, che mostra anche ciò che resta fuori dal formato scelto
+  const ghostRef = useRef<HTMLVideoElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -296,11 +317,13 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   const lastMainMaxRef = useRef(DIGITAL_ZOOM_MAX);
   const aliveRef = useRef(true);
   const mainIdRef = useRef<string | null>(null);
+  // Principale misurato dall'app (può non essere quello aperto di default dal telefono)
+  const mainOverrideRef = useRef<string | null>(loadMainOverride());
   const lensInfoRef = useRef<Record<string, LensInfo>>({});
 
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   // Obiettivo posteriore scelto (null = quello predefinito del telefono)
-  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(() => mainOverrideRef.current);
   const [restartKey, setRestartKey] = useState(0);
   const [rawLenses, setRawLenses] = useState<RawLens[]>([]);
   const [mainId, setMainId] = useState<string | null>(null);
@@ -373,14 +396,23 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           video.srcObject = stream;
           await video.play().catch(() => undefined);
         }
+        const ghost = ghostRef.current;
+        if (ghost) {
+          ghost.srcObject = stream;
+          ghost.play().catch(() => undefined);
+        }
 
         const settings = track.getSettings() as MediaTrackSettings & { zoom?: number };
         const caps = (track.getCapabilities?.() ?? {}) as CameraCaps;
         const activeId = settings.deviceId ?? null;
         // L'obiettivo aperto senza sceglierlo è quello predefinito del telefono: il "Principale"
-        if (!deviceId && facing === 'environment' && activeId) {
-          mainIdRef.current = activeId;
-          setMainId(activeId);
+        if (facing === 'environment' && activeId) {
+          const override = mainOverrideRef.current;
+          const target = override ?? activeId;
+          if (!deviceId || deviceId === override) {
+            mainIdRef.current = target;
+            setMainId(target);
+          }
         }
 
         // Con il permesso concesso il browser mostra i nomi delle fotocamere: si cercano gli obiettivi posteriori
@@ -403,6 +435,15 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           rawList = [];
         }
         if (cancelled) return;
+
+        // Il principale salvato non esiste più (permessi azzerati, fotocamera diversa): si torna al predefinito
+        if (mainOverrideRef.current && rawList.length > 0 && !rawList.some((r) => r.id === mainOverrideRef.current)) {
+          mainOverrideRef.current = null;
+          saveMainOverride(null);
+          setDeviceId(null);
+          setRestartKey((k) => k + 1);
+          return;
+        }
 
         const built = buildLenses(rawList, lensInfoRef.current, mainIdRef.current);
         const role = lensRole(built.find((l) => l.id === activeId) ?? null, mainIdRef.current);
@@ -452,6 +493,10 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         pendingZoomRef.current = null;
         // L'obiettivo scelto non si apre: si torna a quello predefinito
         if (deviceId) {
+          if (deviceId === mainOverrideRef.current) {
+            mainOverrideRef.current = null;
+            saveMainOverride(null);
+          }
           setDeviceId(null);
           return;
         }
@@ -560,7 +605,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           switchingRef.current = true;
           pendingZoomRef.current = next;
           setZoom(next);
-          setDeviceId(target === 'MAIN' ? null : target);
+          setDeviceId(target === 'MAIN' ? mainOverrideRef.current : target);
           return;
         }
       } else if (switchingRef.current) {
@@ -588,7 +633,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     }
     switchingRef.current = true;
     pendingZoomRef.current = lensRole(lens, mainId) === 'ultra' || lensRole(lens, mainId) === 'tele' ? lens.mag : 1;
-    setDeviceId(lens.id === mainId ? null : lens.id);
+    setDeviceId(lens.id === mainId ? mainOverrideRef.current : lens.id);
   };
 
   /** L'utente dice che cos'è un obiettivo: la scelta vale su questo telefono */
@@ -610,12 +655,16 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     }
   };
 
-  /** Confronta il campo visivo di ogni obiettivo con quello del principale, per capire quale sia ultra grandangolare o tele */
+  /**
+   * Confronta il campo visivo di tutti gli obiettivi con quello aperto di default, per capire quale sia ultra grandangolare,
+   * principale e tele. Il principale non si dà per scontato: su alcuni telefoni il predefinito è l'ultra grandangolare.
+   */
   const probeLenses = async () => {
     const video = videoRef.current;
     if (probing || !ready || !video) return;
-    const targets = lenses.filter((l, i) => i > 0 && l.origin !== 'user');
-    if (targets.length === 0) return;
+    const refLens = rawLenses.find((r) => r.id === mainId) ?? rawLenses[0];
+    const targets = rawLenses.filter((r) => r.id !== refLens?.id);
+    if (!refLens || targets.length === 0) return;
     const portrait = video.videoHeight >= video.videoWidth;
     const alive = () => aliveRef.current;
     setNotice(null);
@@ -624,40 +673,39 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     // Android apre una sola fotocamera alla volta: si ferma l'anteprima
     streamRef.current?.getTracks().forEach((t) => t.stop());
     video.srcObject = null;
+    if (ghostRef.current) ghostRef.current.srcObject = null;
     await sleep(350);
 
-    const found: { lens: Lens; info: LensInfo }[] = [];
     let failure: string | null = null;
-    const main = await probeFrame(mainId, portrait, alive);
-    if (!main) failure = 'Non riesco ad aprire gli obiettivi per confrontarli.';
-    else if (frameContrast(main) < 10) failure = 'La scena è troppo uniforme (buio o muro): inquadra qualcosa con molti dettagli.';
+    let assignment: ReturnType<typeof assignLenses> = null;
+    const ref = await probeFrame(refLens.id, portrait, alive);
+    if (!ref) failure = 'Non riesco ad aprire gli obiettivi per confrontarli.';
+    else if (frameContrast(ref) < 10) failure = 'La scena è troppo uniforme (buio o muro): inquadra qualcosa con molti dettagli.';
 
-    if (!failure && main) {
+    if (!failure && ref) {
+      const estimates: { id: string; est: ReturnType<typeof estimateMagnification> }[] = [];
       for (let i = 0; i < targets.length && alive(); i++) {
-        const lens = targets[i];
         setProbing({ step: i + 1, total: targets.length + 1 });
         await sleep(300);
-        const frame = await probeFrame(lens.id, portrait, alive);
-        if (!frame) continue;
-        const verdict = verdictFromEstimate(estimateMagnification(main, frame));
-        if (verdict) found.push({ lens, info: { kind: verdict.kind, mag: verdict.mag, origin: 'measured' } });
+        const frame = await probeFrame(targets[i].id, portrait, alive);
+        estimates.push({ id: targets[i].id, est: frame ? estimateMagnification(ref, frame) : null });
       }
+      if (alive()) assignment = assignLenses(refLens.id, estimates);
     }
     if (!alive()) return;
 
-    if (found.length > 0) {
-      const next = { ...lensInfoRef.current };
-      for (const f of found) next[f.lens.id] = f.info;
+    if (assignment) {
+      const next: Record<string, LensInfo> = {};
+      for (const [id, o] of Object.entries(assignment.others)) next[id] = { kind: o.kind, mag: o.mag, origin: 'measured' };
       saveLensInfo(next);
       lensInfoRef.current = next;
       setLensInfo(next);
-      const rebuilt = buildLenses(rawLenses, next, mainId);
-      setNotice({
-        ok: true,
-        text: found
-          .map((f) => `${f.lens.name} = ${rebuilt.find((l) => l.id === f.lens.id)?.name ?? f.info.kind}`)
-          .join(' · '),
-      });
+      mainOverrideRef.current = assignment.mainId;
+      saveMainOverride(assignment.mainId);
+      mainIdRef.current = assignment.mainId;
+      setMainId(assignment.mainId);
+      const rebuilt = buildLenses(rawLenses, next, assignment.mainId);
+      setNotice({ ok: true, text: rebuilt.map((l) => l.name).join(' · ') });
     } else {
       setNotice({
         ok: false,
@@ -670,7 +718,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     // Riapre la fotocamera sul principale
     pendingZoomRef.current = null;
     switchingRef.current = false;
-    setDeviceId(null);
+    setDeviceId(mainOverrideRef.current);
     setRestartKey((k) => k + 1);
   };
 
@@ -802,7 +850,25 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   }
 
   // Il pulsante "Riconosci" serve finché c'è un obiettivo di cui non si sa nulla
-  const needsRecognition = lenses.some((l, i) => i > 0 && l.origin === 'none');
+  const needsRecognition = lenses.length > 1;
+
+  // Ripresa attenuata dietro il riquadro: stesse dimensioni e stesso ingrandimento del video principale, così combacia
+  let ghostStyle: React.CSSProperties | null = null;
+  if (area.w > 0 && area.h > 0 && videoDims.w > 0 && videoDims.h > 0 && (boxStyle.width !== area.w || boxStyle.height !== area.h)) {
+    const bw = Number(boxStyle.width);
+    const bh = Number(boxStyle.height);
+    const k = Math.max(bw / videoDims.w, bh / videoDims.h);
+    ghostStyle = { width: videoDims.w * k, height: videoDims.h * k };
+  }
+
+  const ghostOn = ghostStyle !== null;
+  useEffect(() => {
+    const ghost = ghostRef.current;
+    if (ghostOn && ghost && streamRef.current && ghost.srcObject !== streamRef.current) {
+      ghost.srcObject = streamRef.current;
+      ghost.play().catch(() => undefined);
+    }
+  }, [ghostOn, ready, restartKey]);
 
   const previewTransform = [
     facing === 'user' ? 'scaleX(-1)' : '',
@@ -874,6 +940,22 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           if (e.touches.length < 2) pinchRef.current = null;
         }}
       >
+        {/* Fuori dal formato scelto si vede la stessa ripresa, attenuata: così si capisce come viene la foto in totale */}
+        {ghostStyle && (
+          <video
+            ref={ghostRef}
+            playsInline
+            muted
+            autoPlay
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-1/2 max-w-none opacity-35"
+            style={{
+              ...ghostStyle,
+              transform: `translate(-50%, -50%)${previewTransform ? ` ${previewTransform}` : ''}`,
+            }}
+          />
+        )}
+
         {/* Riquadro con le proporzioni della foto: quello che si vede è quello che si salva */}
         <div ref={boxRef} className="relative overflow-hidden shrink-0" style={boxStyle} data-aspect={aspect}>
           <video
@@ -1030,7 +1112,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           onClick={() => {
             pendingZoomRef.current = null;
             switchingRef.current = false;
-            setDeviceId(null);
+            setDeviceId(facing === 'environment' ? null : mainOverrideRef.current);
             setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
           }}
           aria-label="Cambia fotocamera"

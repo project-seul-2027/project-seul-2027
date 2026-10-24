@@ -285,11 +285,11 @@ export const WorldClockBar: React.FC = () => {
           role="dialog"
           aria-modal="true"
           onClick={() => setIsDetailsOpen(false)}
-          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-6 overflow-hidden animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] overflow-hidden animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-cyan-500/40 rounded-t-3xl sm:rounded-3xl max-w-xl w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5 sm:space-y-5 text-slate-200 sm:my-auto max-h-[88dvh] overflow-y-auto"
+            className="bg-slate-900 border border-cyan-500/40 rounded-3xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-5 text-slate-200 max-h-full overflow-y-auto"
           >
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 sm:pb-3">

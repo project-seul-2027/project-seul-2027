@@ -25,7 +25,7 @@ export interface MagEstimate {
 const GRID_W = 64;
 const GRID_H = 48;
 const MIN_MAG = 0.3;
-const MAX_MAG = 6;
+const MAX_MAG = 10;
 
 function sampleRegion(f: GrayFrame, cx: number, cy: number, rw: number, rh: number, out: Float32Array): void {
   const { w, h, data } = f;
@@ -98,7 +98,7 @@ export function estimateMagnification(main: GrayFrame, other: GrayFrame): MagEst
   };
 
   // Scale esplorate (progressione geometrica) e piccoli spostamenti, perché gli obiettivi sono a qualche cm l'uno dall'altro
-  const steps = 72;
+  const steps = 90;
   const offsets = [-8, -4, 0, 4, 8];
   const perScale: { m: number; s: number; dx: number; dy: number }[] = [];
   for (let i = 0; i < steps; i++) {
@@ -154,4 +154,41 @@ export function verdictFromEstimate(e: MagEstimate | null): LensVerdict | null {
   }
   if (e.mag > 1.4) return { kind: 'tele', mag: Math.round(e.mag * 2) / 2 };
   return null;
+}
+
+export interface LensAssignment {
+  /** Obiettivo che fa da principale (1×): non è detto che sia quello aperto di default dal telefono */
+  mainId: string;
+  /** Tipo e ingrandimento (rispetto al principale) degli altri obiettivi */
+  others: Record<string, { kind: MeasuredKind; mag: number }>;
+}
+
+const reliable = (e: MagEstimate | null): e is MagEstimate => !!e && e.score >= 0.5 && e.margin >= 0.06;
+
+/**
+ * Dai campi visivi misurati rispetto a un obiettivo di riferimento (quello aperto di default) ricava quale sia il principale.
+ * Il telefono può aprire di default anche l'ultra grandangolare, quindi il principale non si dà per scontato:
+ * si ordinano gli obiettivi dal più largo al più stretto; il principale è il secondo se il più largo vede almeno
+ * 1,25× più del successivo e il successivo non è già un teleobiettivo (oltre 2,3× il più largo). Se la misura non è netta: null.
+ */
+export function assignLenses(refId: string, others: { id: string; est: MagEstimate | null }[]): LensAssignment | null {
+  if (others.length === 0 || !others.every((o) => reliable(o.est))) return null;
+  const all = [{ id: refId, s: 1 }, ...others.map((o) => ({ id: o.id, s: (o.est as MagEstimate).mag }))].sort(
+    (a, b) => a.s - b.s
+  );
+  const r = all[1].s / all[0].s;
+  if (r < 1.25) return null;
+  const main = r <= 2.3 ? all[1] : all[0];
+  const result: LensAssignment = { mainId: main.id, others: {} };
+  for (const l of all) {
+    if (l.id === main.id) continue;
+    const m = l.s / main.s;
+    if (m > 0.8 && m < 1.25) return null;
+    if (m <= 0.8) {
+      result.others[l.id] = { kind: 'ultra', mag: Math.abs(m - 0.5) < 0.08 ? 0.5 : Math.round(m * 10) / 10 };
+    } else {
+      result.others[l.id] = { kind: 'tele', mag: Math.max(1.5, Math.round(m * 2) / 2) };
+    }
+  }
+  return result;
 }
