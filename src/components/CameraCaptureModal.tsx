@@ -14,6 +14,8 @@ interface CameraCaptureModalProps {
 const DIGITAL_ZOOM_MAX = 4;
 /** Oltre questo valore lo zoom hardware è solo ingrandimento e peggiora la foto */
 const HARDWARE_ZOOM_CAP = 10;
+/** Un ultra grandangolare separato inquadra circa il doppio del principale: lo zoom mostrato parte da 0.5× */
+const ULTRA_BASE = 0.5;
 
 type ZoomMode = 'hardware' | 'digital';
 
@@ -27,10 +29,14 @@ interface ImageCaptureLike {
   takePhoto(): Promise<Blob>;
 }
 
-/** Obiettivo posteriore esposto dal browser (ultra grandangolare, tele, ...) */
+type LensKind = 'ultra' | 'tele' | 'other';
+
+/** Obiettivo posteriore esposto dal browser */
 interface Lens {
   id: string;
   name: string;
+  /** Solo quando il nome dell'obiettivo lo dichiara: altrimenti 'other' e non si afferma nulla */
+  kind: LensKind;
 }
 
 const FRONT_RE = /front|user|selfie|anterior|frontale/i;
@@ -38,10 +44,16 @@ const BACK_RE = /back|rear|environment|posterior|trasera|arri[eè]re/i;
 // Sensori che non servono per scattare foto (profondità, infrarossi, ...)
 const IGNORE_RE = /depth|tof|infrared|\bir\b|mono|bokeh/i;
 
-/** Il browser non dice di che tipo è un obiettivo: si deduce dal nome, altrimenti si numerano */
-function lensName(label: string, index: number): string {
-  if (/ultra|grandangol/i.test(label)) return 'Ultra grandangolare';
-  if (/tele|periscop/i.test(label)) return 'Teleobiettivo';
+function lensKind(label: string): LensKind {
+  if (/ultra|grandangol/i.test(label)) return 'ultra';
+  if (/tele|periscop/i.test(label)) return 'tele';
+  return 'other';
+}
+
+/** Il browser raramente dice di che tipo è un obiettivo: si deduce dal nome, altrimenti si numerano */
+function lensName(label: string, kind: LensKind, index: number): string {
+  if (kind === 'ultra') return 'Ultra grandangolare';
+  if (kind === 'tele') return 'Teleobiettivo';
   if (/macro/i.test(label)) return 'Macro';
   return index === 0 ? 'Principale' : `Obiettivo ${index + 1}`;
 }
@@ -53,8 +65,14 @@ function toLenses(devices: MediaDeviceInfo[]): Lens[] {
         d.kind === 'videoinput' && !!d.label && !FRONT_RE.test(d.label) && BACK_RE.test(d.label) && !IGNORE_RE.test(d.label)
     )
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
-    .map((d, i) => ({ id: d.deviceId, name: lensName(d.label, i) }));
+    .map((d, i) => {
+      const kind = lensKind(d.label);
+      return { id: d.deviceId, name: lensName(d.label, kind, i), kind };
+    });
 }
+
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+const round1 = (v: number) => Math.round(v * 10) / 10;
 
 const touchDistance = (touches: React.TouchList) =>
   Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
@@ -75,13 +93,22 @@ function grabFrame(video: HTMLVideoElement, digitalZoom: number): Promise<Blob |
 /**
  * Fotocamera dentro l'app, usata su Android: con l'app Fotocamera di sistema Android può chiudere
  * l'app durante lo scatto e la foto andrebbe persa. Offre zoom (pizzico, pulsanti e cursore),
- * flash, tocco per mettere a fuoco e foto a piena risoluzione dove il telefono lo permette.
+ * flash, tocco per mettere a fuoco, scelta dell'obiettivo e foto a piena risoluzione dove possibile.
+ *
+ * Obiettivi: il browser non dice quale lente sia ultra grandangolare o tele. Lo zoom sotto 1× di una
+ * fotocamera "logica" è per definizione l'ultra grandangolare; un obiettivo separato è riconosciuto
+ * solo se il suo nome lo dichiara. In tutti gli altri casi l'app non afferma nulla.
  */
 export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCapture, onClose, onUseSystemCamera }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const trackRef = useRef<MediaStreamTrack | null>(null);
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+  // Zoom da applicare quando la fotocamera si riapre dopo un cambio di obiettivo
+  const pendingZoomRef = useRef<number | null>(null);
+  // Cambio di obiettivo in corso: evita richieste doppie durante il pizzico
+  const switchingRef = useRef(false);
+  const lastMainMaxRef = useRef(DIGITAL_ZOOM_MAX);
 
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   // Obiettivo posteriore scelto (null = quello predefinito del telefono)
@@ -93,8 +120,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   const [busy, setBusy] = useState(false);
 
   const [zoomMode, setZoomMode] = useState<ZoomMode>('digital');
-  const [zoomMin, setZoomMin] = useState(1);
-  const [zoomMax, setZoomMax] = useState(DIGITAL_ZOOM_MAX);
+  // Limiti dello zoom dell'obiettivo aperto (hardware) e valore mostrato all'utente (rispetto al principale)
+  const [hwMin, setHwMin] = useState(1);
+  const [hwMax, setHwMax] = useState(DIGITAL_ZOOM_MAX);
   const [zoom, setZoom] = useState(1);
 
   const [torchSupported, setTorchSupported] = useState(false);
@@ -102,7 +130,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   const [focusSupported, setFocusSupported] = useState(false);
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number; key: number } | null>(null);
 
-  // Avvio della fotocamera (e riavvio quando si cambia tra posteriore e frontale)
+  // Avvio della fotocamera (e riavvio quando si cambia obiettivo o tra posteriore e frontale)
   useEffect(() => {
     let cancelled = false;
     setReady(false);
@@ -135,33 +163,59 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           await video.play().catch(() => undefined);
         }
 
-        const caps = (track.getCapabilities?.() ?? {}) as CameraCaps;
-        const settings = track.getSettings() as MediaTrackSettings & { zoom?: number };
-        if (caps.zoom && caps.zoom.max > caps.zoom.min) {
-          setZoomMode('hardware');
-          setZoomMin(caps.zoom.min);
-          setZoomMax(Math.min(caps.zoom.max, HARDWARE_ZOOM_CAP));
-          setZoom(settings.zoom ?? caps.zoom.min);
-        } else {
-          setZoomMode('digital');
-          setZoomMin(1);
-          setZoomMax(DIGITAL_ZOOM_MAX);
-          setZoom(1);
-        }
-        setTorchSupported(!!caps.torch);
-        setFocusSupported(Array.isArray(caps.focusMode) && caps.focusMode.includes('single-shot'));
-        setActiveLensId(track.getSettings().deviceId ?? null);
-
         // Con il permesso concesso il browser mostra i nomi delle fotocamere: si cercano gli obiettivi posteriori
+        let lensList: Lens[] = [];
         try {
           const devices = await navigator.mediaDevices.enumerateDevices();
-          if (!cancelled) setLenses(facing === 'environment' ? toLenses(devices) : []);
+          if (facing === 'environment') lensList = toLenses(devices);
         } catch {
-          if (!cancelled) setLenses([]);
+          lensList = [];
         }
+        if (cancelled) return;
+
+        const settings = track.getSettings() as MediaTrackSettings & { zoom?: number };
+        const caps = (track.getCapabilities?.() ?? {}) as CameraCaps;
+        const activeId = settings.deviceId ?? null;
+        const kind = lensList.find((l) => l.id === activeId)?.kind ?? 'other';
+        const scale = kind === 'ultra' ? ULTRA_BASE : 1;
+
+        let mode: ZoomMode = 'digital';
+        let min = 1;
+        let max = DIGITAL_ZOOM_MAX;
+        let initialHw = 1;
+        if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+          mode = 'hardware';
+          min = caps.zoom.min;
+          max = Math.min(caps.zoom.max, HARDWARE_ZOOM_CAP);
+          initialHw = settings.zoom ?? caps.zoom.min;
+        }
+        if (kind !== 'ultra') lastMainMaxRef.current = max;
+
+        // Zoom richiesto prima del cambio di obiettivo (es. 0.9× dopo il passaggio all'ultra grandangolare)
+        let hw = initialHw;
+        const pending = pendingZoomRef.current;
+        pendingZoomRef.current = null;
+        if (pending != null) {
+          hw = clamp(pending / scale, min, max);
+          if (mode === 'hardware') {
+            track.applyConstraints({ advanced: [{ zoom: hw } as MediaTrackConstraintSet] }).catch(() => undefined);
+          }
+        }
+
+        setZoomMode(mode);
+        setHwMin(min);
+        setHwMax(max);
+        setZoom(round1(scale * hw));
+        setTorchSupported(!!caps.torch);
+        setFocusSupported(Array.isArray(caps.focusMode) && caps.focusMode.includes('single-shot'));
+        setLenses(lensList);
+        setActiveLensId(activeId);
+        switchingRef.current = false;
         setReady(true);
       } catch (err) {
         if (cancelled) return;
+        switchingRef.current = false;
+        pendingZoomRef.current = null;
         // L'obiettivo scelto non si apre: si torna a quello predefinito
         if (deviceId) {
           setDeviceId(null);
@@ -194,18 +248,57 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const activeLens = lenses.find((l) => l.id === activeLensId) ?? null;
+  const activeKind: LensKind = activeLens?.kind ?? 'other';
+  const ultraLens = lenses.find((l) => l.kind === 'ultra') ?? null;
+  // Zoom mostrato = zoom dell'obiettivo × scala (l'ultra grandangolare separato vale 0.5×)
+  const scale = activeKind === 'ultra' ? ULTRA_BASE : 1;
+  // Sotto 1× si passa all'ultra grandangolare separato solo se l'obiettivo principale non scende già sotto 1×
+  const canSwitchToUltra = facing === 'environment' && !!ultraLens && activeKind !== 'ultra' && hwMin >= 1;
+  const displayMin = activeKind === 'ultra' ? scale * hwMin : canSwitchToUltra ? ULTRA_BASE : hwMin;
+  const displayMax = activeKind === 'ultra' ? Math.max(lastMainMaxRef.current, 2) : hwMax;
+
   const applyZoom = useCallback(
     (value: number) => {
-      const next = Math.round(Math.min(zoomMax, Math.max(zoomMin, value)) * 10) / 10;
+      const next = round1(clamp(value, displayMin, displayMax));
+
+      // Cambio di obiettivo: sotto 1× ultra grandangolare, da 1× in su di nuovo il principale
+      if (switchingRef.current) {
+        setZoom(next);
+        pendingZoomRef.current = next;
+        return;
+      }
+      if (canSwitchToUltra && ultraLens && next < 1) {
+        switchingRef.current = true;
+        pendingZoomRef.current = next;
+        setZoom(next);
+        setDeviceId(ultraLens.id);
+        return;
+      }
+      if (activeKind === 'ultra' && next >= 1) {
+        switchingRef.current = true;
+        pendingZoomRef.current = next;
+        setZoom(next);
+        setDeviceId(null);
+        return;
+      }
+
       setZoom(next);
       if (zoomMode === 'hardware') {
         trackRef.current
-          ?.applyConstraints({ advanced: [{ zoom: next } as MediaTrackConstraintSet] })
+          ?.applyConstraints({ advanced: [{ zoom: next / scale } as MediaTrackConstraintSet] })
           .catch(() => undefined);
       }
     },
-    [zoomMin, zoomMax, zoomMode]
+    [displayMin, displayMax, canSwitchToUltra, ultraLens, activeKind, zoomMode, scale]
   );
+
+  const selectLens = (lens: Lens) => {
+    if (lens.id === activeLensId || switchingRef.current) return;
+    switchingRef.current = true;
+    pendingZoomRef.current = lens.kind === 'ultra' ? ULTRA_BASE : 1;
+    setDeviceId(lens.id);
+  };
 
   const toggleTorch = () => {
     const next = !torchOn;
@@ -235,6 +328,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     return () => window.clearTimeout(id);
   }, [focusPoint]);
 
+  // Zoom digitale effettivo (solo se l'obiettivo non ha zoom hardware)
+  const digitalZoom = zoomMode === 'digital' ? zoom / scale : 1;
+
   const takePhoto = async () => {
     const video = videoRef.current;
     const track = trackRef.current;
@@ -245,7 +341,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       // Foto a piena risoluzione del sensore (Android Chrome), con lo zoom hardware già applicato
       const ImageCaptureCtor = (window as unknown as { ImageCapture?: new (t: MediaStreamTrack) => ImageCaptureLike })
         .ImageCapture;
-      const canUseFullRes = zoomMode === 'hardware' || zoom === 1;
+      const canUseFullRes = zoomMode === 'hardware' || digitalZoom === 1;
       if (ImageCaptureCtor && track && canUseFullRes) {
         try {
           blob = await new ImageCaptureCtor(track).takePhoto();
@@ -253,7 +349,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           blob = null;
         }
       }
-      if (!blob) blob = await grabFrame(video, zoomMode === 'digital' ? zoom : 1);
+      if (!blob) blob = await grabFrame(video, digitalZoom);
       if (!blob) {
         setError('Scatto non riuscito, riprova.');
         return;
@@ -264,16 +360,21 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     }
   };
 
-  // Pulsanti rapidi di zoom (0.5× compare solo se il telefono ha il grandangolo)
+  // Pulsanti rapidi di zoom (0.5× compare solo se si può davvero scendere sotto 1×)
   const zoomPresets = Array.from(
-    new Set([zoomMin < 1 ? zoomMin : null, 1, 2, 5, 10].filter((v): v is number => v !== null && v >= zoomMin && v <= zoomMax))
+    new Set([displayMin < 1 ? displayMin : null, 1, 2, 5, 10].filter((v): v is number => v !== null && v >= displayMin && v <= displayMax))
   );
   const nearestPreset = zoomPresets.reduce((a, b) => (Math.abs(b - zoom) < Math.abs(a - zoom) ? b : a), zoomPresets[0] ?? 1);
   const formatZoom = (z: number) => `${Number.isInteger(z) ? z : z.toFixed(1)}×`;
 
+  // Avvisi verdi: compaiono solo quando è certo quale obiettivo è in uso e spariscono tornando al principale
+  const showUltraNotice =
+    ready && facing === 'environment' && (activeKind === 'ultra' || (scale === 1 && hwMin < 1 && zoom < 1));
+  const showTeleNotice = ready && facing === 'environment' && activeKind === 'tele';
+
   const previewTransform = [
     facing === 'user' ? 'scaleX(-1)' : '',
-    zoomMode === 'digital' && zoom !== 1 ? `scale(${zoom})` : '',
+    digitalZoom !== 1 ? `scale(${digitalZoom})` : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -363,6 +464,15 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           </span>
         )}
 
+        {(showUltraNotice || showTeleNotice) && (
+          <span
+            role="status"
+            className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-emerald-500 text-slate-950 text-xs font-bold shadow-lg whitespace-nowrap"
+          >
+            {showUltraNotice ? 'Ultra grandangolare attiva' : 'Teleobiettivo attivo'}
+          </span>
+        )}
+
         {!ready && !error && (
           <div className="absolute inset-0 flex items-center justify-center gap-2 text-slate-300 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" /> Apro la fotocamera…
@@ -393,7 +503,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
             <button
               key={lens.id}
               type="button"
-              onClick={() => lens.id !== activeLensId && setDeviceId(lens.id)}
+              onClick={() => selectLens(lens)}
               aria-pressed={lens.id === activeLensId}
               className={`h-9 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                 lens.id === activeLensId ? 'bg-white text-slate-950' : 'bg-white/10 text-white'
@@ -426,8 +536,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           </div>
           <input
             type="range"
-            min={zoomMin}
-            max={zoomMax}
+            min={displayMin}
+            max={displayMax}
             step={0.1}
             value={zoom}
             onChange={(e) => applyZoom(Number(e.target.value))}
@@ -442,6 +552,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         <button
           type="button"
           onClick={() => {
+            pendingZoomRef.current = null;
+            switchingRef.current = false;
             setDeviceId(null);
             setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
           }}
