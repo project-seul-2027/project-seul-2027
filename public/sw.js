@@ -1,15 +1,16 @@
 /*
  * Service worker di Seul 2027: rende il sito installabile e lo apre anche senza rete.
  *
- * - Pagine (navigazione): prima la rete, così ogni push si vede subito; senza rete, l'ultima versione salvata.
+ * - Pagine (navigazione): prima la rete, saltando la cache HTTP del browser (GitHub Pages la tiene 10 minuti),
+ *   così ogni push si vede subito; senza rete, l'ultima versione salvata.
  * - File della build (/assets/nome-HASH.js|css): in cache per sempre (il nome cambia a ogni versione).
  * - Altri file del sito (icone, PDF, immagini): subito dalla cache, aggiornati in background.
  * - Font Google e CSS di Leaflet: come sopra.
  * - Firebase, Google Maps, meteo e ogni altra API: mai toccati dal service worker.
  */
-const SHELL_CACHE = 'seul2027-shell-v1';
-const ASSET_CACHE = 'seul2027-assets-v1';
-const EXT_CACHE = 'seul2027-ext-v1';
+const SHELL_CACHE = 'seul2027-shell-v2';
+const ASSET_CACHE = 'seul2027-assets-v2';
+const EXT_CACHE = 'seul2027-ext-v2';
 const KEEP = [SHELL_CACHE, ASSET_CACHE, EXT_CACHE];
 const MAX_ASSETS = 120;
 
@@ -48,7 +49,8 @@ async function networkFirstPage(request) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 6000);
-    const response = await fetch(request, { signal: controller.signal });
+    // cache: 'reload' ignora la cache HTTP: altrimenti per 10 minuti dopo un deploy arriva l'index.html vecchio
+    const response = await fetch(request.url, { cache: 'reload', credentials: 'same-origin', signal: controller.signal });
     clearTimeout(timer);
     if (response.ok) cache.put('./', response.clone());
     return response;
@@ -95,7 +97,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.origin === self.location.origin) {
-    if (url.pathname.endsWith('/sw.js')) return;
+    if (url.pathname.endsWith('/sw.js') || url.pathname.endsWith('/version.json')) return;
     if (HASHED_ASSET.test(url.pathname)) event.respondWith(cacheFirst(request, ASSET_CACHE));
     else event.respondWith(staleWhileRevalidate(request, ASSET_CACHE, event));
     return;

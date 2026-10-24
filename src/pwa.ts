@@ -11,6 +11,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+declare const __BUILD_ID__: string;
+
+/** Versione dell'app in esecuzione (7 caratteri del commit pubblicato) */
+export const BUILD_ID: string = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
+
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((fn) => fn());
@@ -99,4 +104,54 @@ export function useMediaQuery(query: string): boolean {
     return () => mq.removeEventListener('change', onChange);
   }, [query]);
   return matches;
+}
+
+
+/**
+ * Avvisa quando online c'è una versione più nuova di quella aperta.
+ * Controlla all'avvio, quando l'app torna in primo piano, quando torna la rete e ogni 5 minuti.
+ */
+export function useUpdateAvailable() {
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    let cancelled = false;
+    const check = async () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      try {
+        const res = await fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = (await res.json()) as { build?: string };
+        if (!cancelled && data.build && data.build !== BUILD_ID) setUpdateAvailable(true);
+      } catch {
+        // offline o file assente: nessun avviso
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void check();
+    };
+    void check();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', check);
+    const timer = window.setInterval(check, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', check);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const applyUpdate = async () => {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      await reg?.update();
+    } catch {
+      // si ricarica comunque
+    }
+    window.location.reload();
+  };
+
+  return { updateAvailable, applyUpdate };
 }

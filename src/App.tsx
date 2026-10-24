@@ -24,7 +24,7 @@ import { GoogleAuthModal } from './components/GoogleAuthModal';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { useAuth } from './auth/AuthContext';
-import { useInstallPrompt, useMediaQuery } from './pwa';
+import { useInstallPrompt, useMediaQuery, useUpdateAvailable, BUILD_ID } from './pwa';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
   CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus
@@ -90,6 +90,7 @@ function TripPortal() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isInstallHelpOpen, setIsInstallHelpOpen] = useState(false);
   const install = useInstallPrompt();
+  const { updateAvailable, applyUpdate } = useUpdateAvailable();
   const [installBannerHidden, setInstallBannerHidden] = useState(() => {
     try {
       return localStorage.getItem('seoul2027_install_banner_hidden') === '1';
@@ -633,6 +634,26 @@ function TripPortal() {
         </div>
       </div>
 
+      {/* Avviso di nuova versione: l'app installata non si ricarica da sola */}
+      {updateAvailable && (
+        <div
+          role="status"
+          className="fixed inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[90] mx-auto max-w-md flex items-center gap-3 rounded-2xl border border-emerald-400/50 bg-emerald-950/95 px-4 py-3 shadow-2xl backdrop-blur"
+        >
+          <div className="flex-1 min-w-0 text-xs text-emerald-100 leading-snug">
+            <div className="font-bold text-white">Nuova versione disponibile</div>
+            Aggiorna per vedere le ultime novità.
+          </div>
+          <button
+            type="button"
+            onClick={() => void applyUpdate()}
+            className="shrink-0 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-bold text-slate-950"
+          >
+            Aggiorna
+          </button>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <main ref={mainRef} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8">
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
@@ -748,6 +769,8 @@ function TripPortal() {
               <span className="font-bold text-slate-300">Seul 2027</span>
               <span>·</span>
               <span>Viaggio in Corea del Sud per 4 amici (2 - 19 marzo 2027)</span>
+              <span>·</span>
+              <span className="font-mono text-slate-600" title="Versione dell'app in uso">v. {BUILD_ID}</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
