@@ -46,9 +46,9 @@ const MemberSheet: React.FC<{ member: GroupMember; color: string; onClose: () =>
   const hidden = OPTIONAL_SHARE_FIELDS.length - shown.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
       <button type="button" aria-label="Chiudi" onClick={onClose} className="absolute inset-0 bg-black/70" />
-      <div className="relative w-full sm:max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4">
+      <div className="relative w-full sm:max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-slate-900 border border-slate-800 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5 space-y-4">
         <div className="flex items-start gap-3">
           {member.avatarUrl ? (
             <img
