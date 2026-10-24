@@ -130,11 +130,11 @@ export const WorldClockBar: React.FC = () => {
       {/* Barra Orologio Globale - Sticky e visibile su ogni pagina */}
       <section
         aria-label="Orologio mondiale in tempo reale: Italia, Seul e Pechino"
-        className="w-full bg-[#080d1a]/95 border-b border-cyan-950/60 backdrop-blur-md px-3 sm:px-6 py-2 transition-all relative z-40"
+        className="w-full bg-[#080d1a]/95 border-b border-cyan-950/60 backdrop-blur-md px-3 sm:px-6 py-1.5 md:py-2 transition-all relative z-40"
       >
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs">
-          {/* Label Sinistra / Badge Live */}
-          <div className="flex items-center justify-between md:justify-start gap-2.5 shrink-0">
+        <div className="max-w-7xl mx-auto flex flex-row md:flex-row md:items-center justify-between gap-2 text-xs">
+          {/* Label Sinistra / Badge Live (solo desktop: sul telefono la barra è solo gli orari) */}
+          <div className="hidden md:flex items-center justify-between md:justify-start gap-2.5 shrink-0">
             <div className="flex items-center gap-1.5 text-cyan-400 font-mono font-medium">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
@@ -146,18 +146,10 @@ export const WorldClockBar: React.FC = () => {
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
-              className="inline-flex md:hidden items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-mono"
-            >
-              <Info className="w-3 h-3" />
-              <span>Dettagli fusi</span>
-            </button>
           </div>
 
           {/* Griglia / Ticker dei 3 orologi: Italia, Seul, Pechino */}
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 flex-1 md:max-w-3xl md:mx-4">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 flex-1 min-w-0 md:max-w-3xl md:mx-4">
             {/* 1. ITALIA */}
             <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition-colors">
               <div className="flex items-center gap-1.5 min-w-0">
@@ -168,9 +160,9 @@ export const WorldClockBar: React.FC = () => {
                       Italia
                     </span>
                     {romeData.isDay ? (
-                      <Sun className="w-3 h-3 text-amber-400 shrink-0" />
+                      <Sun className="hidden sm:block w-3 h-3 text-amber-400 shrink-0" />
                     ) : (
-                      <Moon className="w-3 h-3 text-indigo-300 shrink-0" />
+                      <Moon className="hidden sm:block w-3 h-3 text-indigo-300 shrink-0" />
                     )}
                   </div>
                   <span className="hidden sm:block text-[10px] text-slate-400 font-mono truncate">
@@ -180,7 +172,7 @@ export const WorldClockBar: React.FC = () => {
               </div>
               <div className="text-right shrink-0">
                 <span className="font-mono tabular-nums font-bold text-xs sm:text-sm text-emerald-300">
-                  {romeData.timeStr}
+                  <span className="sm:hidden">{romeData.timeStr.slice(0, 5)}</span><span className="hidden sm:inline">{romeData.timeStr}</span>
                 </span>
                 <span className="hidden sm:block text-[9px] font-mono text-slate-400">
                   CET
@@ -198,9 +190,9 @@ export const WorldClockBar: React.FC = () => {
                       Seul
                     </span>
                     {seoulData.isDay ? (
-                      <Sun className="w-3 h-3 text-amber-400 shrink-0" />
+                      <Sun className="hidden sm:block w-3 h-3 text-amber-400 shrink-0" />
                     ) : (
-                      <Moon className="w-3 h-3 text-indigo-300 shrink-0" />
+                      <Moon className="hidden sm:block w-3 h-3 text-indigo-300 shrink-0" />
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -208,7 +200,7 @@ export const WorldClockBar: React.FC = () => {
                       {seoulData.dayStr}
                     </span>
                     {isSeoulNextDay && (
-                      <span className="hidden sm:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-900/60 text-cyan-200 border border-cyan-500/30">
+                      <span className="hidden sm:inline-block text-[9px] font-mono px-1 py-px rounded bg-cyan-900/60 text-cyan-200 border border-cyan-500/30">
                         +1gg
                       </span>
                     )}
@@ -217,7 +209,7 @@ export const WorldClockBar: React.FC = () => {
               </div>
               <div className="text-right shrink-0">
                 <span className="font-mono tabular-nums font-bold text-xs sm:text-sm text-cyan-300">
-                  {seoulData.timeStr}
+                  <span className="sm:hidden">{seoulData.timeStr.slice(0, 5)}</span><span className="hidden sm:inline">{seoulData.timeStr}</span>
                 </span>
                 <span className="hidden sm:block text-[9px] font-mono text-cyan-400/80">
                   +8h (KST)
@@ -235,9 +227,9 @@ export const WorldClockBar: React.FC = () => {
                       Pechino
                     </span>
                     {beijingData.isDay ? (
-                      <Sun className="w-3 h-3 text-amber-400 shrink-0" />
+                      <Sun className="hidden sm:block w-3 h-3 text-amber-400 shrink-0" />
                     ) : (
-                      <Moon className="w-3 h-3 text-indigo-300 shrink-0" />
+                      <Moon className="hidden sm:block w-3 h-3 text-indigo-300 shrink-0" />
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -245,7 +237,7 @@ export const WorldClockBar: React.FC = () => {
                       {beijingData.dayStr}
                     </span>
                     {isBeijingNextDay && (
-                      <span className="hidden sm:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-amber-900/60 text-amber-200 border border-amber-500/30">
+                      <span className="hidden sm:inline-block text-[9px] font-mono px-1 py-px rounded bg-amber-900/60 text-amber-200 border border-amber-500/30">
                         +1gg
                       </span>
                     )}
@@ -254,7 +246,7 @@ export const WorldClockBar: React.FC = () => {
               </div>
               <div className="text-right shrink-0">
                 <span className="font-mono tabular-nums font-bold text-xs sm:text-sm text-amber-300">
-                  {beijingData.timeStr}
+                  <span className="sm:hidden">{beijingData.timeStr.slice(0, 5)}</span><span className="hidden sm:inline">{beijingData.timeStr}</span>
                 </span>
                 <span className="hidden sm:block text-[9px] font-mono text-slate-400">
                   +7h (CST)
@@ -262,6 +254,16 @@ export const WorldClockBar: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Telefono: un'icona discreta accanto agli orari apre la guida */}
+          <button
+            type="button"
+            onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+            aria-label="Guida ai fusi orari"
+            className="md:hidden shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 border border-cyan-500/30 text-cyan-300 active:scale-95 transition-transform"
+          >
+            <Info className="w-4 h-4" />
+          </button>
 
           {/* Pulsante info / guida fusi su desktop */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
@@ -283,24 +285,24 @@ export const WorldClockBar: React.FC = () => {
           role="dialog"
           aria-modal="true"
           onClick={() => setIsDetailsOpen(false)}
-          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-6 overflow-hidden animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-cyan-500/40 rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-5 text-slate-200 my-auto max-h-[92vh] overflow-y-auto"
+            className="bg-slate-900 border border-cyan-500/40 rounded-t-3xl sm:rounded-3xl max-w-xl w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl space-y-3.5 sm:space-y-5 text-slate-200 sm:my-auto max-h-[88dvh] overflow-y-auto"
           >
             {/* Header Modal */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-cyan-950 border border-cyan-500/40 text-cyan-300">
-                  <Globe className="w-5 h-5" />
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 sm:pb-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-cyan-950 border border-cyan-500/40 text-cyan-300 shrink-0">
+                  <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-white font-display">
-                    Guida ai Fusi Orari · Italia, Seul & Pechino
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white font-display leading-tight">
+                    Guida ai Fusi Orari
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Riferimento rapido per chiamate, jet lag e spostamenti
+                  <p className="text-[11px] sm:text-xs text-slate-400 leading-snug">
+                    Italia · Seul · Pechino
                   </p>
                 </div>
               </div>
@@ -316,32 +318,32 @@ export const WorldClockBar: React.FC = () => {
             </div>
 
             {/* Dettagli Orologi in Tempo Reale */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3">
               {CITIES.map((city) => {
                 const info = getCityTime(city.timeZone);
                 return (
                   <div
                     key={city.id}
-                    className={`p-3.5 rounded-2xl border text-center space-y-1.5 ${
+                    className={`p-2 sm:p-3.5 rounded-2xl border text-center space-y-1 sm:space-y-1.5 min-w-0 ${
                       city.id === 'seoul'
                         ? 'bg-cyan-950/30 border-cyan-500/50'
                         : 'bg-slate-950/70 border-slate-800'
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-lg">{city.flag}</span>
-                      <span className="font-bold text-sm text-white">{city.name}</span>
+                    <div className="flex items-center justify-center gap-1 min-w-0">
+                      <span className="text-base sm:text-lg leading-none">{city.flag}</span>
+                      <span className="font-bold text-xs sm:text-sm text-white truncate">{city.name}</span>
                     </div>
 
-                    <div className="font-mono tabular-nums text-lg font-extrabold text-cyan-300">
+                    <div className="font-mono tabular-nums text-base sm:text-lg font-extrabold text-cyan-300 leading-tight">
                       {info.timeStr}
                     </div>
 
-                    <div className="text-[11px] font-mono text-slate-400">
+                    <div className="text-[10px] sm:text-[11px] font-mono text-slate-400 truncate">
                       {info.dayStr}
                     </div>
 
-                    <div className="text-[10px] font-mono text-cyan-400 pt-1 border-t border-slate-800/80">
+                    <div className="text-[9px] sm:text-[10px] font-mono text-cyan-400 pt-1 border-t border-slate-800/80 truncate">
                       {city.offsetLabel}
                     </div>
                   </div>
@@ -350,38 +352,38 @@ export const WorldClockBar: React.FC = () => {
             </div>
 
             {/* Consigli Pratici per il Viaggio */}
-            <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3">
+            <div className="space-y-2 sm:space-y-3 text-xs">
+              <div className="p-2.5 sm:p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-2.5 sm:gap-3">
                 <PhoneCall className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <strong className="text-white block">
+                <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                  <strong className="text-white block text-[12px] sm:text-xs leading-snug">
                     Fascia ideale per videochiamare casa in Italia:
                   </strong>
-                  <p className="text-slate-300 leading-relaxed">
+                  <p className="text-slate-300 leading-snug sm:leading-relaxed text-[11px] sm:text-xs">
                     Dalle <strong>15:00 alle 23:00 ora di Seul</strong> (corrispondenti alle <strong>07:00 - 15:00 ora italiana</strong>). Evita di chiamare la mattina presto da Seul poiché in Italia è piena notte!
                   </p>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3">
+              <div className="p-2.5 sm:p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-2.5 sm:gap-3">
                 <Plane className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <strong className="text-white block">
+                <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                  <strong className="text-white block text-[12px] sm:text-xs leading-snug">
                     Differenza Seul ↔ Pechino (Scalo 240h):
                   </strong>
-                  <p className="text-slate-300 leading-relaxed">
+                  <p className="text-slate-300 leading-snug sm:leading-relaxed text-[11px] sm:text-xs">
                     Pechino è soltanto <strong>1 ora indietro rispetto a Seul</strong>. Quando atterrerai a Pechino per lo scalo del 19 marzo dovrai portare l'orologio indietro di 1 ora.
                   </p>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3">
+              <div className="p-2.5 sm:p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-2.5 sm:gap-3">
                 <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <strong className="text-white block">
+                <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                  <strong className="text-white block text-[12px] sm:text-xs leading-snug">
                     Adattamento Jet Lag (8 ore avanti):
                   </strong>
-                  <p className="text-slate-300 leading-relaxed">
+                  <p className="text-slate-300 leading-snug sm:leading-relaxed text-[11px] sm:text-xs">
                     Durante il primo giorno a Seul (2 marzo), esponiti alla luce naturale e cerca di rimanere sveglio fino alle 22:00 ora locale per agganciare subito il ritmo circadiano coreano.
                   </p>
                 </div>

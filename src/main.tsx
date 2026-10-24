@@ -11,3 +11,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </AuthProvider>
 );
+
+// Appena l'app è dipinta si chiude la schermata di avvio (vedi index.html)
+requestAnimationFrame(() => requestAnimationFrame(() => (window as unknown as { __hideSplash?: () => void }).__hideSplash?.()));

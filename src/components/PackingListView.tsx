@@ -75,6 +75,8 @@ export const PackingListView: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unpacked' | 'packed'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  // Telefono: i filtri restano chiusi finché servono
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false);
 
   // Modali e toast
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -407,7 +409,7 @@ export const PackingListView: React.FC = () => {
       )}
 
       {/* Header Panoramica Valigia */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950/40 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950/40 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-xl space-y-3 md:space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -441,11 +443,11 @@ export const PackingListView: React.FC = () => {
                 )}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2.5">
+            <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2.5">
               <Luggage className="w-6 h-6 text-teal-400" />
               <span>Valigia & Checklist Personale Seul 2027</span>
             </h2>
-            <p className="text-xs text-slate-300 max-w-2xl">
+            <p className="hidden md:block text-xs text-slate-300 max-w-2xl">
               Crea e spunta gli oggetti per il tuo viaggio in Corea. I dati sono legati al tuo account{' '}
               <strong className="text-white">{currentUser.displayName}</strong>, salvati in cloud e puoi decidere se
               condividere la tua lista con i tuoi compagni di viaggio per coordinarvi.
@@ -453,7 +455,7 @@ export const PackingListView: React.FC = () => {
           </div>
 
           {/* Quick Actions & Export Buttons */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-2 shrink-0">
             {/* Pulsante Condivisione */}
             <button
               onClick={() => setIsShareModalOpen(true)}
@@ -474,13 +476,49 @@ export const PackingListView: React.FC = () => {
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-teal-500/20"
             >
               <Smartphone className="w-4 h-4 text-slate-950" />
-              <span>Integrazioni App (iOS / Android)</span>
+              <span className="md:hidden">App & calendario</span>
+              <span className="hidden md:inline">Integrazioni App (iOS / Android)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Telefono: riepilogo in due numeri, barra e data del volo in una riga */}
+        <div className="md:hidden pt-2 border-t border-slate-800/80 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+              <div className="text-[9px] uppercase font-mono text-slate-400">Oggetti in valigia</div>
+              <div className="text-base font-bold text-teal-400 font-mono">
+                {packedCount}/{totalItems}{' '}
+                <span className="text-[10px] font-normal text-slate-400">{percentPacked}%</span>
+              </div>
+            </div>
+            <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
+              <div className="text-[9px] uppercase font-mono text-slate-400">Essenziali</div>
+              <div className="text-base font-bold text-amber-400 font-mono">
+                {essentialPacked}/{essentialCount}{' '}
+                <span className="text-[10px] font-normal text-slate-400">pronti</span>
+              </div>
+            </div>
+          </div>
+          <div className="w-full bg-slate-800/70 rounded-full h-1.5 overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-400 rounded-full transition-all duration-300" style={{ width: `${percentPacked}%` }} />
+          </div>
+          <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-300">
+            <span className="min-w-0 truncate">
+              Malpensa 1 mar · 12:30 <span className="text-cyan-400">· check bagaglio 28 feb</span>
+            </span>
+            <button
+              onClick={handleDownloadIcs}
+              aria-label="Aggiungi sveglia al calendario"
+              className="p-1.5 rounded-lg bg-slate-800 text-teal-300 shrink-0"
+            >
+              <Calendar className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
         {/* Barra di Avanzamento e Indicatori */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80">
+        <div className="hidden md:grid md:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80">
           <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
             <div>
               <div className="text-[10px] uppercase font-mono text-slate-400">Oggetti in Valigia</div>
@@ -522,15 +560,41 @@ export const PackingListView: React.FC = () => {
         </div>
 
         {/* Barra di caricamento grafica */}
-        <div className="w-full bg-slate-800/70 rounded-full h-2 overflow-hidden border border-slate-700/50">
+        <div className="hidden md:block w-full bg-slate-800/70 rounded-full h-2 overflow-hidden border border-slate-700/50">
           <div
             className="h-full bg-gradient-to-r from-teal-500 to-cyan-400 rounded-full transition-all duration-300"
             style={{ width: `${percentPacked}%` }}
           />
         </div>
 
+        {/* Telefono: i tre bagagli in chip affiancati (toccando si filtra) */}
+        <div className="md:hidden grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800/80">
+          {PACKING_LOCATIONS.map((loc) => {
+            const isSelected = selectedLocation === loc.id;
+            const totalInLoc = myList.items.filter((i) => (i.location || 'checked') === loc.id).length;
+            const packedInLoc = myList.items.filter((i) => (i.location || 'checked') === loc.id && i.packed).length;
+            return (
+              <button
+                key={loc.id}
+                onClick={() => setSelectedLocation(isSelected ? 'all' : loc.id)}
+                className={`p-2 rounded-xl border text-center transition-all ${
+                  isSelected
+                    ? `${loc.bgColor} ${loc.borderColor} ring-1 ring-teal-500`
+                    : 'bg-slate-950/70 border-slate-800/80'
+                }`}
+              >
+                <div className="text-lg leading-none">{loc.iconEmoji}</div>
+                <div className={`text-[10px] font-bold truncate mt-1 ${loc.badgeColor}`}>{loc.shortLabel}</div>
+                <div className="text-[11px] font-mono font-bold text-white">
+                  {packedInLoc}/{totalInLoc}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Suddivisione Oggetti nei 3 Bagagli (Zaino, A mano, Stiva) con Filtro Rapido */}
-        <div className="pt-2 border-t border-slate-800/80">
+        <div className="hidden md:block pt-2 border-t border-slate-800/80">
           <div className="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-slate-300">
               <Luggage className="w-3.5 h-3.5 text-teal-400" />
@@ -685,8 +749,33 @@ export const PackingListView: React.FC = () => {
             </div>
           )}
 
+          {/* Telefono: ricerca sempre visibile, il resto dei filtri si apre con un pulsante */}
+          <div className="md:hidden flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Cerca oggetto…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              />
+            </div>
+            <button
+              onClick={() => setMobileFiltersOpen((v) => !v)}
+              aria-expanded={mobileFiltersOpen}
+              className={`shrink-0 px-3 py-2 rounded-lg text-xs font-semibold border ${
+                mobileFiltersOpen || selectedCategory !== 'all' || selectedLocation !== 'all' || statusFilter !== 'all'
+                  ? 'bg-teal-500/15 border-teal-500/50 text-teal-300'
+                  : 'bg-slate-900 border-slate-800 text-slate-300'
+              }`}
+            >
+              Filtri{selectedCategory !== 'all' || selectedLocation !== 'all' || statusFilter !== 'all' ? ' •' : ''}
+            </button>
+          </div>
+
           {/* Barra di Filtri Categoria & Ricerca */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between min-w-0">
+          <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} md:flex bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex-col md:flex-row gap-3 items-stretch md:items-center justify-between min-w-0`}>
             {/* Pillole Categoria */}
             <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none text-xs">
               <button
@@ -723,7 +812,7 @@ export const PackingListView: React.FC = () => {
 
             {/* Ricerca e Filtro Stato */}
             <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-auto md:justify-end min-w-0">
-              <div className="relative col-span-2 md:col-span-1 md:w-48 min-w-0">
+              <div className="hidden md:block relative col-span-2 md:col-span-1 md:w-48 min-w-0">
                 <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -793,7 +882,7 @@ export const PackingListView: React.FC = () => {
                 return (
                   <div
                     key={item.id}
-                    className={`p-3.5 rounded-xl border transition-all flex items-start justify-between gap-3 group ${
+                    className={`p-3 md:p-3.5 rounded-xl border transition-all flex items-start justify-between gap-2.5 md:gap-3 group ${
                       item.packed
                         ? 'bg-slate-950/40 border-slate-800/60 text-slate-400 opacity-80'
                         : 'bg-slate-900/90 border-slate-800 hover:border-teal-500/40 text-slate-200'
@@ -842,7 +931,7 @@ export const PackingListView: React.FC = () => {
                       </div>
 
                       {item.notes && (
-                        <p className="text-[11px] text-slate-400 leading-relaxed font-sans">{item.notes}</p>
+                        <p className="text-[11px] text-slate-400 leading-relaxed font-sans line-clamp-2 md:line-clamp-none">{item.notes}</p>
                       )}
 
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60 mt-1">

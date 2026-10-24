@@ -357,7 +357,8 @@ export async function fetchLiveWeather(location: WeatherLocation): Promise<LiveW
 
   for (let i = 0; i < Math.min(times.length, 7); i++) {
     const dateStr = times[i];
-    const d = new Date(dateStr);
+    // a mezzogiorno: senza orario la data è letta come mezzanotte UTC e, a ovest di Greenwich, scivola al giorno prima
+    const d = new Date(`${dateStr}T12:00:00`);
     const code = data.daily.weather_code[i] ?? 0;
     const cond = getWmoCondition(code, 1);
 

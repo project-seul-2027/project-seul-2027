@@ -11,6 +11,35 @@
     <meta name="apple-mobile-web-app-title" content="Seul 2027" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <!-- Immagini di avvio per iPhone (schermata mostrata dalla home prima dell'app) -->
+    <link rel="apple-touch-startup-image" href="./splash/launch-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
+    <link rel="apple-touch-startup-image" href="./splash/launch-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" />
+    <style id="splash-style">
+      /* Schermata di avvio: solo transform e opacity (niente layout), così resta fluida su Android e iPhone */
+      #splash { position: fixed; inset: 0; z-index: 2147483000; background: #090d16; display: flex; align-items: center; justify-content: center; overflow: hidden; height: 100vh; height: 100dvh; opacity: 1; transition: opacity 0.42s ease; }
+      #splash.sp-out { opacity: 0; pointer-events: none; }
+      #splash .sp-stage { position: relative; width: 26vmin; height: 26vmin; }
+      #splash .sp-icon { position: absolute; inset: 0; width: 100%; height: 100%; display: block; will-change: transform, opacity; backface-visibility: hidden; transform: translateZ(0); animation: sp-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both, sp-zoom 0.62s cubic-bezier(0.7, 0, 0.6, 1) 1.3s both; }
+      #splash .sp-plane { position: absolute; left: 0; top: 30vh; width: 14vmin; height: 5.25vmin; will-change: transform; backface-visibility: hidden; animation: sp-fly 1.1s cubic-bezier(0.45, 0, 0.3, 1) 0.2s both; }
+      #splash .sp-plane svg { width: 100%; height: 100%; display: block; overflow: visible; }
+      #splash .sp-trail { position: absolute; right: 88%; top: 50%; width: 26vmin; height: 2px; margin-top: -1px; border-radius: 2px; background: linear-gradient(90deg, rgba(103, 232, 249, 0), rgba(103, 232, 249, 0.75)); transform-origin: right center; }
+      @keyframes sp-in { from { transform: scale(0.86); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      @keyframes sp-zoom { from { transform: scale(1); } to { transform: scale(var(--sp-full, 6)); } }
+      @keyframes sp-fly { from { transform: translate3d(-22vw, 0, 0); } to { transform: translate3d(118vw, 0, 0); } }
+      @media (prefers-reduced-motion: reduce) {
+        #splash .sp-plane { display: none; }
+        #splash .sp-icon { animation: sp-fade 0.25s ease both; }
+        @keyframes sp-fade { from { opacity: 0; } to { opacity: 1; } }
+      }
+    </style>
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
     <script>
       // Fix for extensions/interceptors attempting to assign to window.fetch when it has only a getter
@@ -58,6 +87,41 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   </head>
   <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500/20 selection:text-cyan-200">
+    <div id="splash" aria-hidden="true">
+      <div class="sp-stage">
+        <img class="sp-icon" src="./splash/app-mark.png" alt="" draggable="false" />
+      </div>
+      <div class="sp-plane">
+        <div class="sp-trail"></div>
+        <svg viewBox="0 0 64 24" aria-hidden="true">
+          <path d="M2 11 C2 9.6 3.2 9 4.5 9 L30 9 L40 1.5 L45 1.5 L38 9 L52 9 L58 4 L61 4 L58 11.5 L61 19.5 L58 19.5 L52 15 L38 15 L45 22.5 L40 22.5 L30 15 L4.5 15 C3.2 15 2 14.4 2 13 Z" fill="#e2e8f0" />
+        </svg>
+      </div>
+    </div>
+    <script>
+      // Chiude la schermata di avvio quando l'app è pronta e l'animazione è finita (mai bloccata oltre 9 s)
+      (function () {
+        var root = document.getElementById('splash');
+        if (!root) return;
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        function setFull() {
+          var w = window.innerWidth, h = window.innerHeight;
+          root.style.setProperty('--sp-full', (Math.max(w, h) * 1.15 / (0.26 * Math.min(w, h))).toFixed(2));
+        }
+        setFull();
+        window.addEventListener('resize', setFull);
+        var appReady = false, animDone = false, finished = false;
+        function finish() {
+          if (finished || !appReady || !animDone) return;
+          finished = true;
+          root.classList.add('sp-out');
+          setTimeout(function () { root.parentNode && root.parentNode.removeChild(root); }, 480);
+        }
+        window.__hideSplash = function () { appReady = true; finish(); };
+        setTimeout(function () { animDone = true; finish(); }, reduce ? 350 : 2000);
+        setTimeout(function () { window.__hideSplash(); }, 9000);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
