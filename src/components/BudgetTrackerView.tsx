@@ -336,9 +336,12 @@ export const BudgetTrackerView: React.FC = () => {
               const fmt = (v: number, dec: number, sign: string) => {
                 if (!Number.isFinite(v)) return '—';
                 const full = `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v)} ${sign}`;
-                const short = Math.abs(v) >= 1e9
-                  ? `${new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 }).format(v / 1e9)} mld ${sign}`
-                  : full;
+                // 1 miliardo → "673 mld"; oltre mille miliardi → notazione scientifica, sempre corta
+                const short = Math.abs(v) >= 1e12
+                  ? `${new Intl.NumberFormat('it-IT', { notation: 'scientific', maximumFractionDigits: 2 }).format(v)} ${sign}`
+                  : Math.abs(v) >= 1e9
+                    ? `${new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2 }).format(v / 1e9)} mld ${sign}`
+                    : full;
                 return { full, short };
               };
               const cells = [
