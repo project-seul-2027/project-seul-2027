@@ -367,7 +367,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   // Avvio della fotocamera (e riavvio quando si cambia obiettivo, tra posteriore e frontale o dopo il riconoscimento)
   useEffect(() => {
     let cancelled = false;
-    setReady(false);
+    // Durante un cambio di obiettivo resta visibile l'ultimo fotogramma: niente schermo nero né «Apro la fotocamera…»
+    if (!switchingRef.current) setReady(false);
     setError(null);
     setTorchOn(false);
 
@@ -1092,16 +1093,6 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
               </button>
             ))}
           </div>
-          <input
-            type="range"
-            min={displayMin}
-            max={displayMax}
-            step={0.1}
-            value={zoom}
-            onChange={(e) => applyZoom(Number(e.target.value))}
-            aria-label="Zoom"
-            className="w-full accent-amber-400"
-          />
         </div>
       )}
 
