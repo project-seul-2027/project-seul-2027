@@ -1,11 +1,112 @@
-import React from 'react';
-import { Users, Phone, Utensils, Home, UserPlus, MessageCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Users, Phone, Utensils, Home, UserPlus, MessageCircle, X, Lock } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { ACCOMMODATIONS } from '../data/tripData';
+import { OPTIONAL_SHARE_FIELDS, type GroupMember, type OptionalShareField } from '../shared/travelerProfile';
+
+const FIELD_LABELS: Record<OptionalShareField, string> = {
+  birthDate: 'Data di nascita',
+  hasPassport: 'Passaporto',
+  passportExpiry: 'Scadenza passaporto',
+  passportNumber: 'Numero passaporto',
+  ketaStatus: 'Stato KETA',
+  travelInsurance: 'Assicurazione di viaggio',
+  emergencyContactName: 'Contatto di emergenza',
+  emergencyContactPhone: 'Tel. contatto di emergenza',
+  allergies: 'Allergie',
+  dailyBudgetGoal: 'Budget giornaliero',
+  notes: 'Note'
+};
+
+const formatValue = (key: OptionalShareField, value: unknown): string => {
+  if (value === undefined || value === null || value === '') return '—';
+  if (key === 'hasPassport') return value ? 'Sì' : 'No';
+  if (key === 'birthDate' || key === 'passportExpiry') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(value);
+  }
+  return String(value);
+};
+
+/** Dettaglio di un partecipante: solo i campi opzionali che ha deciso di rendere visibili al gruppo. */
+const MemberSheet: React.FC<{ member: GroupMember; color: string; onClose: () => void }> = ({
+  member,
+  color,
+  onClose
+}) => {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const shown = OPTIONAL_SHARE_FIELDS.filter((k) => member.shared.includes(k));
+  const hidden = OPTIONAL_SHARE_FIELDS.length - shown.length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
+      <button type="button" aria-label="Chiudi" onClick={onClose} className="absolute inset-0 bg-black/70" />
+      <div className="relative w-full sm:max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4">
+        <div className="flex items-start gap-3">
+          {member.avatarUrl ? (
+            <img
+              src={member.avatarUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="w-12 h-12 rounded-full border-2 shrink-0"
+              style={{ borderColor: color }}
+            />
+          ) : (
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shrink-0"
+              style={{ backgroundColor: color }}
+            >
+              {member.firstName.slice(0, 1)}
+              {member.lastName.slice(0, 1)}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="font-bold text-white truncate">
+              {member.firstName} {member.lastName}
+            </div>
+            <div className="text-xs text-slate-400">“{member.displayName}”</div>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white" aria-label="Chiudi">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {shown.length > 0 ? (
+          <dl className="grid gap-3 text-sm">
+            {shown.map((key) => (
+              <div key={key} className="grid grid-cols-[9rem_1fr] gap-2">
+                <dt className="text-xs text-slate-400">{FIELD_LABELS[key]}</dt>
+                <dd className="text-slate-100 break-words whitespace-pre-wrap">{formatValue(key, member[key])}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-sm text-slate-400">Non ha condiviso altre informazioni.</p>
+        )}
+
+        {hidden > 0 && (
+          <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <Lock className="w-3 h-3" />
+            {hidden} {hidden === 1 ? 'informazione resta privata' : 'informazioni restano private'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /** Elenco dei partecipanti registrati con Google: contatti e preferenze condivise. */
 export const GroupView: React.FC = () => {
   const { user, group, travelers } = useAuth();
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const openMember = group.find((m) => m.id === openId) ?? null;
+  const openSlot = openMember ? travelers.find((s) => s.id === openMember.travelerId) : undefined;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -16,8 +117,8 @@ export const GroupView: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold font-display text-white">Partecipanti</h2>
           <p className="text-xs text-slate-400">
-            {group.length} su 4 registrati con Google · aggiornato in tempo reale. Documenti e contatti di emergenza
-            restano privati.
+            {group.length} su 4 registrati con Google · aggiornato in tempo reale. Tocca un partecipante per vedere
+            le informazioni che ha scelto di condividere.
           </p>
         </div>
       </div>
@@ -53,18 +154,23 @@ export const GroupView: React.FC = () => {
                 isMe ? 'border-cyan-500/50 ring-1 ring-cyan-500/20' : 'border-slate-800'
               }`}
             >
-              <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setOpenId(member.id)}
+                className="w-full flex items-center gap-3 text-left rounded-xl hover:bg-slate-800/40 -m-1 p-1 transition-colors"
+                aria-label={`Dettagli di ${member.firstName} ${member.lastName}`}
+              >
                 {member.avatarUrl ? (
                   <img
                     src={member.avatarUrl}
                     alt=""
                     referrerPolicy="no-referrer"
-                    className="w-11 h-11 rounded-full border-2"
+                    className="w-11 h-11 rounded-full border-2 shrink-0"
                     style={{ borderColor: slot.color }}
                   />
                 ) : (
                   <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white"
+                    className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0"
                     style={{ backgroundColor: slot.color }}
                   >
                     {member.firstName.slice(0, 1)}
@@ -80,7 +186,7 @@ export const GroupView: React.FC = () => {
                     {member.displayName !== `${member.firstName} ${member.lastName}` && ` · “${member.displayName}”`}
                   </div>
                 </div>
-              </div>
+              </button>
 
               <dl className="grid gap-2 text-xs">
                 <div className="flex items-center gap-2">
@@ -126,6 +232,14 @@ export const GroupView: React.FC = () => {
           );
         })}
       </div>
+
+      {openMember && (
+        <MemberSheet
+          member={openMember}
+          color={openSlot?.color ?? '#22d3ee'}
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </div>
   );
 };
