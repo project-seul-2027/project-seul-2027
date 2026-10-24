@@ -213,10 +213,10 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
                       <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                       <div>
                         <strong className="block font-bold text-white mb-0.5">
-                          ⚠️ Sede Torneo: Arena NON ancora decisa (in attesa di annuncio ufficiale Riot Games)
+                          ⚠️ Sede e orari: non ancora pubblicati (in attesa di annuncio ufficiale Riot Games)
                         </strong>
                         <span className="leading-relaxed">
-                          L'arena delle finali del Valorant Masters Seoul non è stata ancora ufficializzata da Riot Games. La posizione sulla mappa è indicativa in attesa della sede definitiva (tra le candidate: Sangam e-Stadium, LoL Park Jongno, KSPO Dome o Handball Gymnasium).
+                          Sede, orari della finale e biglietti del Valorant Masters Seoul non sono ancora stati annunciati. La posizione sulla mappa è indicativa: il giorno resta riservato e il piano va aggiornato appena escono le informazioni.
                         </span>
                       </div>
                     </div>

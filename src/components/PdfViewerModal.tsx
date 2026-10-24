@@ -4,19 +4,21 @@ import { FileText, Download, Maximize2, X, BookOpen } from 'lucide-react';
 import { PdfPageViewer } from './PdfPageViewer';
 
 export const PdfViewerModal: React.FC = () => {
-  const [selectedPageTopic, setSelectedPageTopic] = useState<number>(2); // Default to accommodations page 2
+  const [selectedPageTopic, setSelectedPageTopic] = useState<number>(1);
   const [fullscreen, setFullscreen] = useState(false);
 
+  // Cosa racconta ciascuna pagina del PDF aggiornato (10 pagine)
   const pageTopics = [
-    { page: 1, title: 'Pag. 1: Calendario, Voli & Ritrovo Malpensa', summary: 'Ritrovo T1 Air China ore 10:00, orari e date generali, Valorant Masters.' },
-    { page: 2, title: 'Pag. 2: 4 Alloggi Enko & Divisione Affitto', summary: 'Formula fissata: Pietro 6 notti (37-66 €) vs Ognuno dei 3 per 17 notti (129-227 €).' },
-    { page: 3, title: 'Pag. 3: Note Alloggi & Guida "Quale Scegliere"', summary: 'Pro e contro di A, B, C, D; consigli per movida (C) vs risparmio (A) vs letti (D).' },
-    { page: 4, title: 'Pag. 4: Settimana 1 (2 - 7 Marzo)', summary: 'Arrivo, Valorant Masters (3 mar), Palazzi + Gangnam di giovedì, Saluto Pietro (7 mar).' },
-    { page: 5, title: 'Pag. 5: Settimana 2 (8 - 14 Marzo)', summary: 'Rientro di Pietro a Milano (8 mar), Namsan a piedi, COEX, Gita Suwon, White Day sul fiume Han.' },
-    { page: 6, title: 'Pag. 6: Settimana 3 (15 - 18 Marzo)', summary: 'Bukhansan, DMZ, shopping skincare, preparazione valigie 23kg, Tiananmen online e China card.' },
-    { page: 7, title: 'Pag. 7: 19 Marzo Partenza Seul & Scalo Pechino', summary: 'Partenza Seul, arrivo Pechino T3, permesso transito 240h, Qianmen e cena anatra laccata.' },
-    { page: 8, title: 'Pag. 8: Rientro T3 Pechino Tassativo (21:15)', summary: 'Regole orari rientro, checklist sicurezza, volo notturno 02:15 per Milano.' },
-    { page: 9, title: 'Pag. 9: Preventivo Completo & Consigli Risparmio', summary: 'Riepilogo costi (Pietro e i 3 amici), budget scalo Pechino 190-310 CNY, consigli low-cost.' }
+    { page: 1, title: 'Pag. 1: Calendario, voli e ritrovo a Malpensa', summary: 'Date, voli Air China di andata e ritorno, ritrovo al T1 alle 10:00 del 1 marzo, regole d\'oro e Valorant Masters (sede da annunciare).' },
+    { page: 2, title: 'Pag. 2: Dove dormire, 4 alloggi a confronto', summary: 'Enko Stay: prezzi mensili, totali per 17 notti, metro e bus, e come dividere l\'affitto (chi parte l\'8 paga 6 notti).' },
+    { page: 3, title: 'Pag. 3: Cancellazioni e note per alloggio', summary: 'Regole di rimborso Enko, pro e contro di A, B, C, D e la guida "Quale scegliere" per movida, risparmio o letti.' },
+    { page: 4, title: 'Pag. 4: Come sono organizzate le serate', summary: 'Strade, noraebang, sale giochi, pocha, live house e club, con costi e limiti di età (19 anni), più come gestire il gruppo che si divide.' },
+    { page: 5, title: 'Pag. 5: Budget serate e prima settimana (2 - 7 marzo)', summary: 'Budget serate (stretto, equilibrato, largo) e il programma giorno per giorno: arrivo, Valorant, Palazzi e Gangnam, Seongsu, Itaewon, mercati.' },
+    { page: 6, title: 'Pag. 6: Rientro (8 marzo) e seconda settimana (9 - 15 marzo)', summary: 'Rientro di chi parte l\'8, poi museo, Incheon, COEX e Sinchon, Suwon, Hongdae del sabato, White Day sul fiume Han e DMZ.' },
+    { page: 7, title: 'Pag. 7: Ultima parte (16 - 19 marzo)', summary: 'Bukhansan e Yeonnam, souvenir e ultima serata grande, ultimo giorno pieno e partenza del 19 marzo.' },
+    { page: 8, title: 'Pag. 8: 19 marzo, mattina a Seul e Pechino', summary: 'Prerequisiti per il transito 240h (passaporto, Arrival Card, internet, pagamenti) e la tabella della mattina a Seul fino al volo delle 13:10.' },
+    { page: 9, title: 'Pag. 9: Arrivo a Pechino passo per passo', summary: 'Bagagli, carta d\'arrivo, banco del transito 240h, controllo passaporti, uscita e la tabella delle prime ore a PEK.' },
+    { page: 10, title: 'Pag. 10: Serata a Pechino, costi e rischi', summary: 'Qianmen e anatra laccata, rientro al T3 entro le 21:15, volo delle 02:15, budget dello scalo (190-310 CNY) e cose da verificare.' }
   ];
 
   // Chiudi il pannello a schermo intero con Esc
@@ -42,7 +44,7 @@ export const PdfViewerModal: React.FC = () => {
               Documento Ufficiale Aggiornato: Itinerario Seul 2027
             </h3>
             <p className="text-xs text-slate-400">
-              PDF aggiornato di 9 pagine con ripartizione affitti per Pietro (6 notti) e i 3 amici (17 notti), Valorant, White Day e guida Pechino.
+              PDF aggiornato di 10 pagine: alloggi a confronto, serate, programma giorno per giorno e lo scalo di 240 ore a Pechino. Scegli una pagina qui sotto per vedere cosa contiene.
             </p>
           </div>
         </div>
