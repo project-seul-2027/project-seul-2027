@@ -46,8 +46,10 @@ import {
   markPendingAccepted,
   loadPendingCamera,
   clearPendingCamera,
-  hasResumeFlag
+  hasResumeFlag,
+  setResumeFlag
 } from '../services/pendingCamera';
+import { CameraCaptureModal } from './CameraCaptureModal';
 
 /** Foto caricate alla volta (ogni miniatura pesa ~30 KB); "Mostra altre" ne aggiunge altrettante */
 const PAGE_SIZE = 48;
@@ -91,6 +93,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   // Foto appena scattata con la fotocamera: va confermata prima di compilare luogo, giorno e didascalia
   const [cameraPending, setCameraPending] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // Filtri e Ricerca
   const [filterLocation, setFilterLocation] = useState<string>('all');
@@ -396,13 +399,38 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     void handleFileSelect(file);
   };
 
+  // Fotocamera di sistema (ripiego): Android/iOS possono chiudere l'app durante lo scatto,
+  // quindi si segna di riaprire la galleria al ritorno
+  const openSystemCamera = () => {
+    setResumeFlag();
+    cameraInputRef.current?.click();
+  };
+
+  // Fotocamera dentro l'app (preferita): non si esce dalla pagina; ripiego sulla fotocamera di sistema
+  const openCamera = () => {
+    const hasLiveCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+    if (hasLiveCamera) setIsCameraOpen(true);
+    else openSystemCamera();
+  };
+
   // Scatta di nuovo: chiude l'anteprima e riapre la fotocamera
   const retakeCameraPhoto = () => {
     resetUploadForm();
     setCameraPending(false);
     void clearPendingCamera();
-    cameraInputRef.current?.click();
+    openCamera();
   };
+
+  // Se si annulla la fotocamera di sistema non c'è nulla da ripristinare
+  useEffect(() => {
+    const input = cameraInputRef.current;
+    if (!input) return;
+    const onCancel = () => {
+      void clearPendingCamera();
+    };
+    input.addEventListener('cancel', onCancel);
+    return () => input.removeEventListener('cancel', onCancel);
+  }, []);
 
   // Ritorno dalla fotocamera: il telefono può aver ricaricato l'app, quindi ripristina foto e modal
   useEffect(() => {
@@ -410,7 +438,12 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     (async () => {
       if (!hasResumeFlag()) return;
       const pending = await loadPendingCamera();
-      if (!pending || !active) return;
+      if (!pending) {
+        // L'app è stata chiusa durante lo scatto e la foto non è arrivata: nulla da ripristinare
+        await clearPendingCamera();
+        return;
+      }
+      if (!active) return;
       setIsUploadOpen(true);
       setCameraPending(!pending.accepted);
       await handleFileSelect(pending.file);
@@ -672,7 +705,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             {/* Solo smartphone: apre direttamente la fotocamera del telefono */}
             <button
               type="button"
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={openCamera}
               className="md:hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 font-bold text-xs shadow-lg shadow-black/20 transition-all active:scale-[0.98] cursor-pointer"
             >
               <Camera className="w-4 h-4" />
@@ -691,6 +724,20 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                 if (file) handleCameraCapture(file);
               }}
             />
+
+            {isCameraOpen && (
+              <CameraCaptureModal
+                onCapture={(file) => {
+                  setIsCameraOpen(false);
+                  handleCameraCapture(file);
+                }}
+                onClose={() => setIsCameraOpen(false)}
+                onUseSystemCamera={() => {
+                  setIsCameraOpen(false);
+                  openSystemCamera();
+                }}
+              />
+            )}
           </div>
         </div>
 

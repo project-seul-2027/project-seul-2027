@@ -45,6 +45,15 @@ export function hasResumeFlag(): boolean {
   }
 }
 
+/** Da chiamare subito prima di aprire la fotocamera di sistema: se l'app viene chiusa, si riapre sulla galleria. */
+export function setResumeFlag(): void {
+  try {
+    localStorage.setItem(RESUME_FLAG, '1');
+  } catch {
+    /* ignora */
+  }
+}
+
 export async function savePendingCamera(file: File, accepted: boolean): Promise<void> {
   try {
     localStorage.setItem(RESUME_FLAG, '1');
