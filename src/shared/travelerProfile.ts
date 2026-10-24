@@ -32,6 +32,29 @@ export const DAILY_BUDGET_OPTIONS = [20, 30, 40, 50] as const;
 export const TRIP_RETURN_DATE = '2027-03-19';
 export const PASSPORT_RECOMMENDED_MIN_EXPIRY = '2027-09-19';
 
+/**
+ * Campi che ciascuno può scegliere di rendere visibili al gruppo. Quelli fuori da questo elenco
+ * (nome, posto, telefono, alimentazione, voto alloggio, foto) sono sempre visibili.
+ */
+export const OPTIONAL_SHARE_FIELDS = [
+  'birthDate',
+  'hasPassport',
+  'passportExpiry',
+  'passportNumber',
+  'ketaStatus',
+  'travelInsurance',
+  'emergencyContactName',
+  'emergencyContactPhone',
+  'allergies',
+  'dailyBudgetGoal',
+  'notes'
+] as const;
+export type OptionalShareField = (typeof OPTIONAL_SHARE_FIELDS)[number];
+export type ShareVisibility = Partial<Record<OptionalShareField, boolean>>;
+
+/** Foto caricata dal telefono (data URL JPEG ridimensionato). Vuota = si usa la foto di Google. */
+export const CUSTOM_AVATAR_MAX_CHARS = 150_000;
+
 /** Dati che ogni partecipante compila (e può modificare) dopo l'accesso con Google. */
 export interface TravelerProfileInput {
   firstName: string;
@@ -53,6 +76,10 @@ export interface TravelerProfileInput {
   dailyBudgetGoal: number;
   accommodationPreference: AccommodationId | null;
   notes: string;
+  /** Foto caricata dal telefono (vuota = foto di Google) */
+  customAvatar: string;
+  /** Campi opzionali che l'utente rende visibili al gruppo */
+  visibility: ShareVisibility;
 }
 
 /** Account completo salvato dal server (chiave: `sub` Google). */
@@ -60,7 +87,12 @@ export interface UserAccount extends Partial<TravelerProfileInput> {
   id: string; // Google `sub`
   email: string;
   googleName: string;
+  /** Foto mostrata nell'app: quella caricata dal telefono oppure quella di Google */
   avatarUrl: string;
+  /** Foto del profilo Google, da usare quando non se ne carica una propria */
+  googlePhotoUrl: string;
+  customAvatar?: string;
+  visibility?: ShareVisibility;
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string;
@@ -81,6 +113,51 @@ export interface GroupMember {
   phone: string;
   dietaryPreference: string;
   accommodationPreference: AccommodationId | null;
+  /** Quali campi opzionali sono condivisi (elenco) */
+  shared: OptionalShareField[];
+  /** Valori dei campi opzionali condivisi (solo quelli in `shared`) */
+  birthDate?: string;
+  hasPassport?: boolean;
+  passportExpiry?: string;
+  passportNumber?: string;
+  ketaStatus?: string;
+  travelInsurance?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  allergies?: string;
+  dailyBudgetGoal?: number;
+  notes?: string;
+}
+
+/**
+ * Dato condiviso: fisso (sempre visibile) + i campi opzionali scelti dall'utente.
+ * Il campo non scelto non compare proprio nel documento condiviso, così nessun altro può leggerlo.
+ */
+export function buildGroupMember(
+  id: string,
+  input: Pick<TravelerProfileInput, OptionalShareField | 'travelerId' | 'firstName' | 'lastName' | 'displayName' | 'phone' | 'dietaryPreference' | 'accommodationPreference' | 'visibility'>,
+  avatarUrl: string
+): GroupMember {
+  const member: GroupMember = {
+    id,
+    travelerId: input.travelerId,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    displayName: input.displayName,
+    avatarUrl,
+    phone: input.phone,
+    dietaryPreference: input.dietaryPreference,
+    accommodationPreference: input.accommodationPreference,
+    shared: []
+  };
+  const bag = member as unknown as Record<string, unknown>;
+  for (const key of OPTIONAL_SHARE_FIELDS) {
+    if (input.visibility?.[key]) {
+      bag[key] = input[key];
+      member.shared.push(key);
+    }
+  }
+  return member;
 }
 
 export type ValidationResult =
@@ -126,6 +203,14 @@ export function validateProfileInput(raw: unknown): ValidationResult {
       ? (accRaw as AccommodationId)
       : null;
   const notes = str(src.notes, 500);
+  const customAvatarRaw = typeof src.customAvatar === 'string' ? src.customAvatar : '';
+  const customAvatar =
+    customAvatarRaw.startsWith('data:image/jpeg;base64,') && customAvatarRaw.length <= CUSTOM_AVATAR_MAX_CHARS
+      ? customAvatarRaw
+      : '';
+  const visibility: ShareVisibility = {};
+  const visRaw = src.visibility && typeof src.visibility === 'object' ? (src.visibility as Record<string, unknown>) : {};
+  for (const key of OPTIONAL_SHARE_FIELDS) visibility[key] = visRaw[key] === true;
 
   if (!firstName) errors.firstName = 'Il nome è obbligatorio.';
   if (!lastName) errors.lastName = 'Il cognome è obbligatorio.';
@@ -193,23 +278,15 @@ export function validateProfileInput(raw: unknown): ValidationResult {
       allergies,
       dailyBudgetGoal,
       accommodationPreference,
-      notes
+      notes,
+      customAvatar,
+      visibility
     }
   };
 }
 
 export function toGroupMember(user: CompletedUserAccount): GroupMember {
-  return {
-    id: user.id,
-    travelerId: user.travelerId,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    displayName: user.displayName,
-    avatarUrl: user.avatarUrl,
-    phone: user.phone,
-    dietaryPreference: user.dietaryPreference,
-    accommodationPreference: user.accommodationPreference
-  };
+  return buildGroupMember(user.id, user, user.avatarUrl);
 }
 
 export function isCompleted(user: UserAccount): user is CompletedUserAccount {

@@ -7,7 +7,7 @@ Portale del viaggio a Seul (2–19 marzo 2027): itinerario, alloggi a confronto 
 - **Voti sugli alloggi** e **partecipanti** condivisi in tempo reale tramite Firestore.
 - Nessun server da gestire: il sito è statico (GitHub Pages) e i dati stanno su Firebase, entrambi gratuiti.
 
-Gli altri partecipanti vedono solo nome, posto, foto, telefono, preferenza alimentare e voto sull'alloggio. Documenti, data di nascita, contatti di emergenza e allergie restano visibili solo al titolare. Lo garantiscono le regole in [`firestore.rules`](firestore.rules).
+Gli altri partecipanti vedono sempre nome, posto, foto, telefono, preferenza alimentare e voto sull'alloggio. Gli altri dati del profilo (data di nascita, passaporto, KETA, assicurazione, contatto di emergenza, allergie, budget, note) sono privati per default: ogni campo ha un interruttore "Visibile al gruppo" nel profilo, e solo i campi attivati compaiono nel dettaglio del partecipante (tocca la sua card in "Partecipanti"). I campi non condivisi non vengono salvati nel database condiviso. La foto è quella di Google, ma puoi caricarne una dal telefono (e tornare a quella di Google). Lo garantiscono le regole in [`firestore.rules`](firestore.rules).
 
 ---
 

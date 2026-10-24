@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  User, Phone, HeartPulse, BookUser, Utensils, Wallet, Home, StickyNote,
-  CheckCircle, AlertTriangle, Save, Loader2, Trash2, LogOut
-} from 'lucide-react';
+import { User, Phone, HeartPulse, BookUser, Utensils, Wallet, Home, StickyNote, CheckCircle, AlertTriangle, Save, Loader2, Trash2, LogOut, Eye, EyeOff, Camera, Upload } from 'lucide-react';
+import { compressImage } from '../../services/galleryService';
+import { OPTIONAL_SHARE_FIELDS, type OptionalShareField } from '../../shared/travelerProfile';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../services/authService';
 import { ACCOMMODATIONS } from '../../data/tripData';
@@ -40,13 +39,34 @@ const Field: React.FC<{
   required?: boolean;
   error?: string;
   hint?: React.ReactNode;
+  /** Se presente, mostra l'interruttore "Visibile al gruppo" */
+  shareOn?: boolean;
+  onShare?: (on: boolean) => void;
   children: React.ReactNode;
-}> = ({ label, htmlFor, required, error, hint, children }) => (
+}> = ({ label, htmlFor, required, error, hint, shareOn, onShare, children }) => (
   <div className="space-y-1">
-    <label htmlFor={htmlFor} className="text-xs font-medium text-slate-300">
-      {label}
-      {required && <span className="text-cyan-400"> *</span>}
-    </label>
+    <div className="flex items-center justify-between gap-2">
+      <label htmlFor={htmlFor} className="text-xs font-medium text-slate-300">
+        {label}
+        {required && <span className="text-cyan-400"> *</span>}
+      </label>
+      {onShare && (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={!!shareOn}
+          onClick={() => onShare(!shareOn)}
+          className={`h-6 px-2 rounded-full border text-[10.5px] font-semibold flex items-center gap-1 shrink-0 ${
+            shareOn
+              ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-300'
+              : 'bg-slate-900 border-slate-700 text-slate-400'
+          }`}
+        >
+          {shareOn ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+          {shareOn ? 'Visibile al gruppo' : 'Solo tu'}
+        </button>
+      )}
+    </div>
     {children}
     {error ? (
       <p className="text-[11px] text-red-400">{error}</p>
@@ -103,7 +123,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
     allergies: account?.allergies ?? '',
     dailyBudgetGoal: account?.dailyBudgetGoal ?? 30,
     accommodationPreference: account?.accommodationPreference ?? null,
-    notes: account?.notes ?? ''
+    notes: account?.notes ?? '',
+    customAvatar: account?.customAvatar ?? '',
+    visibility: account?.visibility ?? {}
   }));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -154,6 +176,25 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
     }
   };
 
+  const setShare = (key: OptionalShareField, on: boolean) => set('visibility', { ...form.visibility, [key]: on });
+  const shareProps = (key: OptionalShareField) => ({ shareOn: !!form.visibility[key], onShare: (on: boolean) => setShare(key, on) });
+
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const onPickAvatar = async (file: File | undefined) => {
+    if (!file) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    try {
+      const img = await compressImage(file);
+      set('customAvatar', img.thumb);
+    } catch (err) {
+      setAvatarError((err as Error).message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
   const errorClass = (key: keyof TravelerProfileInput) => (errors[key] ? 'border-red-500/70' : 'border-slate-700');
 
   return (
@@ -181,6 +222,51 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
             Cambia account
           </button>
         )}
+      </div>
+
+      {/* Foto profilo: quella di Google, oppure una caricata dal telefono */}
+      <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+        {form.customAvatar || account?.googlePhotoUrl || account?.avatarUrl ? (
+          <img
+            src={form.customAvatar || account?.googlePhotoUrl || account?.avatarUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="w-14 h-14 rounded-full object-cover border border-slate-700 shrink-0"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-slate-800 shrink-0" />
+        )}
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="text-xs font-semibold text-white">Foto profilo</div>
+          <div className="text-[11px] text-slate-400">{form.customAvatar ? 'Foto caricata dal telefono' : 'Foto del tuo account Google'}</div>
+          <div className="flex flex-wrap gap-1.5">
+            <label className="h-8 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer">
+              <Camera className="w-3.5 h-3.5" />
+              {avatarBusy ? 'Elaboro…' : 'Carica foto'}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                disabled={avatarBusy}
+                onChange={(e) => {
+                  void onPickAvatar(e.target.files?.[0]);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            {form.customAvatar && (
+              <button
+                type="button"
+                onClick={() => set('customAvatar', '')}
+                className="h-8 px-3 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-semibold flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Usa quella di Google
+              </button>
+            )}
+          </div>
+          {avatarError && <p className="text-[11px] text-red-400">{avatarError}</p>}
+        </div>
       </div>
 
       <Section icon={<User className="w-4 h-4" />} title="Chi sei">
@@ -217,7 +303,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
               className={`${inputClass} border-slate-700`}
             />
           </Field>
-          <Field label="Data di nascita" htmlFor="pf-birth" required error={errors.birthDate}>
+          <Field label="Data di nascita" htmlFor="pf-birth" {...shareProps('birthDate')} required error={errors.birthDate}>
             <input
               id="pf-birth"
               type="date"
@@ -277,7 +363,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
           />
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Contatto di emergenza" htmlFor="pf-emname" error={errors.emergencyContactName} hint="Facoltativo.">
+          <Field label="Contatto di emergenza" htmlFor="pf-emname" {...shareProps('emergencyContactName')} error={errors.emergencyContactName} hint="Facoltativo.">
             <input
               id="pf-emname"
               placeholder="es. Maria Rossi (madre)"
@@ -286,7 +372,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
               className={`${inputClass} ${errorClass('emergencyContactName')}`}
             />
           </Field>
-          <Field label="Telefono di emergenza" htmlFor="pf-emphone" error={errors.emergencyContactPhone} hint="Facoltativo.">
+          <Field label="Telefono di emergenza" htmlFor="pf-emphone" {...shareProps('emergencyContactPhone')} error={errors.emergencyContactPhone} hint="Facoltativo.">
             <input
               id="pf-emphone"
               type="tel"
@@ -304,7 +390,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         title="Documenti"
         subtitle="Visibili solo a te: servono come promemoria per Corea e transito a Pechino."
       >
-        <Field label="Possiedi un passaporto?" htmlFor="pf-haspp" required error={errors.hasPassport}>
+        <Field label="Possiedi un passaporto?" htmlFor="pf-haspp" {...shareProps('hasPassport')} required error={errors.hasPassport}>
           <div id="pf-haspp" role="radiogroup" className="grid grid-cols-2 gap-2">
             {[
               { value: true, label: 'Sì, ce l\'ho' },
@@ -342,7 +428,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field
             label="Scadenza passaporto"
-            htmlFor="pf-ppexp"
+            htmlFor="pf-ppexp" {...shareProps('passportExpiry')}
             required
             error={errors.passportExpiry}
             hint={
@@ -362,7 +448,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
               className={`${inputClass} ${errorClass('passportExpiry')} [color-scheme:dark]`}
             />
           </Field>
-          <Field label="Numero passaporto" htmlFor="pf-ppnum" error={errors.passportNumber} hint="Facoltativo.">
+          <Field label="Numero passaporto" htmlFor="pf-ppnum" {...shareProps('passportNumber')} error={errors.passportNumber} hint="Facoltativo.">
             <input
               id="pf-ppnum"
               value={form.passportNumber}
@@ -373,7 +459,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="K-ETA (autorizzazione ingresso Corea)" htmlFor="pf-keta" required error={errors.ketaStatus}>
+          <Field label="K-ETA (autorizzazione ingresso Corea)" htmlFor="pf-keta" {...shareProps('ketaStatus')} required error={errors.ketaStatus}>
             <select
               id="pf-keta"
               value={form.ketaStatus}
@@ -387,7 +473,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
               ))}
             </select>
           </Field>
-          <Field label="Assicurazione viaggio" htmlFor="pf-ins" hint="Facoltativo: compagnia e n. polizza.">
+          <Field label="Assicurazione viaggio" htmlFor="pf-ins" {...shareProps('travelInsurance')} hint="Facoltativo: compagnia e n. polizza.">
             <input
               id="pf-ins"
               value={form.travelInsurance}
@@ -415,7 +501,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         </Field>
         <Field
           label="Allergie o condizioni mediche"
-          htmlFor="pf-allergies"
+          htmlFor="pf-allergies" {...shareProps('allergies')}
           hint="Facoltativo, visibile solo a te: utile da mostrare in caso di necessità."
         >
           <div className="relative">
@@ -429,7 +515,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
             />
           </div>
         </Field>
-        <Field label="Budget giornaliero in loco (cibo + svago)" htmlFor="pf-budget" required error={errors.dailyBudgetGoal}>
+        <Field label="Budget giornaliero in loco (cibo + svago)" htmlFor="pf-budget" {...shareProps('dailyBudgetGoal')} required error={errors.dailyBudgetGoal}>
           <div className="relative">
             <Wallet className="w-3.5 h-3.5 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <select
@@ -479,7 +565,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
           </div>
         </div>
 
-        <Field label="Note per il gruppo" htmlFor="pf-notes" hint="Facoltativo.">
+        <Field label="Note per il gruppo" htmlFor="pf-notes" {...shareProps('notes')} hint="Facoltativo.">
           <div className="relative">
             <StickyNote className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-3" />
             <textarea

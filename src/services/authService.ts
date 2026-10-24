@@ -28,6 +28,7 @@ import {
   type FirestoreError
 } from 'firebase/firestore';
 import { firebase } from '../firebase/client';
+import { buildGroupMember } from '../shared/travelerProfile';
 import type {
   AccommodationId,
   GroupMember,
@@ -133,19 +134,24 @@ export const authApi = {
       if (isPermissionDenied(err)) throw new NotAllowedError(user.email ?? 'sconosciuto');
       throw err;
     }
+    const googlePhotoUrl = user.photoURL ?? '';
     const google = {
       email: (user.email ?? '').toLowerCase(),
       googleName: user.displayName ?? '',
-      avatarUrl: user.photoURL ?? ''
+      googlePhotoUrl
     };
     if (snap.exists()) {
-      return { ...(snap.data() as UserAccount), ...google, id: user.uid };
+      const stored = snap.data() as UserAccount;
+      // Foto propria (se caricata) oppure quella di Google
+      const avatarUrl = stored.customAvatar || googlePhotoUrl;
+      return { ...stored, ...google, avatarUrl, id: user.uid };
     }
     const [firstName = '', ...rest] = (user.displayName ?? '').split(' ');
     const now = new Date().toISOString();
     return {
       id: user.uid,
       ...google,
+      avatarUrl: googlePhotoUrl,
       firstName,
       lastName: rest.join(' '),
       createdAt: now,
@@ -161,21 +167,12 @@ export const authApi = {
     const next: UserAccount = {
       ...account,
       ...input,
+      avatarUrl: input.customAvatar || account.googlePhotoUrl || '',
       updatedAt: now,
       lastLoginAt: now,
       profileCompleted: true
     };
-    const member: GroupMember = {
-      id: account.id,
-      travelerId: input.travelerId,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      displayName: input.displayName,
-      avatarUrl: account.avatarUrl,
-      phone: input.phone,
-      dietaryPreference: input.dietaryPreference,
-      accommodationPreference: input.accommodationPreference
-    };
+    const member = buildGroupMember(account.id, input, input.customAvatar || account.googlePhotoUrl || '');
 
     const previousSlot = account.profileCompleted ? account.travelerId : undefined;
     const batch = writeBatch(firebase().db);

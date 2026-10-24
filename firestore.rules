@@ -53,7 +53,8 @@ service cloud.firestore {
         && request.resource.data.id == uid
         && request.resource.data.email == request.auth.token.email.lower()
         && request.resource.data.size() <= 40
-        && validVote(request.resource.data.get('accommodationPreference', null));
+        && validVote(request.resource.data.get('accommodationPreference', null))
+        && (!('customAvatar' in request.resource.data) || shortString(request.resource.data.customAvatar, 150000));
     }
 
     // Dati condivisi con il gruppo
@@ -63,7 +64,10 @@ service cloud.firestore {
       allow create, update: if isOwner(uid)
         && request.resource.data.keys().hasOnly([
              'id', 'travelerId', 'firstName', 'lastName', 'displayName',
-             'avatarUrl', 'phone', 'dietaryPreference', 'accommodationPreference'
+             'avatarUrl', 'phone', 'dietaryPreference', 'accommodationPreference',
+             'shared', 'birthDate', 'hasPassport', 'passportExpiry', 'passportNumber', 'ketaStatus',
+             'travelInsurance', 'emergencyContactName', 'emergencyContactPhone', 'allergies',
+             'dailyBudgetGoal', 'notes'
            ])
         && request.resource.data.id == uid
         && request.resource.data.travelerId in slots()
@@ -72,10 +76,24 @@ service cloud.firestore {
         && shortString(request.resource.data.firstName, 60)
         && shortString(request.resource.data.lastName, 60)
         && shortString(request.resource.data.displayName, 60)
-        && shortString(request.resource.data.avatarUrl, 500)
+        && shortString(request.resource.data.avatarUrl, 150000)
         && shortString(request.resource.data.phone, 25)
         && shortString(request.resource.data.dietaryPreference, 80)
-        && validVote(request.resource.data.accommodationPreference);
+        && validVote(request.resource.data.accommodationPreference)
+        // campi opzionali: solo quelli dichiarati in `shared`, ciascuno con il suo tipo
+        && request.resource.data.shared is list
+        && request.resource.data.shared.size() <= 11
+        && (!('birthDate' in request.resource.data) || ('birthDate' in request.resource.data.shared && shortString(request.resource.data.birthDate, 20)))
+        && (!('hasPassport' in request.resource.data) || ('hasPassport' in request.resource.data.shared && request.resource.data.hasPassport is bool))
+        && (!('passportExpiry' in request.resource.data) || ('passportExpiry' in request.resource.data.shared && shortString(request.resource.data.passportExpiry, 20)))
+        && (!('passportNumber' in request.resource.data) || ('passportNumber' in request.resource.data.shared && shortString(request.resource.data.passportNumber, 40)))
+        && (!('ketaStatus' in request.resource.data) || ('ketaStatus' in request.resource.data.shared && shortString(request.resource.data.ketaStatus, 80)))
+        && (!('travelInsurance' in request.resource.data) || ('travelInsurance' in request.resource.data.shared && shortString(request.resource.data.travelInsurance, 120)))
+        && (!('emergencyContactName' in request.resource.data) || ('emergencyContactName' in request.resource.data.shared && shortString(request.resource.data.emergencyContactName, 60)))
+        && (!('emergencyContactPhone' in request.resource.data) || ('emergencyContactPhone' in request.resource.data.shared && shortString(request.resource.data.emergencyContactPhone, 25)))
+        && (!('allergies' in request.resource.data) || ('allergies' in request.resource.data.shared && shortString(request.resource.data.allergies, 300)))
+        && (!('dailyBudgetGoal' in request.resource.data) || ('dailyBudgetGoal' in request.resource.data.shared && (request.resource.data.dailyBudgetGoal is int || request.resource.data.dailyBudgetGoal is float || shortString(request.resource.data.dailyBudgetGoal, 20))))
+        && (!('notes' in request.resource.data) || ('notes' in request.resource.data.shared && shortString(request.resource.data.notes, 500)));
     }
 
     // Un posto per persona: si può solo occupare (se libero) o liberare (se è proprio)
