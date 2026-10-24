@@ -27,6 +27,35 @@ interface ImageCaptureLike {
   takePhoto(): Promise<Blob>;
 }
 
+/** Obiettivo posteriore esposto dal browser (ultra grandangolare, tele, ...) */
+interface Lens {
+  id: string;
+  name: string;
+}
+
+const FRONT_RE = /front|user|selfie|anterior|frontale/i;
+const BACK_RE = /back|rear|environment|posterior|trasera|arri[eè]re/i;
+// Sensori che non servono per scattare foto (profondità, infrarossi, ...)
+const IGNORE_RE = /depth|tof|infrared|\bir\b|mono|bokeh/i;
+
+/** Il browser non dice di che tipo è un obiettivo: si deduce dal nome, altrimenti si numerano */
+function lensName(label: string, index: number): string {
+  if (/ultra|grandangol/i.test(label)) return 'Ultra grandangolare';
+  if (/tele|periscop/i.test(label)) return 'Teleobiettivo';
+  if (/macro/i.test(label)) return 'Macro';
+  return index === 0 ? 'Principale' : `Obiettivo ${index + 1}`;
+}
+
+function toLenses(devices: MediaDeviceInfo[]): Lens[] {
+  return devices
+    .filter(
+      (d) =>
+        d.kind === 'videoinput' && !!d.label && !FRONT_RE.test(d.label) && BACK_RE.test(d.label) && !IGNORE_RE.test(d.label)
+    )
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+    .map((d, i) => ({ id: d.deviceId, name: lensName(d.label, i) }));
+}
+
 const touchDistance = (touches: React.TouchList) =>
   Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
 
@@ -55,6 +84,10 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
 
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+  // Obiettivo posteriore scelto (null = quello predefinito del telefono)
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [lenses, setLenses] = useState<Lens[]>([]);
+  const [activeLensId, setActiveLensId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -78,16 +111,16 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
 
     (async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: facing },
-            width: { ideal: 1920 },
-            height: { ideal: 1440 },
-            // chiede l'accesso allo zoom della fotocamera dove il browser lo supporta
-            zoom: true,
-          } as MediaTrackConstraints,
-          audio: false,
-        });
+        const constraints = {
+          ...(deviceId && facing === 'environment'
+            ? { deviceId: { exact: deviceId } }
+            : { facingMode: { ideal: facing } }),
+          width: { ideal: 1920 },
+          height: { ideal: 1440 },
+          // chiede l'accesso allo zoom della fotocamera dove il browser lo supporta
+          zoom: true,
+        } as unknown as MediaTrackConstraints;
+        const stream = await navigator.mediaDevices.getUserMedia({ video: constraints, audio: false });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -117,9 +150,23 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         }
         setTorchSupported(!!caps.torch);
         setFocusSupported(Array.isArray(caps.focusMode) && caps.focusMode.includes('single-shot'));
+        setActiveLensId(track.getSettings().deviceId ?? null);
+
+        // Con il permesso concesso il browser mostra i nomi delle fotocamere: si cercano gli obiettivi posteriori
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          if (!cancelled) setLenses(facing === 'environment' ? toLenses(devices) : []);
+        } catch {
+          if (!cancelled) setLenses([]);
+        }
         setReady(true);
       } catch (err) {
         if (cancelled) return;
+        // L'obiettivo scelto non si apre: si torna a quello predefinito
+        if (deviceId) {
+          setDeviceId(null);
+          return;
+        }
         const name = (err as DOMException)?.name;
         if (name === 'NotAllowedError' || name === 'SecurityError') {
           setError('Permesso negato: consenti l\'uso della fotocamera a questo sito nelle impostazioni del browser.');
@@ -137,7 +184,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       streamRef.current = null;
       trackRef.current = null;
     };
-  }, [facing]);
+  }, [facing, deviceId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -250,13 +297,15 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         </button>
 
         <div className="flex items-center gap-2">
-          {torchSupported && (
+          {facing === 'environment' && (
             <button
               type="button"
               onClick={toggleTorch}
-              aria-label={torchOn ? 'Spegni flash' : 'Accendi flash'}
+              disabled={!torchSupported}
+              title={torchSupported ? undefined : 'Flash non disponibile su questa fotocamera'}
+              aria-label={torchSupported ? (torchOn ? 'Spegni flash' : 'Accendi flash') : 'Flash non disponibile'}
               aria-pressed={torchOn}
-              className={`w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-all ${
+              className={`w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-all disabled:opacity-30 ${
                 torchOn ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'
               }`}
             >
@@ -337,6 +386,25 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         )}
       </div>
 
+      {/* Scelta dell'obiettivo posteriore (solo se il telefono ne espone più di uno) */}
+      {ready && facing === 'environment' && lenses.length > 1 && (
+        <div className="shrink-0 px-4 pt-3 flex items-center justify-center gap-2 overflow-x-auto" role="group" aria-label="Obiettivo">
+          {lenses.map((lens) => (
+            <button
+              key={lens.id}
+              type="button"
+              onClick={() => lens.id !== activeLensId && setDeviceId(lens.id)}
+              aria-pressed={lens.id === activeLensId}
+              className={`h-9 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                lens.id === activeLensId ? 'bg-white text-slate-950' : 'bg-white/10 text-white'
+              }`}
+            >
+              {lens.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Controlli zoom */}
       {ready && zoomPresets.length > 1 && (
         <div className="shrink-0 px-6 pt-3 space-y-3">
@@ -373,7 +441,10 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       <div className="shrink-0 px-8 py-5 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => setFacing((f) => (f === 'environment' ? 'user' : 'environment'))}
+          onClick={() => {
+            setDeviceId(null);
+            setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
+          }}
           aria-label="Cambia fotocamera"
           className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-95 transition-transform"
         >
