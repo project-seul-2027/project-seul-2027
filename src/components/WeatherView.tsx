@@ -41,6 +41,7 @@ import {
   type WeatherTheme
 } from '../data/weatherData';
 import { useMediaQuery } from '../pwa';
+import { WeatherScene } from './WeatherScene';
 
 interface WeatherViewProps {
   onNavigateToItinerary?: () => void;
@@ -67,6 +68,22 @@ const THEME_STYLES: Record<
     accentBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
     textAccent: 'text-amber-400',
     particleIcon: '☀️'
+  },
+  clearNight: {
+    bgGradient: 'from-indigo-950/70 via-slate-950 to-slate-950',
+    ambientGlow: 'rgba(99, 102, 241, 0.22)',
+    cardBorder: 'border-indigo-400/30',
+    accentBadge: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/40',
+    textAccent: 'text-indigo-300',
+    particleIcon: '🌙'
+  },
+  partlyCloudyNight: {
+    bgGradient: 'from-slate-900 via-indigo-950/40 to-slate-950',
+    ambientGlow: 'rgba(129, 140, 248, 0.16)',
+    cardBorder: 'border-indigo-400/25',
+    accentBadge: 'bg-slate-800/80 text-indigo-200 border-indigo-400/30',
+    textAccent: 'text-indigo-300',
+    particleIcon: '☁️'
   },
   partlyCloudy: {
     bgGradient: 'from-sky-950/40 via-slate-900 to-slate-950',
@@ -535,6 +552,15 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
             className="absolute -right-8 -top-10 w-44 h-44 rounded-full blur-3xl pointer-events-none opacity-40"
             style={{ backgroundColor: themeStyle.ambientGlow }}
           />
+          {current && (
+            <WeatherScene
+              code={current.weatherCode}
+              isDay={current.isDay === 1}
+              precipitationMm={current.precipitationMm}
+              windKmH={current.windSpeedKmH}
+              compact
+            />
+          )}
           <div className="relative z-10 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <div className="text-xs font-bold text-white truncate">{selectedLocation.name.split(' (')[0]}</div>
@@ -564,7 +590,6 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   </strong>
                 </div>
               </div>
-              {current && <div className="shrink-0">{renderWeatherIcon(current.condition.iconName, 'w-12 h-12')}</div>}
             </div>
 
             <div className="grid grid-cols-3 gap-2 font-mono tabular-nums">
@@ -995,6 +1020,14 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               className="absolute -right-8 -top-8 w-64 h-64 rounded-full blur-3xl pointer-events-none opacity-40 transition-all duration-500"
               style={{ backgroundColor: themeStyle.ambientGlow }}
             />
+            {weatherData && (
+              <WeatherScene
+                code={weatherData.current.weatherCode}
+                isDay={weatherData.current.isDay === 1}
+                precipitationMm={weatherData.current.precipitationMm}
+                windKmH={weatherData.current.windSpeedKmH}
+              />
+            )}
 
             <div className="relative z-10 space-y-6">
               {/* Riga superiore: Luogo, Tag e Timestamp */}

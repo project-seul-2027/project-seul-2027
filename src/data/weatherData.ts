@@ -62,7 +62,16 @@ export const WEATHER_LOCATIONS: WeatherLocation[] = [
   }
 ];
 
-export type WeatherTheme = 'sunny' | 'partlyCloudy' | 'cloudy' | 'rainy' | 'snowy' | 'stormy' | 'foggy';
+export type WeatherTheme =
+  | 'sunny'
+  | 'clearNight'
+  | 'partlyCloudy'
+  | 'partlyCloudyNight'
+  | 'cloudy'
+  | 'rainy'
+  | 'snowy'
+  | 'stormy'
+  | 'foggy';
 
 export interface WeatherConditionInfo {
   code: number;
@@ -82,28 +91,34 @@ export function getWmoCondition(code: number, isDay = 1): WeatherConditionInfo {
       return {
         code,
         labelIt: isDay ? 'Cielo sereno' : 'Notte serena',
-        theme: 'sunny',
+        theme: isDay ? 'sunny' : 'clearNight',
         iconName: isDay ? 'Sun' : 'Moon',
-        descriptionIt: 'Luce tersa e visibilità limpida',
-        activityTipIt: 'Ideale per salire a Namsan Seoul Tower e noleggiare l\'Hanbok a Gyeongbokgung!'
+        descriptionIt: isDay ? 'Luce tersa e visibilità limpida' : 'Cielo limpido e stellato',
+        activityTipIt: isDay
+          ? 'Ideale per salire a Namsan Seoul Tower e noleggiare l\'Hanbok a Gyeongbokgung!'
+          : 'Notte limpida: ottima per la vista sulle luci della città da Namsan o per una passeggiata lungo il Cheonggyecheon illuminato.'
       };
     case 1:
       return {
         code,
         labelIt: 'Prevalentemente sereno',
-        theme: 'sunny',
+        theme: isDay ? 'sunny' : 'clearNight',
         iconName: isDay ? 'Sun' : 'Moon',
-        descriptionIt: 'Sole dominante con lievi velature',
-        activityTipIt: 'Ottima giornata per camminare a Seoul Forest, Seongsu-dong o escursione a Bukhansan.'
+        descriptionIt: isDay ? 'Sole dominante con lievi velature' : 'Cielo quasi sgombro con lievi velature',
+        activityTipIt: isDay
+          ? 'Ottima giornata per camminare a Seoul Forest, Seongsu-dong o escursione a Bukhansan.'
+          : 'Serata asciutta e quasi senza nuvole: bella per una passeggiata a Hongdae, sul fiume Han o per street food.'
       };
     case 2:
       return {
         code,
         labelIt: 'Poco nuvoloso',
-        theme: 'partlyCloudy',
+        theme: isDay ? 'partlyCloudy' : 'partlyCloudyNight',
         iconName: isDay ? 'CloudSun' : 'CloudMoon',
-        descriptionIt: 'Alternanza di sole e nuvole passeggere',
-        activityTipIt: 'Clima gradevole per esplorare i mercati all\'aperto (Mangwon, Gwangjang) e i caffè di Ikseon-dong.'
+        descriptionIt: isDay ? 'Alternanza di sole e nuvole passeggere' : 'Luna e nuvole passeggere',
+        activityTipIt: isDay
+          ? 'Clima gradevole per esplorare i mercati all\'aperto (Mangwon, Gwangjang) e i caffè di Ikseon-dong.'
+          : 'Serata con qualche nuvola: va bene per mercati serali, pocha e locali di Hongdae.'
       };
     case 3:
       return {
