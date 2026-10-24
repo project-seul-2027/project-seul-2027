@@ -133,7 +133,7 @@ export const TRIP_META = {
   base: 'Opzioni Enko Stay: Myeongdong, Seoul Station, Mapo o Sinseol-dong',
   airline: 'Air China',
   specialHighlight: 'VALORANT MASTERS SEOUL 2027',
-  pdfPath: `${import.meta.env.BASE_URL}assets/aistudio/Itinerario_Seul_2027_fb1043a9.pdf`
+  pdfPath: `${import.meta.env.BASE_URL}assets/aistudio/Itinerario_Seul_2027_aggiornato.pdf`
 };
 
 export const SKYSCANNER_FLIGHTS_URL =
@@ -990,411 +990,453 @@ export const PRE_TRIP_CHECKLIST = [
 export const ITINERARY_DAYS: ItineraryDay[] = [
   {
     id: 0,
-    dateStr: '1 marzo 2027',
-    dayOfWeek: 'Lunedì',
-    phase: 'Partenza',
-    title: 'Ritrovo a Malpensa & Volo Air China',
-    subtitle: 'Obiettivo: trovarsi tutti insieme al T1 entro le 10:00',
-    description: 'Partenza dall\'Italia verso la Cina e poi Seul. Ritrovo al Terminal 1 di Milano Malpensa davanti ai banchi Air China.',
+    dateStr: "1 marzo 2027",
+    dayOfWeek: "Lunedì",
+    phase: "Partenza",
+    title: "Ritrovo a Malpensa & volo Air China",
+    subtitle: "Ritrovo al T1 entro le 10:00 · decollo alle 12:30",
+    description: "Ritrovo a Milano Malpensa T1 davanti ai banchi Air China entro le 10:00. Check-in e bagagli tutti insieme, poi decollo per la Cina e per Seul (arrivo a Incheon il 2 marzo alle 11:40).",
     schedule: [
-      { time: 'Prima', activity: 'Ognuno verifica il proprio mezzo e orario per arrivare al T1 entro le 10:00 (condividere nel gruppo orari e contatto).' },
-      { time: 'Entro 10:00', activity: 'RITROVO a T1 partenze davanti ai banchi check-in Air China.', isHighlight: true },
-      { time: '10:00 - 10:45', activity: 'Check-in e consegna bagagli (23 kg inclusi) tutti insieme. Chiedere carte d\'imbarco di tutti i tratti e valigie etichettate fino a Seul.' },
-      { time: '10:45 - 11:45', activity: 'Controlli di sicurezza e passaporto, spuntino al sacco o colazione, poi gate.' },
-      { time: '12:30', activity: 'Decollo per la Cina e poi Seul (arrivo a Incheon il 2 marzo alle 11:40).', isHighlight: true }
+      { time: "Prima", activity: "Verificare mezzo e orario per arrivare al T1 entro le 10:00. Condividere nel gruppo orari di treno/volo e un numero di telefono raggiungibile." },
+      { time: "Da Milano Centrale", activity: "Malpensa Express subito (cartelli 'Malpensa Express / Aeroporti'): circa 50 min, biglietto ~15 €, meglio comprarlo in anticipo su Trenord. Treni consigliati 8:25 o 8:55 (da verificare)." },
+      { time: "Entro 10:00", activity: "RITROVO a T1 partenze, banchi Air China. Il check-in apre circa 3 ore prima del volo (12:30, da riconfermare).", isHighlight: true },
+      { time: "10:00 - 10:45", activity: "Check-in e consegna bagagli (23 kg inclusi) tutti insieme. Chiedere le carte d'imbarco di tutti i tratti e le valigie etichettate fino a Seul." },
+      { time: "10:45 - 11:45", activity: "Controlli di sicurezza e passaporto, colazione o pranzo, poi gate." },
+      { time: "12:30", activity: "Decollo per la Cina e poi Seul (arrivo a Incheon il 2 marzo alle 11:40).", isHighlight: true }
     ],
     bulletPoints: [
-      'Ritrovo T1 ore 10:00 (se la prenotazione indica T2 ci si sposta lì)',
-      'Arrivo a Malpensa con mezzi propri o treno ordinario per risparmiare',
-      'Bagaglio in stiva: 23 kg inclusi con Air China',
-      'Regola d\'oro: banco check-in chiude 60 min prima, ma tassativo arrivare entro le 10:00'
+      "Ritrovo T1 entro le 10:00 (se la prenotazione indica T2, il ritrovo si sposta lì)",
+      "Se un treno o un volo ritarda: avvisare subito il gruppo e prendere il mezzo successivo",
+      "Il banco chiude circa 60 minuti prima del volo: non superare le 10:30",
+      "Chi atterra a Malpensa (es. Wizz Air) ritira l'eventuale bagaglio e va a piedi alle partenze T1"
     ],
-    costsEstimate: 'Trasporto autonomo (escluso dal budget)',
-    locationIds: ['mxp_terminal1'],
-    tags: ['Partenza', 'Voli', 'Malpensa', 'Air China'],
+    costsEstimate: "Malpensa Express ~15 € (fuori dal budget delle serate)",
+    locationIds: ["mxp_terminal1"],
+    tags: ["Partenza", "Voli", "Malpensa", "Air China"],
     tips: [
-      'Se un treno o mezzo ritarda, avvisare subito il gruppo sul gruppo WhatsApp e prendere il successivo.',
-      'Chi atterra a Malpensa (es. Wizz Air) ritira eventuale bagaglio e va a piedi alle partenze T1.'
+      "Condividere nel gruppo orari e numero di telefono prima di partire.",
+      "Regola d'oro: arrivare al T1 entro le 10:00 anche se un mezzo ritarda."
     ]
   },
   {
     id: 1,
-    dateStr: '2 marzo 2027',
-    dayOfWeek: 'Martedì',
-    phase: 'Prima settimana',
-    title: 'Arrivo a Seul & Check-in Alloggio',
-    subtitle: 'Atterraggio 11:40, AREX, pranzo a Mangwon e sistemazione',
-    description: 'Atterraggio a Incheon ore 11:40. Trasferimento in treno AREX verso l\'alloggio prescelto, pranzo autentico al mercato di Mangwon, check-in alle 16:00, spesa al supermercato, SIM/eSIM e ricarica T-money.',
+    dateStr: "2 marzo 2027",
+    dayOfWeek: "Martedì",
+    phase: "Prima settimana",
+    title: "Arrivo a Seul & sistemazione",
+    subtitle: "Atterraggio 11:40, AREX in città e deposito bagagli",
+    description: "Atterraggio a Incheon alle 11:40. Treno AREX fino in città, pranzo veloce e deposito bagagli se il check-in non è ancora pronto. Nel pomeriggio check-in, spesa al supermercato, SIM/eSIM e T-money.",
     schedule: [
-      { time: '11:40', activity: 'Atterraggio all\'aeroporto di Incheon (ICN). Controlli passaporti e ritiro bagagli.', isHighlight: true },
-      { time: '12:45', activity: 'Treno AREX all-stop fino a Hongdae o Gongdeok.' },
-      { time: '14:00', activity: 'Lascio bagagli temporaneo e pranzo al vicino mercato tradizionale di Mangwon.', isHighlight: true },
-      { time: '16:00', activity: 'Check-in nell\'alloggio Enko prescelto, spesa per la colazione, attivazione SIM/eSIM e T-money.' },
-      { time: 'Sera', activity: 'Prima passeggiata serale tranquilla tra i vicoli per riprendersi dal jet lag.' }
+      { time: "11:40", activity: "Atterraggio a Incheon (ICN). Controlli passaporto e ritiro bagagli.", isHighlight: true },
+      { time: "12:45", activity: "Treno AREX fino in città (per l'alloggio scelto, con cambio se serve)." },
+      { time: "Pomeriggio", activity: "Check-in, spesa al supermercato, SIM/eSIM e T-money." },
+      { time: "Sera", activity: "Prima passeggiata a Hongdae con street food: serata corta per il fuso orario (~10 €).", isHighlight: true }
     ],
     bulletPoints: [
-      'Atterraggio 11:40, AREX verso l\'alloggio',
-      'Pranzo al mercato di Mangwon (street food incredibile ed economico)',
-      'Check-in alle 16:00 nell\'appartamento',
-      'SIM/eSIM e acquisto carta ricaricabile T-money per metro e bus',
-      'Sera: passeggiata tranquilla per ambientarsi'
+      "Atterraggio 11:40, AREX verso il centro",
+      "Pranzo veloce e deposito bagagli se il check-in non è pronto",
+      "SIM/eSIM e T-money per metro e bus",
+      "Sera corta: il fuso orario si fa sentire"
     ],
-    costsEstimate: '~10-15 € (AREX + T-money iniziale + street food Mangwon)',
-    locationIds: ['incheon_airport', 'acc_c', 'mangwon_market'],
-    tags: ['Arrivo', 'AREX', 'Alloggio', 'Mangwon', 'T-money'],
+    costsEstimate: "~10 € (AREX + street food serale)",
+    locationIds: ["incheon_airport", "acc_c", "hongdae_district"],
+    tags: ["Arrivo", "AREX", "Alloggio", "T-money"],
     tips: [
-      'Prendere la T-money in aeroporto o al convenience store (GS25/CU) e caricarla con contanti.'
+      "Prendere la T-money in aeroporto o al convenience store (GS25/CU) e caricarla con contanti."
     ]
   },
   {
     id: 2,
-    dateStr: '3 marzo 2027',
-    dayOfWeek: 'Mercoledì',
-    phase: 'Prima settimana',
-    title: 'VALORANT MASTERS SEOUL 2027 (Arena Da Annunciare)',
-    subtitle: 'L\'evento esports clou del viaggio · Sede ufficiale in attesa di annuncio da Riot Games',
-    description: 'Giornata interamente dedicata alle finali del Valorant Masters Seoul 2027 (torneo dal 20 febbraio al 3 marzo). ⚠️ NOTA ARENA: La venue esatta del torneo a Seul NON è ancora stata decisa e deve essere ancora ufficialmente annunciata da Riot Games (possibili sedi: LoL Park Jongno, Sangam e-Stadium, KSPO Dome o Olympic Handball Stadium). Mattina libera, poi live match e festeggiamenti serali nei pocha.',
+    dateStr: "3 marzo 2027",
+    dayOfWeek: "Mercoledì",
+    phase: "Prima settimana",
+    title: "VALORANT MASTERS SEOUL 2027 (sede da annunciare)",
+    subtitle: "Evento esports clou del viaggio · sede e orari in attesa di annuncio",
+    description: "Giornata dedicata al Valorant Masters Seoul 2027, il cui torneo va dal 20 febbraio al 3 marzo. Sede, orari della finale e biglietti non sono ancora pubblicati: la giornata resta riservata e il piano va aggiornato appena escono le informazioni.",
     schedule: [
-      { time: 'Mattina', activity: 'Mattina libera per riposo, colazione e passeggiata nei dintorni.' },
-      { time: 'Pomeriggio', activity: 'VALORANT MASTERS SEOUL 2027: Sede e orari ufficiali TBD (in attesa di annuncio Riot Games). Tifo scatenato all\'arena!', isHighlight: true },
-      { time: 'Dopo match', activity: 'Pregame nei convenience store e festa in un tipico pocha a Hongdae o Sinchon.', isHighlight: true }
+      { time: "Mattina", activity: "Mattina libera per riposo e colazione." },
+      { time: "Pomeriggio", activity: "VALORANT MASTERS SEOUL 2027: sede e orari da confermare, in attesa dell'annuncio ufficiale.", isHighlight: true },
+      { time: "Dopo il match", activity: "Cena e pocha a Hongdae per chiudere la serata insieme (~15 €)." }
     ],
     bulletPoints: [
-      '⚠️ ARENA DA DEFINIRE: Riot Games non ha ancora annunciato la sede ufficiale del torneo (probabili candidate: Sangam e-Stadium, LoL Park, KSPO Dome)',
-      'Il torneo si svolge dal 20 febbraio al 3 marzo: il 3 marzo è il giorno finale riservato dal nostro itinerario',
-      'Biglietti in vendita circa 4-6 settimane prima su Interpark Global / Ticketlink',
-      'Dopo match: pregame nei convenience store e cena tipica in un pocha con soju e piatti da condividere'
+      "Giornata riservata: sede, orari della finale e biglietti da verificare",
+      "Aggiornare il piano appena Riot Games pubblica le informazioni",
+      "Dopo il match: pocha a Hongdae per chiudere insieme la serata"
     ],
-    costsEstimate: 'Biglietto evento (TBD) + ~10-15 € pocha serale',
-    locationIds: ['valorant_masters_arena'],
-    tags: ['Esports', 'Valorant Masters', 'Arena TBD', 'Highlight', 'Pocha', 'Hongdae'],
+    costsEstimate: "~15 € (cena e pocha), biglietti da verificare",
+    locationIds: ["valorant_masters_arena", "hongdae_district"],
+    tags: ["Valorant", "Esports", "Hongdae"],
+    isSpecialEvent: true,
     tips: [
-      'Monitorare i canali ufficiali @ValorantEsports: l\'arena e le modalità di acquisto biglietti verranno ufficializzate a ridosso dell\'evento.'
-    ],
-    isSpecialEvent: true
-  },
-  {
-    id: 3,
-    dateStr: '4 marzo 2027',
-    dayOfWeek: 'Giovedì',
-    phase: 'Prima settimana',
-    title: 'Palazzi Reali in Hanbok & Sinchon',
-    subtitle: 'Gyeongbokgung con costume tradizionale, Bukchon, Insadong e Sinchon',
-    description: 'Immersione nella storia e tradizione coreana: noleggio hanbok per entrare gratuitamente nel maestoso Gyeongbokgung, passeggiata nel villaggio di Bukchon Hanok, tè tradizionale a Insadong e serata universitaria a Sinchon.',
-    bulletPoints: [
-      'Gyeongbokgung con hanbok: l\'ingresso al palazzo reale è GRATUITO per chi indossa il costume tradizionale!',
-      'Passeggiata fotografica tra le case storiche di Bukchon Hanok Village',
-      'Insadong: vicoli di artigianato, case da tè tradizionali e souvenir autentici',
-      'Sera: Sinchon (quartiere universitario economico a due passi da Hongdae)'
-    ],
-    costsEstimate: '~12-15 € (noleggio hanbok base) + cena a Sinchon (~10-12 €)',
-    locationIds: ['gyeongbokgung', 'bukchon_hanok', 'insadong', 'sinchon'],
-    tags: ['Storia', 'Palazzi', 'Hanbok', 'Bukchon', 'Sinchon'],
-    tips: [
-      'Noleggiando l\'hanbok si risparmia il biglietto d\'ingresso del palazzo reale.'
+      "Il torneo è riservato nel calendario: non prenotare altri impegni per quel giorno."
     ]
   },
   {
-    id: 4,
-    dateStr: '5 marzo 2027',
-    dayOfWeek: 'Venerdì',
-    phase: 'Prima settimana',
-    title: 'Seongsu-dong & Club Night a Hongdae',
-    subtitle: 'La "Brooklyn di Seul", Seoul Forest e prima grande serata nei club',
-    description: 'Esplorazione di Seongsu-dong tra concept store e pop-up di design. Relax a Seoul Forest (parco gratuito) e serata clubbing a Hongdae.',
-    bulletPoints: [
-      'Seongsu-dong: concept store all\'avanguardia e architettura industriale riconvertita',
-      'Passeggiata a Seoul Forest (parco pubblico gratuito)',
-      'Sera a Hongdae: riscaldamento nei bar e clubbing con cover 10.000 - 20.000 KRW'
+    id: 3,
+    dateStr: "4 marzo 2027",
+    dayOfWeek: "Giovedì",
+    phase: "Prima settimana",
+    title: "Palazzi + Gangnam",
+    subtitle: "Gyeongbokgung in hanbok, Bukchon e serata a Gangnam",
+    description: "Mattina a Gyeongbokgung con hanbok (ingresso gratis col noleggio) e Bukchon. Pomeriggio di riposo. Sera a Gangnam, di giovedì perché costa meno (~30-35 €): zona più adulta e più cara, da fare una volta sola. Per chi non può entrare nei club, alternativa decisa prima nella stessa zona.",
+    schedule: [
+      { time: "Mattina", activity: "Gyeongbokgung con hanbok (ingresso gratis col noleggio) e Bukchon Hanok Village." },
+      { time: "Pomeriggio", activity: "Rientro per riposare." },
+      { time: "Sera", activity: "Gangnam, di giovedì (~30-35 €). Alternativa decisa prima per chi non entra nei club.", isHighlight: true }
     ],
-    costsEstimate: '~15-20 € cover club + drink',
-    locationIds: ['seongsu_dong', 'seoul_forest'],
-    tags: ['Moda', 'Trend', 'Seoul Forest', 'Club', 'Nightlife']
+    bulletPoints: [
+      "Hanbok col noleggio: ingresso gratis ai palazzi",
+      "Bukchon per le case tradizionali (rispettare i residenti)",
+      "Gangnam di giovedì: costa meno che nel weekend",
+      "Decidere prima l'alternativa per chi non entra nei club"
+    ],
+    costsEstimate: "~30-35 € a testa (serata Gangnam)",
+    locationIds: ["gyeongbokgung", "bukchon_hanok", "gangnam_district"],
+    tags: ["Palazzi", "Hanbok", "Gangnam"]
+  },
+  {
+    id: 4,
+    dateStr: "5 marzo 2027",
+    dayOfWeek: "Venerdì",
+    phase: "Prima settimana",
+    title: "Seongsu + venerdì a Hongdae",
+    subtitle: "Seongsu-dong e Seoul Forest, poi serata a Hongdae",
+    description: "Giornata a Seongsu-dong e Seoul Forest (gratis). Sera a Hongdae: il venerdì è pieno, con strada, photo booth, sala giochi e una live house per chi vuole musica dal vivo (~20 €).",
+    schedule: [
+      { time: "Giorno", activity: "Seongsu-dong e Seoul Forest (gratis)." },
+      { time: "Sera", activity: "Hongdae: strada, photo booth, sala giochi e live house (~20 €).", isHighlight: true }
+    ],
+    bulletPoints: [
+      "Seongsu-dong e Seoul Forest, gratis",
+      "Hongdae il venerdì: piena di gente",
+      "Live house per chi vuole musica dal vivo"
+    ],
+    costsEstimate: "~20 € a testa",
+    locationIds: ["seongsu_dong", "seoul_forest", "hongdae_district"],
+    tags: ["Seongsu", "Hongdae", "Live house"]
   },
   {
     id: 5,
-    dateStr: '6 marzo 2027',
-    dayOfWeek: 'Sabato',
-    phase: 'Prima settimana',
-    title: 'Itaewon & Serata Cosmopolita',
-    subtitle: 'Giornata lenta e serata nel quartiere internazionale di Seul',
-    description: 'Risveglio con calma. Pomeriggio rilassato tra i vicoli panoramici e le boutique di Hannam-dong e Itaewon. Sera dedicata a locali cosmopoliti.',
-    bulletPoints: [
-      'Giornata lenta per recuperare energie',
-      'Passeggiata pomeridiana tra Hannam-dong e Itaewon',
-      'Sera a Itaewon: quartiere internazionale',
-      'Strategia risparmio: pregame nei convenience store e selezione di un singolo locale (~20-25 €)'
+    dateStr: "6 marzo 2027",
+    dayOfWeek: "Sabato",
+    phase: "Prima settimana",
+    title: "Itaewon",
+    subtitle: "Giornata lenta tra mercatini e serata internazionale",
+    description: "Giornata lenta, mercatini e quartiere. Sera a Itaewon: la zona più internazionale, con musica hip hop e latina e locali con cucina dove si entra per cenare. Più cara, quindi da fare una volta sola (~25-30 €).",
+    schedule: [
+      { time: "Giorno", activity: "Giornata lenta, mercatini e quartiere." },
+      { time: "Sera", activity: "Itaewon: zona internazionale, musica hip hop e latina, cena nei locali (~25-30 €).", isHighlight: true }
     ],
-    costsEstimate: '~20-25 € (serata Itaewon)',
-    locationIds: ['itaewon'],
-    tags: ['Relax', 'Itaewon', 'Cocktail', 'Internazionale']
+    bulletPoints: [
+      "Ritmo lento e mercatini",
+      "Itaewon: la zona più internazionale",
+      "Musica hip hop e latina, locali con cucina"
+    ],
+    costsEstimate: "~25-30 € a testa",
+    locationIds: ["itaewon"],
+    tags: ["Itaewon", "Internazionale", "Cena"]
   },
   {
     id: 6,
-    dateStr: '7 marzo 2027',
-    dayOfWeek: 'Domenica',
-    phase: 'Prima settimana',
-    title: 'Mercati Storici, Design & Noraebang',
-    subtitle: 'Gwangjang Market, Cheonggyecheon, DDP e karaoke notturno',
-    description: 'Domenica alla scoperta dello street food leggendario: bindaetteok e mandu a Gwangjang Market, passeggiata lungo il torrente Cheonggyecheon, visita al Dongdaemun Design Plaza (DDP) di Zaha Hadid e noraebang serale.',
-    bulletPoints: [
-      'Mercato tradizionale di Gwangjang: bindaetteok (pancake di soia verde), mayak kimbap e mandu a 3-5 €',
-      'Passeggiata sul torrente Cheonggyecheon fino a Dongdaemun (gratis)',
-      'Dongdaemun Design Plaza (DDP): architettura futuristica iconica',
-      'Sera: Noraebang (karaoke coreano in stanza privata) con soju (~6-8 € a persona pomeridiano)'
+    dateStr: "7 marzo 2027",
+    dayOfWeek: "Domenica",
+    phase: "Prima settimana",
+    title: "Mercati + serata di saluto",
+    subtitle: "Gwangjang, Cheonggyecheon, DDP e serata con chi riparte l'8",
+    description: "Mercato di Gwangjang, Cheonggyecheon e DDP. Sera con noraebang e sala giochi: serata di saluto con chi riparte l'8 marzo (~12 €).",
+    schedule: [
+      { time: "Giorno", activity: "Mercato di Gwangjang, Cheonggyecheon e DDP." },
+      { time: "Sera", activity: "Noraebang e sala giochi: saluto con chi riparte l'8 (~12 €).", isHighlight: true }
     ],
-    costsEstimate: '~6-8 € street food + ~6-8 € noraebang e soju',
-    locationIds: ['gwangjang_market', 'cheonggyecheon', 'ddp_dongdaemun'],
-    tags: ['Cibo', 'Mercati', 'DDP', 'Karaoke', 'Noraebang']
+    bulletPoints: [
+      "Mercato di Gwangjang",
+      "Passeggiata lungo Cheonggyecheon",
+      "DDP per la sera e le luci",
+      "Noraebang e sala giochi per salutarsi"
+    ],
+    costsEstimate: "~12 € a testa",
+    locationIds: ["gwangjang_market", "cheonggyecheon", "ddp_dongdaemun"],
+    tags: ["Mercati", "Noraebang", "Saluto"]
   },
   {
     id: 7,
-    dateStr: '8 marzo 2027',
-    dayOfWeek: 'Lunedì',
-    phase: 'Prima settimana',
-    title: 'Namsan, Myeongdong & Language Exchange',
-    subtitle: 'Salita a piedi alla N Seoul Tower, shopping cosmetici e scambio linguistico',
-    description: 'Salita a piedi verso la N Seoul Tower sul monte Namsan attraverso sentieri alberati panoramici (completamente gratis), shopping cosmetici e street food a Myeongdong, e serata dedicata a un evento di Language Exchange.',
-    bulletPoints: [
-      'Namsan a piedi: sentiero panoramico gratuito con vista mozzafiato su tutta la metropoli',
-      'Discesa verso Myeongdong: paradiso di maschere viso, street food e store K-beauty',
-      'Sera: Language Exchange bar per fare amicizia con ragazzi coreani e internazionali'
+    dateStr: "8 marzo 2027",
+    dayOfWeek: "Lunedì",
+    phase: "Prima settimana",
+    title: "Rientro di una persona del gruppo",
+    subtitle: "Colazione insieme, check-out e poi Namsan e Myeongdong per chi resta",
+    description: "Sveglia presto, colazione insieme e check-out di chi parte: lasciare l'alloggio circa 4-4,5 ore prima del volo. Accompagnare alla stazione più vicina da cui parte per l'aeroporto. Chi resta: Namsan a piedi (gratis), Myeongdong e Insadong (~10 €). Sera: language exchange.",
+    schedule: [
+      { time: "Mattina", activity: "Sveglia, colazione insieme e check-out di chi parte." },
+      { time: "Saluti", activity: "Accompagnare alla stazione più vicina da cui parte per l'aeroporto.", isHighlight: true },
+      { time: "Pomeriggio", activity: "Namsan a piedi (gratis), Myeongdong e Insadong (~10 €)." },
+      { time: "Sera", activity: "Language exchange." }
     ],
-    costsEstimate: '~8-10 € (drink evento language exchange)',
-    locationIds: ['namsan_tower', 'myeongdong'],
-    tags: ['Panorama', 'Namsan', 'Myeongdong', 'Language Exchange', 'Social']
+    bulletPoints: [
+      "Lasciare l'alloggio circa 4-4,5 ore prima del volo",
+      "Avvisare l'host che da oggi restano meno ospiti",
+      "Tenere chiavi o codice e confermare la procedura",
+      "Namsan e Myeongdong per chi resta"
+    ],
+    costsEstimate: "~10 € a testa (per chi resta)",
+    locationIds: ["namsan_tower", "myeongdong", "insadong"],
+    tags: ["Rientro", "Namsan", "Myeongdong", "Insadong"],
+    tips: [
+      "Il prezzo dell'alloggio non cambia quando parte una persona: chiedere all'host come gestire le chiavi."
+    ]
   },
   {
     id: 8,
-    dateStr: '9 marzo 2027',
-    dayOfWeek: 'Martedì',
-    phase: 'Seconda settimana',
-    title: 'Museo Nazionale & Serata Studentesca a Kondae',
-    subtitle: 'National Museum of Korea (gratis) e la nightlife economica di Konkuk',
-    description: 'Mattina e primo pomeriggio al maestoso Museo Nazionale della Corea (accesso gratuito). Sera a Konkuk University (Kondae), celebre area studentesca piena di locali economici.',
-    bulletPoints: [
-      'National Museum of Korea a Ichon: ingresso alla collezione permanente gratuito',
-      'Sera a Konkuk (Kondae): zona studentesca vivace, bar economici, sale giochi e ristoranti a prezzi calmierati',
-      'Prezzi molto abbordabili rispetto al centro'
+    dateStr: "9 marzo 2027",
+    dayOfWeek: "Martedì",
+    phase: "Seconda settimana",
+    title: "Museo + Kondae",
+    subtitle: "National Museum of Korea e serata a Konkuk",
+    description: "National Museum of Korea (gratis). Sera a Konkuk (Kondae): zona studentesca, economica e molto frequentata (~15 €).",
+    schedule: [
+      { time: "Giorno", activity: "National Museum of Korea (gratis)." },
+      { time: "Sera", activity: "Konkuk (Kondae): zona studentesca ed economica (~15 €).", isHighlight: true }
     ],
-    costsEstimate: '~10-12 € (cena e drink a Kondae)',
-    locationIds: ['national_museum', 'kondae_konkuk'],
-    tags: ['Cultura', 'Museo', 'Kondae', 'Studentesco', 'Low Cost']
+    bulletPoints: [
+      "Museo nazionale gratuito",
+      "Kondae: economica e molto frequentata"
+    ],
+    costsEstimate: "~15 € a testa",
+    locationIds: ["national_museum", "kondae_konkuk"],
+    tags: ["Museo", "Kondae"]
   },
   {
     id: 9,
-    dateStr: '10 marzo 2027',
-    dayOfWeek: 'Mercoledì',
-    phase: 'Seconda settimana',
-    title: 'Gita fuori porta: Incheon, Chinatown & Wolmido',
-    subtitle: 'Fuga marittima a circa un\'ora di metro da Seul',
-    description: 'Escursione giornaliera nella città portuale di Incheon. Visita all\'unica Chinatown ufficiale della Corea per assaggiare il celebre Jajangmyeon originale, passeggiata sul lungomare di Wolmido con luna park vintage sul mare, e rientro a Seul.',
-    bulletPoints: [
-      'Metro Linea 1: circa 1 ora di viaggio con normale tariffa T-Money (~2-3 €)',
-      'Chinatown di Incheon: culla del Jajangmyeon originale economico',
-      'Wolmido Island: passerella panoramica sul Mar Giallo e giostre vintage',
-      'Rientro a Seul per cena e serata tranquilla'
+    dateStr: "10 marzo 2027",
+    dayOfWeek: "Mercoledì",
+    phase: "Seconda settimana",
+    title: "Gita a Incheon",
+    subtitle: "Chinatown e Wolmido, rientro per una cena tranquilla",
+    description: "Chinatown e Wolmido, circa un'ora di treno. Rientro per cena e serata tranquilla a Hongdae (~12 €).",
+    schedule: [
+      { time: "Giorno", activity: "Chinatown e Wolmido, circa un'ora di treno.", isHighlight: true },
+      { time: "Sera", activity: "Rientro per cena e serata tranquilla a Hongdae (~12 €)." }
     ],
-    costsEstimate: '~5 € metro A/R + ~10-12 € cibo',
-    locationIds: ['incheon_chinatown_wolmido'],
-    tags: ['Gita', 'Incheon', 'Chinatown', 'Wolmido', 'Mare']
+    bulletPoints: [
+      "Chinatown di Incheon",
+      "Wolmido sul mare",
+      "Rientro in serata a Hongdae"
+    ],
+    costsEstimate: "~12 € a testa",
+    locationIds: ["incheon_chinatown_wolmido", "hongdae_district"],
+    tags: ["Incheon", "Chinatown", "Wolmido"]
   },
   {
     id: 10,
-    dateStr: '11 marzo 2027',
-    dayOfWeek: 'Giovedì',
-    phase: 'Seconda settimana',
-    title: 'Starfield COEX, Bongeunsa & Gangnam di Giovedì',
-    subtitle: 'La biblioteca futuristica, il tempio millenario e la serata a Gangnam',
-    description: 'Pomeriggio nel distretto di Gangnam: la spettacolare Starfield Library all\'interno del COEX Mall, seguita dal tempio Bongeunsa di fronte. Serata a Gangnam di giovedì per evitare i rincari del weekend.',
-    bulletPoints: [
-      'Starfield Library al COEX: la biblioteca su due piani con pareti di libri alte 13 metri (gratis)',
-      'Tempio Bongeunsa: oasi di silenzio fondata nel 794 d.C. con statua monumentale di Buddha',
-      'Sera a Gangnam: una sola volta durante la vacanza e di giovedì per spendere meno (~25 €)'
+    dateStr: "11 marzo 2027",
+    dayOfWeek: "Giovedì",
+    phase: "Seconda settimana",
+    title: "COEX + Sinchon",
+    subtitle: "Starfield Library, Bongeunsa e birre a Sinchon",
+    description: "Starfield Library (COEX) e Bongeunsa. Sera a Sinchon: zona universitaria, birre grandi a 4.000-5.000 KRW, locali economici e molta gente della stessa età (~15 €).",
+    schedule: [
+      { time: "Giorno", activity: "Starfield Library (COEX) e tempio Bongeunsa." },
+      { time: "Sera", activity: "Sinchon: birre grandi a 4.000-5.000 KRW (~15 €).", isHighlight: true }
     ],
-    costsEstimate: '~25 € (cena e locali a Gangnam di giovedì)',
-    locationIds: ['coex_starfield', 'bongeunsa_temple', 'gangnam_district'],
-    tags: ['Gangnam', 'COEX', 'Bongeunsa', 'Architettura', 'Nightlife']
+    bulletPoints: [
+      "Starfield Library al COEX",
+      "Bongeunsa, tempio nel cuore di Gangnam",
+      "Sinchon: locali economici e molta gente della stessa età"
+    ],
+    costsEstimate: "~15 € a testa",
+    locationIds: ["coex_starfield", "bongeunsa_temple", "sinchon"],
+    tags: ["COEX", "Sinchon", "Birre"]
   },
   {
     id: 11,
-    dateStr: '12 marzo 2027',
-    dayOfWeek: 'Venerdì',
-    phase: 'Seconda settimana',
-    title: 'Gita a Suwon: Fortezza UNESCO & Ingye-dong',
-    subtitle: 'La maestosa fortezza di Hwaseong e i locali del dopocena',
-    description: 'Gita di un giorno a Suwon (a 45 minuti di metro Linea 1 da Seul) per camminare lungo le mura della Fortezza di Hwaseong (patrimonio UNESCO). Visita al villaggio dei murales e cena a Ingye-dong.',
-    bulletPoints: [
-      'Fortezza di Hwaseong: 5,7 km di mura difensive percorribili a piedi, porte fortificate e torri',
-      'Haenggung-dong: vicoli bohémien attorno alla fortezza con cafè indipendenti',
-      'Zona locali per la cena: Ingye-dong (polo giovane di Suwon)',
-      'Rientro a Seul prima della mezzanotte con la metro'
+    dateStr: "12 marzo 2027",
+    dayOfWeek: "Venerdì",
+    phase: "Seconda settimana",
+    title: "Gita a Suwon",
+    subtitle: "Fortezza di Hwaseong e serata breve in zona",
+    description: "Fortezza di Hwaseong. La zona dei locali dovrebbe essere Ingye-dong (da verificare). Rientro in tempo per l'ultima metro, poi serata breve in zona (~12 €).",
+    schedule: [
+      { time: "Giorno", activity: "Fortezza di Hwaseong.", isHighlight: true },
+      { time: "Sera", activity: "Ingye-dong (da verificare). Rientro in tempo per l'ultima metro (~12 €)." }
     ],
-    costsEstimate: '~5 € metro A/R + ~12-15 € cena',
-    locationIds: ['suwon_hwaseong', 'suwon_ingyedong'],
-    tags: ['Gita', 'Suwon', 'UNESCO', 'Fortezza', 'Ingye-dong']
+    bulletPoints: [
+      "Fortezza di Hwaseong",
+      "Ingye-dong per la serata (da verificare)",
+      "Rientro in tempo per l'ultima metro"
+    ],
+    costsEstimate: "~12 € a testa",
+    locationIds: ["suwon_hwaseong", "suwon_ingyedong"],
+    tags: ["Suwon", "Hwaseong"]
   },
   {
     id: 12,
-    dateStr: '13 marzo 2027',
-    dayOfWeek: 'Sabato',
-    phase: 'Seconda settimana',
-    title: 'Sabato Sera Grande: Hongdae o Itaewon',
-    subtitle: 'La notte più attesa del weekend coreano',
-    description: 'Sabato libero per mercatini o relax e poi immersione totale nella notte del sabato sera a Seul con opzioni studentesche per contenere i costi.',
-    bulletPoints: [
-      'Pomeriggio libero a ritmo rilassato per acquisti o relax',
-      'Decisione del gruppo: Hongdae (energia giovanile e busker) oppure Itaewon',
-      'Soju, birra somaek e cena tipica'
+    dateStr: "13 marzo 2027",
+    dayOfWeek: "Sabato",
+    phase: "Seconda settimana",
+    title: "Serata grande a Hongdae",
+    subtitle: "Giornata libera e il sabato più affollato della settimana",
+    description: "Giornata libera o seconda visita a una zona piaciuta. Sera: il sabato è la serata più affollata della settimana. Strada e busking fino a tardi, poi club per chi vuole e piano comune per gli altri (~20-30 €).",
+    schedule: [
+      { time: "Giorno", activity: "Giornata libera o seconda visita a una zona piaciuta." },
+      { time: "Sera", activity: "Hongdae: strada e busking fino a tardi, poi club per chi vuole (~20-30 €).", isHighlight: true }
     ],
-    costsEstimate: '~15-20 € a persona con opzioni pocha',
-    locationIds: ['itaewon'],
-    tags: ['Weekend', 'Party', 'Hongdae', 'Itaewon', 'Somaek']
+    bulletPoints: [
+      "Il sabato è la serata più affollata",
+      "Strada e busking fino a tardi",
+      "Club per chi vuole, piano comune per gli altri"
+    ],
+    costsEstimate: "~20-30 € a testa",
+    locationIds: ["hongdae_district"],
+    tags: ["Hongdae", "Sabato", "Club"]
   },
   {
     id: 13,
-    dateStr: '14 marzo 2027',
-    dayOfWeek: 'Domenica',
-    phase: 'Seconda settimana',
-    title: 'White Day & Pomeriggio sul Fiume Han',
-    subtitle: 'Tradizione coreana del 14 marzo e ramyeon cucinato sul prato',
-    description: 'Il 14 marzo in Corea si celebra il White Day. Esperienza locale al Yeouido Hangang Park: preparare i tipici ramyeon con le macchine automatiche dei convenience store e gustarli al tramonto sul prato per 3-4 € a testa.',
-    bulletPoints: [
-      'White Day: atmosfera festosa e decorazioni speciali nei negozi',
-      'Pomeriggio sul fiume Han (Yeouido Hangang Park)',
-      'Esperienza K-culture a costo minimo: acquisto ramyeon nei convenience store (CU/GS25), cottura istantanea nelle ciotole di alluminio',
-      'Relax sulle rive del fiume guardando lo skyline'
+    dateStr: "14 marzo 2027",
+    dayOfWeek: "Domenica",
+    phase: "Seconda settimana",
+    title: "White Day coreano",
+    subtitle: "Pomeriggio sul fiume Han con ramyeon dai convenience store",
+    description: "Festa tipica coreana. Pomeriggio sul fiume Han con ramyeon dei convenience store (a marzo fa freddo: vestirsi bene). Sera leggera dopo il sabato (~8 €).",
+    schedule: [
+      { time: "Pomeriggio", activity: "Fiume Han con ramyeon dei convenience store.", isHighlight: true },
+      { time: "Sera", activity: "Serata leggera dopo il sabato (~8 €)." }
     ],
-    costsEstimate: '~4-6 € (ramyeon, uovo, snack e bibite al convenience store)',
-    locationIds: ['yeouido_hangang_park'],
-    tags: ['White Day', 'Fiume Han', 'Ramyeon', 'K-Culture', 'Relax']
+    bulletPoints: [
+      "Festa tipica coreana",
+      "Ramyeon dai convenience store sul fiume Han",
+      "Vestirsi bene: a marzo fa freddo"
+    ],
+    costsEstimate: "~8 € a testa",
+    locationIds: ["yeouido_hangang_park"],
+    tags: ["White Day", "Han", "Festa"]
   },
   {
     id: 14,
-    dateStr: '15 marzo 2027',
-    dayOfWeek: 'Lunedì',
-    phase: 'Seconda settimana',
-    title: 'Tour DMZ (Confine Corea del Nord) & Language Exchange',
-    subtitle: 'Mezza giornata nella zona demilitarizzata più sorvegliata al mondo',
-    description: 'Tour organizzato di mezza giornata verso la DMZ (Demilitarized Zone): Parco di Imjingak, 3° Tunnel d\'infiltrazione sotterraneo, Osservatorio Dora. Sera rilassata con language exchange.',
-    bulletPoints: [
-      'Tour DMZ mattutino di mezza giornata (~35-50 € a persona) oppure opzione giornata libera',
-      'Visita all\'Osservatorio di Dora con vista sui villaggi della Corea del Nord',
-      'Discesa nel Terzo Tunnel sotterraneo (caschetto compreso)',
-      'Rientro a Seul per il primo pomeriggio',
-      'Sera: language exchange per salutare gli amici conosciuti'
+    dateStr: "15 marzo 2027",
+    dayOfWeek: "Lunedì",
+    phase: "Seconda settimana",
+    title: "DMZ",
+    subtitle: "Tour di mezza giornata o giornata libera",
+    description: "Tour DMZ di mezza giornata (~35-55 €), oppure giornata libera. Sera: language exchange, utile per riempire le ultime serate con persone già conosciute.",
+    schedule: [
+      { time: "Giorno", activity: "Tour DMZ di mezza giornata (~35-55 €), oppure giornata libera.", isHighlight: true },
+      { time: "Sera", activity: "Language exchange." }
     ],
-    costsEstimate: '~35-50 € (tour DMZ prenotato)',
-    locationIds: ['dmz_imjingak'],
-    tags: ['DMZ', 'Storia', 'Corea del Nord', 'Tour', 'Esperienza']
+    bulletPoints: [
+      "Tour DMZ di mezza giornata",
+      "Alternativa: giornata libera"
+    ],
+    costsEstimate: "~35-55 € (tour DMZ)",
+    locationIds: ["dmz_imjingak"],
+    tags: ["DMZ", "Language exchange"]
   },
   {
     id: 15,
-    dateStr: '16 marzo 2027',
-    dayOfWeek: 'Martedì',
-    phase: 'Ultima parte',
-    title: 'Trekking al Parco Nazionale Bukhansan & Pocha Sinchon',
-    subtitle: 'Natura selvaggia alle porte della metropoli e cena autentica',
-    description: 'Escursione a piedi nel Parco Nazionale del Bukhansan (ingresso 100% gratuito). Sentieri panoramici, aria tersa e templi. Sera rilassata in un pocha tradizionale a Sinchon.',
-    bulletPoints: [
-      'Bukhansan a piedi: natura incontaminata a 40 minuti di metro dal centro (gratis)',
-      'Vette granitiche e vista panoramica su tutta la baia di Seul',
-      'Tappa in uno dei piccoli templi buddisti nascosti lungo i sentieri',
-      'Sera: pocha a Sinchon con jeon (pancake salati) e makgeolli'
+    dateStr: "16 marzo 2027",
+    dayOfWeek: "Martedì",
+    phase: "Ultima parte",
+    title: "Bukhansan + Yeonnam",
+    subtitle: "Trekking gratuito e pocha più tranquilla a Yeonnam-dong",
+    description: "Bukhansan a piedi (gratis). Sera: pocha a Yeonnam-dong, a due passi da Hongdae ma più tranquilla ed economica (~12 €).",
+    schedule: [
+      { time: "Giorno", activity: "Bukhansan a piedi (gratis).", isHighlight: true },
+      { time: "Sera", activity: "Pocha a Yeonnam-dong (~12 €)." }
     ],
-    costsEstimate: '~10-12 € (cena pocha e makgeolli)',
-    locationIds: ['bukhansan_national_park', 'sinchon'],
-    tags: ['Trekking', 'Natura', 'Bukhansan', 'Sinchon', 'Makgeolli']
+    bulletPoints: [
+      "Bukhansan a piedi, gratis",
+      "Yeonnam-dong: più tranquilla ed economica di Hongdae"
+    ],
+    costsEstimate: "~12 € a testa",
+    locationIds: ["bukhansan_national_park", "hongdae_district"],
+    tags: ["Bukhansan", "Yeonnam", "Trekking"]
   },
   {
     id: 16,
-    dateStr: '17 marzo 2027',
-    dayOfWeek: 'Mercoledì',
-    phase: 'Ultima parte',
-    title: 'Souvenir, K-Skincare & Serata d\'Addio',
-    subtitle: 'Razzia da Olive Young con Tax Refund immediato e festa finale',
-    description: 'Pomeriggio dedicato al rifornimento di prodotti skincare coreani da Olive Young con tax refund immediato del 7-8%, souvenir tipici a Dongdaemun e ultima vera serata di gruppo.',
-    bulletPoints: [
-      'Shopping skincare con passaporto alla cassa per tax refund immediato',
-      'Mercati e mall di Dongdaemun per souvenir economici',
-      'Sera d\'addio a Hongdae/Sinchon con barbecue di gruppo'
+    dateStr: "17 marzo 2027",
+    dayOfWeek: "Mercoledì",
+    phase: "Ultima parte",
+    title: "Souvenir + ultima serata grande",
+    subtitle: "Olive Young, Dongdaemun e l'ultima serata a Hongdae",
+    description: "Souvenir e skincare (Olive Young, Dongdaemun). Sera: ultima serata grande a Hongdae, con le persone conosciute durante il viaggio (~20-25 €).",
+    schedule: [
+      { time: "Giorno", activity: "Souvenir e skincare: Olive Young e Dongdaemun." },
+      { time: "Sera", activity: "Ultima serata grande a Hongdae (~20-25 €).", isHighlight: true }
     ],
-    costsEstimate: 'Shopping personale variabile + ~15-20 € cena',
-    locationIds: ['olive_young_flagship', 'ddp_dongdaemun'],
-    tags: ['Shopping', 'Skincare', 'Olive Young', 'Souvenir', 'Party']
+    bulletPoints: [
+      "Olive Young per la skincare",
+      "Dongdaemun per i souvenir",
+      "Ultima serata grande a Hongdae"
+    ],
+    costsEstimate: "~20-25 € a testa",
+    locationIds: ["olive_young_flagship", "ddp_dongdaemun", "hongdae_district"],
+    tags: ["Souvenir", "Olive Young", "Hongdae"]
   },
   {
     id: 17,
-    dateStr: '18 marzo 2027',
-    dayOfWeek: 'Giovedì',
-    phase: 'Ultima parte',
-    title: 'Ultimo Giorno Pieno: Valigie & Burocrazia Cina',
-    subtitle: 'Preparativi meticolosi, peso valigie (max 23kg) e Arrival Card online',
-    description: 'Ultimo giorno pieno a Seul: preparativi per la partenza del giorno successivo. Sveglia il 19 marzo alle 6:30, quindi serata corta e ordinata.',
+    dateStr: "18 marzo 2027",
+    dayOfWeek: "Giovedì",
+    phase: "Ultima parte",
+    title: "Ultimo giorno pieno",
+    subtitle: "Valigie da 23 kg, Arrival Card e Tiananmen online",
+    description: "Ultimo giorno pieno, serata corta di saluti (domani sveglia alle 6:30). Pomeriggio: valigie pronte e pesate, massimo 23 kg, con power bank e liquidi nello zaino. Online: Arrival Card per la Cina, da compilare nelle 24 ore prima dell'arrivo, prenotazione di Piazza Tiananmen (almeno un giorno prima) e screenshot di biglietti e mappe offline.",
     schedule: [
-      { time: 'Pomeriggio', activity: 'Valigie pronte e pesate (massimo 23 kg a testa). Liquidi nel bagaglio in stiva, power bank nello zaino a mano.' },
-      { time: 'Dalle 15:20', activity: 'Online: compilazione Arrival Card per la Cina sul sito s.nia.gov.cn per il transito 240h a Pechino (da fare nelle 24h prima).', isHighlight: true },
-      { time: 'Online', activity: 'Verifica prenotazione accesso a Piazza Tiananmen (richiesta con passaporto con almeno 24h di anticipo).' },
-      { time: 'Sera', activity: 'Ultima cena tranquilla di saluto. Rientro presto per sveglia alle 6:30.' }
+      { time: "Mattina", activity: "Ultime cose, sveglia alle 6:30 di domani." },
+      { time: "Pomeriggio", activity: "Valigie pronte e pesate (max 23 kg). Power bank e liquidi nello zaino." },
+      { time: "Online", activity: "Arrival Card cinese: si compila dalle 15:20 (ora di Seul) del 18 marzo, fino alla mattina del 19.", isHighlight: true },
+      { time: "Online", activity: "Prenotazione di Piazza Tiananmen (almeno un giorno prima), screenshot di biglietti e mappe offline." }
     ],
     bulletPoints: [
-      'Valigie pronte e pesate: tassativo massimo 23 kg per non pagare sovrapprezzi',
-      'Power bank rigorosamente con marchio 3C nello zaino a mano',
-      'Compilazione carta d\'arrivo Cina su s.nia.gov.cn nelle 24h prima (salvare screenshot QR code)',
-      'Prenotazione online Piazza Tiananmen con numero di passaporto',
-      'Scaricare mappe offline e screenshot dei biglietti'
+      "Valigie pesate: massimo 23 kg",
+      "Power bank e liquidi nello zaino",
+      "Arrival Card compilata online (gratis, sul sito ufficiale)",
+      "Prenotazione Tiananmen e screenshot di biglietti e mappe"
     ],
-    costsEstimate: '~10-12 € (cena tranquilla)',
-    locationIds: ['acc_c'],
-    tags: ['Valigie', 'Cina Transit', 'Checklist', 'Tiananmen', 'Burocrazia']
+    costsEstimate: "Gratis (solo online)",
+    locationIds: ["acc_c"],
+    tags: ["Valigie", "Arrival Card", "Tiananmen"],
+    tips: [
+      "L'Arrival Card si compila sul sito ufficiale della National Immigration Administration (s.nia.gov.cn, sezione Arrival Card). Diffidare dei siti che chiedono soldi."
+    ]
   },
   {
     id: 18,
-    dateStr: '19 marzo 2027',
-    dayOfWeek: 'Venerdì',
-    phase: 'Ultima parte',
-    title: 'Partenza da Seul & Scalo Epico a Pechino (Transito 240h)',
-    subtitle: 'Check-out ore 7:30, volo per Pechino, anatra laccata a Qianmen e rientro a Milano',
-    description: 'Giornata clou di viaggio articolata su due capitali asiatiche: mattinata con check-out alloggio e volo Air China da Incheon; pomeriggio e sera a Pechino con il permesso di transito 240 ore senza visto, cena con anatra laccata a Qianmen e ripartenza notturna per Malpensa alle 02:15 del 20 marzo.',
+    dateStr: "19 marzo 2027",
+    dayOfWeek: "Venerdì",
+    phase: "Ultima parte",
+    title: "Partenza da Seul + serata a Pechino",
+    subtitle: "Volo CA124 alle 13:10, transito 240h e rientro al T3 alle 21:15",
+    description: "Mattina a Seul: check-out alle 7:30, colazione fuori, AREX per Incheon, volo CA124 alle 13:10 (pasto a bordo). Atterraggio a Pechino alle 14:20: transito 240h, serata a Qianmen con anatra laccata, rientro al Terminal 3 entro le 21:15 e volo CA949 alle 02:15 per Milano Malpensa (arrivo alle 06:30 del 20 marzo).",
     schedule: [
-      { time: '06:30', activity: 'Sveglia e ultime cose in valigia (colazione fuori).' },
-      { time: '07:00 - 07:30', activity: 'Giro dell\'appartamento: differenziata, foto delle stanze per Enko, chiavi/codice. Check-out ore 7:30.' },
-      { time: '07:30 - 08:15', activity: 'Colazione veloce fuori con le valigie in un bar/caffè già aperto.' },
-      { time: '08:15 - 08:30', activity: 'A piedi o in metro fino alla stazione per AREX.' },
-      { time: '08:30 - 09:30', activity: 'Treno AREX all-stop (con T-money) fino a Incheon Airport (~50-60 min).' },
-      { time: '09:30 - 10:10', activity: 'Eventuale rimborso tasse ai chioschi prima del check-in. Spesa o rimborso residuo T-money.' },
-      { time: '10:10 - 10:40', activity: 'Check-in Air China: chiedere valigie etichettate fino a Milano MXP e ritirare ENTRAMBE le carte d\'imbarco (servono a Pechino).', isHighlight: true },
-      { time: '10:40 - 11:30', activity: 'Controlli di sicurezza e passaporti.' },
-      { time: '12:40', activity: 'Imbarco sul volo per Pechino.' },
-      { time: '13:10', activity: 'Decollo da Incheon. Spostare l\'orologio indietro di 1 ora (ora di Pechino). Pasto a bordo.' },
-      { time: '14:20 (ora PEK)', activity: 'Atterraggio a Pechino Capitale (PEK). Seguire le indicazioni "240-hour Visa-free Transit" (non andare a International Transfer!).', isHighlight: true },
-      { time: '14:30 - 16:30', activity: 'Banco transito 240h: mostrare passaporto, carta d\'imbarco Pechino-Milano e QR card. Ritiro permesso temporaneo, controllo passaporti e dogana.' },
-      { time: '16:30 - 17:00', activity: 'Deposito bagagli se serve (solo se non spedite a Milano), contanti 200 CNY.' },
-      { time: '17:00', activity: 'Airport Express (25 CNY, 20-25 min) fino a Dongzhimen.' },
-      { time: '17:30 - 18:00', activity: 'Metro Linea 2 fino a Qianmen (circa 3 CNY).' },
-      { time: '18:00 - 19:00', activity: 'Passeggiata nella via pedonale storica di Qianmen e Dashilar al tramonto.' },
-      { time: '19:00 - 20:30', activity: 'Cena con autentica anatra laccata alla pechinese (ristorante Quanjude o Siji Minfu divisa in 4).', isHighlight: true },
-      { time: '20:30 - 21:15', activity: 'Piazza Tiananmen illuminata (con prenotazione passaporto) o vicoli Hutong.' },
-      { time: '21:15 TASSATIVO', activity: 'PARTENZA per l\'aeroporto. Questo orario non si negozia per nessun motivo!', isHighlight: true },
-      { time: '22:15 - 22:45', activity: 'Arrivo al Terminal 3 di PEK con ampio margine di sicurezza.' },
-      { time: '23:15', activity: 'Apre il check-in Air China per Milano, controlli di sicurezza e uscita frontiera.' },
-      { time: '02:15 (20 Mar)', activity: 'Decollo volo Air China per Milano Malpensa. Arrivo in mattinata a Milano.', isHighlight: true }
+      { time: "6:30 (Seul)", activity: "Sveglia e ultime cose in valigia." },
+      { time: "7:30 (Seul)", activity: "Check-out dall'alloggio.", isHighlight: true },
+      { time: "8:30 (Seul)", activity: "AREX per Incheon (tariffa da verificare, circa 50-60 min)." },
+      { time: "10:10 (Seul)", activity: "Check-in Air China: valigie etichettate fino a Milano (MXP), carte d'imbarco Incheon-Pechino e Pechino-Milano." },
+      { time: "13:10 (Seul)", activity: "Decollo CA124 per Pechino. Spostare l'orologio indietro di 1 ora.", isHighlight: true },
+      { time: "14:20 (Pechino)", activity: "Atterraggio a Pechino, seguire 'Transit 240h' (non 'International Transfer').", isHighlight: true },
+      { time: "14:30 - 16:30", activity: "Banco transito 240h: passaporto, carta d'imbarco, QR della carta d'arrivo; ritiro del permesso temporaneo." },
+      { time: "17:00", activity: "Airport Express (25 CNY, 20-25 min) fino a Dongzhimen, poi metro Linea 2 fino a Qianmen." },
+      { time: "19:00 - 20:30", activity: "Cena con anatra laccata (Quanjude, Siji Minfu o simili).", isHighlight: true },
+      { time: "21:15 TASSATIVO", activity: "Partenza per l'aeroporto. Non si negozia.", isHighlight: true },
+      { time: "22:15 - 22:45", activity: "Arrivo al Terminal 3." },
+      { time: "23:15", activity: "Apre il check-in Air China, bagagli e controlli." },
+      { time: "02:15 (20 Mar)", activity: "Decollo CA949 per Milano Malpensa (arrivo alle 06:30 del 20 marzo)." }
     ],
     bulletPoints: [
-      'Mattina Seul: check-out 7:30, AREX per Incheon, volo alle 13:10 (valigie spedite fino a Milano)',
-      'Pechino 14:20: banco transito 240h per permesso temporaneo di uscita senza visto',
-      'Airport Express (25 CNY) + Metro Linea 2 (3 CNY) fino a Qianmen',
-      'Cena con famosa anatra laccata condivisa tra i 4 amici',
-      'Vista serale Piazza Tiananmen (prenotazione online indispensabile)',
-      'Rientro al T3: partenza dal centro ore 21:15 max, arrivo aeroporto entro le 22:45',
-      'Volo per Malpensa alle ore 02:15 del 20 marzo'
+      "Seul: check-out alle 7:30, AREX e volo alle 13:10",
+      "Pechino 14:20: transito 240h per il permesso temporaneo senza visto",
+      "Airport Express (25 CNY) e metro Linea 2 (3 CNY) fino a Qianmen",
+      "Cena con anatra laccata condivisa tra i 4 amici",
+      "Piazza Tiananmen illuminata solo con prenotazione",
+      "Rientro al T3 dal centro entro le 21:15"
     ],
-    costsEstimate: '120 - 160 CNY (~15 - 22 € a persona per tutto lo scalo)',
-    locationIds: ['incheon_airport', 'beijing_airport_t3', 'beijing_qianmen', 'beijing_tiananmen', 'beijing_dongzhimen', 'mxp_terminal1'],
-    tags: ['Partenza', 'Scalo', 'Pechino', 'Transito 240h', 'Anatra Laccata', 'Tiananmen', 'Rientro'],
+    costsEstimate: "190-310 CNY a persona (25-40 €) per tutto lo scalo",
+    locationIds: ["incheon_airport", "beijing_airport_t3", "beijing_qianmen", "beijing_tiananmen", "beijing_dongzhimen", "mxp_terminal1"],
+    tags: ["Partenza", "Scalo", "Pechino", "Transito 240h", "Anatra Laccata", "Tiananmen", "Rientro"],
     tips: [
-      'A Pechino Google, WhatsApp e Instagram sono bloccati: usare eSIM con IP italiano.',
-      'Avere installato e verificato Alipay Tour Pass con carta prima di atterrare.'
+      "Verificare che il transito 240h valga a marzo 2027 per gli italiani (ambasciata cinese o Air China).",
+      "Passaporto valido almeno 6 mesi dopo il rientro. Power bank con marchio 3C.",
+      "A Pechino Google, WhatsApp e Instagram sono bloccati: usare eSIM o roaming sulla rete italiana.",
+      "Pagamenti: Alipay (Tour Pass) o WeChat Pay con carta, più 200-300 CNY in contanti."
     ]
   }
 ];
