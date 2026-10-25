@@ -1440,3 +1440,11 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
     ]
   }
 ];
+
+// I giorni di ogni tappa sulla mappa derivano dall'itinerario (locationIds dei giorni),
+// così il filtro "Giorno" della mappa mostra le stesse tappe dell'itinerario.
+// Gli alloggi restano legati alle notti di soggiorno.
+for (const loc of MAP_LOCATIONS) {
+  if (loc.category === 'alloggio') continue;
+  loc.dayNumbers = ITINERARY_DAYS.filter((d) => d.locationIds.includes(loc.id)).map((d) => d.id);
+}
