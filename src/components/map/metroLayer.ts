@@ -7,6 +7,7 @@ import {
   type MetroNetwork
 } from '../../data/seoulMetro';
 import { type MetroRouteResult } from '../../data/metroRouter';
+import { originLabel } from './categoryStyle';
 
 export type MetroTheme = 'dark' | 'light';
 
@@ -383,12 +384,8 @@ export class MetroLayer {
         dashArray: '6, 8',
         opacity: 1
       });
-      const originLabel =
-        route.origin.id === 'gps_origin'
-          ? route.origin.italianName
-          : `Alloggio ${route.origin.accommodationCode ?? route.origin.italianName}`;
       walkStartLine.bindTooltip(
-        `<div class="metro-tip"><div><strong>Tratto a piedi iniziale</strong><span>${escapeHtml(originLabel)} → ${escapeHtml(route.walkStart.station.en)}</span><em>${route.walkStart.distanceMeters} m · ~${route.walkStart.walkMinutes} min a piedi</em></div></div>`,
+        `<div class="metro-tip"><div><strong>Tratto a piedi iniziale</strong><span>${escapeHtml(originLabel(route.origin))} → ${escapeHtml(route.walkStart.station.en)}</span><em>${route.walkStart.distanceMeters} m · ~${route.walkStart.walkMinutes} min a piedi</em></div></div>`,
         { sticky: true, direction: 'top', offset: [0, -8], className: 'metro-tooltip', opacity: 1 }
       );
       this.routeLayer.addLayer(walkStartCasing);

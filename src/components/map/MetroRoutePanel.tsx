@@ -32,6 +32,7 @@ import {
   type SeoulSimulationPreset
 } from '../../data/seoulMetroOfficialData';
 import { LineBadge } from './MetroPanel';
+import { originLabel } from './categoryStyle';
 
 export interface LiveGeoState {
   enabled: boolean;
@@ -711,8 +712,8 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold text-white truncate">
                         Partenza:{' '}
-                        {currentRoute.origin.id === 'gps_origin'
-                          ? currentRoute.origin.italianName
+                        {currentRoute.origin.id === 'gps_origin' || currentRoute.origin.category !== 'alloggio'
+                          ? originLabel(currentRoute.origin)
                           : `Alloggio ${currentRoute.origin.accommodationCode} (${currentRoute.origin.district})`}
                       </span>
                       <span className="text-[11px] font-mono tabular-nums text-slate-400 shrink-0">
