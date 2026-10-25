@@ -70,6 +70,7 @@ const CHIP_CATEGORIES = [
 ];
 
 const DEST_GROUP_ORDER = ['alloggio', 'cultura', 'food', 'nightlife', 'natura', 'gita', 'logistica'];
+const ORIGIN_GROUP_ORDER = DEST_GROUP_ORDER.filter((c) => c !== 'alloggio');
 
 const dayShort = (id: number): string => {
   const d = ITINERARY_DAYS.find((x) => x.id === id);
@@ -139,6 +140,7 @@ export interface MobileMapOverlayProps {
   notice: string | null;
 
   accommodations: MapLocation[];
+  origins: MapLocation[];
   destinations: MapLocation[];
   originId: string;
   destinationId: string;
@@ -374,9 +376,14 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               <Navigation className="w-4 h-4" /> Percorso
             </button>
           )}
-          {loc.category === 'alloggio' && (
+          {canRoute && (
             <button type="button" onClick={() => p.onRouteFrom(loc)} className={pillSecondary}>
-              <Home className="w-4 h-4 text-cyan-400" /> Partenza
+              {loc.category === 'alloggio' ? (
+                <Home className="w-4 h-4 text-cyan-400" />
+              ) : (
+                <MapPin className="w-4 h-4 text-cyan-400" />
+              )}{' '}
+              Partenza
             </button>
           )}
           <a href={getNaverMapSearchUrl(loc)} target="_blank" rel="noopener noreferrer" className={pillSecondary}>
@@ -621,6 +628,19 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                     🏠 Alloggio {a.accommodationCode} · {a.district}
                   </option>
                 ))}
+                {ORIGIN_GROUP_ORDER.map((cat) => {
+                  const list = p.origins.filter((o) => o.category === cat);
+                  if (list.length === 0) return null;
+                  return (
+                    <optgroup key={cat} label={`${CATEGORY_STYLE[cat]?.letter ?? ''} ${CATEGORY_LABEL[cat] ?? cat}`}>
+                      {list.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.italianName}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </SelectField>
               <SelectField label="Destinazione" value={p.destinationId} onChange={p.onDestination}>
                 {DEST_GROUP_ORDER.map((cat) => {

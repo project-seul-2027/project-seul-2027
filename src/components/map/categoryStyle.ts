@@ -18,3 +18,10 @@ export const CATEGORY_LABEL: Record<string, string> = {
   gita: 'Gita fuori porta',
   logistica: 'Logistica'
 };
+
+/** Etichetta della partenza: alloggi con il codice, GPS e qualsiasi altro punto con il nome. */
+export function originLabel(loc: { id: string; italianName: string; category: string; accommodationCode?: string }): string {
+  if (loc.id === 'gps_origin') return loc.italianName;
+  if (loc.category === 'alloggio' && loc.accommodationCode) return `Alloggio ${loc.accommodationCode}`;
+  return loc.italianName;
+}

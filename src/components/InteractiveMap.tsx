@@ -31,7 +31,7 @@ import { MetroLayer } from './map/metroLayer';
 import { MetroPanel, LineBadge } from './map/MetroPanel';
 import { MetroRoutePanel, type LiveGeoState } from './map/MetroRoutePanel';
 import { RealMetroDataDrawer } from './map/RealMetroDataDrawer';
-import { CATEGORY_STYLE } from './map/categoryStyle';
+import { CATEGORY_STYLE, originLabel } from './map/categoryStyle';
 import { MobileMapOverlay, sheetHeight, useIsMobileMap, type SheetSnap } from './map/MobileMapUI';
 
 interface InteractiveMapProps {
@@ -244,6 +244,14 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       ),
     []
   );
+  // Qualsiasi punto della Corea del Sud raggiungibile in metro può fare da partenza (oltre ad alloggi e GPS)
+  const originCandidates = useMemo(
+    () =>
+      MAP_LOCATIONS.filter(
+        (l) => l.category !== 'alloggio' && (l.city === 'Seul' || l.city === 'Dintorni / Gite')
+      ),
+    []
+  );
   const [selectedOriginId, setSelectedOriginId] = useState<string>(() => accommodations[0]?.id ?? 'acc_a');
   const [selectedDestinationId, setSelectedDestinationId] = useState<string>(
     () => koreanDestinations.find((d) => d.id === 'gyeongbokgung')?.id ?? koreanDestinations[0]?.id ?? ''
@@ -439,7 +447,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         dayNumbers: []
       };
     }
-    return accommodations.find((a) => a.id === selectedOriginId) ?? accommodations[0];
+    return (
+      accommodations.find((a) => a.id === selectedOriginId) ??
+      MAP_LOCATIONS.find((l) => l.id === selectedOriginId) ??
+      accommodations[0]
+    );
   }, [selectedOriginId, geoState, accommodations]);
 
   // Letti dai listener dei segnaposto
@@ -1264,9 +1276,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           {mapMode === 'route' && activeOriginLocation && activeDestObj ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-300 font-semibold whitespace-nowrap">
-                {activeOriginLocation.id === 'gps_origin'
-                  ? activeOriginLocation.italianName
-                  : `Alloggio ${activeOriginLocation.accommodationCode}`}
+                {originLabel(activeOriginLocation)}
               </span>
               <span aria-hidden="true">→</span>
               <span className="text-cyan-300 font-semibold truncate">{activeDestObj.italianName}</span>
@@ -1681,9 +1691,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 <Route className="w-4 h-4 text-cyan-400 shrink-0" />
                 <div className="min-w-0">
                   <div className="font-bold text-white truncate">
-                    {currentMetroRoute.origin.id === 'gps_origin'
-                      ? currentMetroRoute.origin.italianName
-                      : `Alloggio ${currentMetroRoute.origin.accommodationCode}`}{' '}
+                    {originLabel(currentMetroRoute.origin)}{' '}
                     → {currentMetroRoute.destination.italianName}
                   </div>
                   <div className="text-[11px] text-slate-300 font-mono tabular-nums">
@@ -1908,6 +1916,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               onLocate={handleLocate}
               notice={mapNotice}
               accommodations={accommodations}
+              origins={originCandidates}
               destinations={koreanDestinations}
               originId={activeOriginLocation.id}
               destinationId={selectedDestinationId}
