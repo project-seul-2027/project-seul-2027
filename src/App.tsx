@@ -199,7 +199,10 @@ function TripPortal() {
       <div
         ref={stickyRef}
         data-app-sticky
-        className="sticky top-0 z-50 bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20 pt-[env(safe-area-inset-top)]"
+        className={`sticky top-0 z-50 bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20 pt-[env(safe-area-inset-top)] ${
+          // Mappa su telefono: via la barra in alto (resta solo l'area sicura sotto l'orologio) per dare spazio alla mappa
+          activeTab === 'map' ? 'max-lg:shadow-none max-lg:[&>*]:hidden' : ''
+        }`}
       >
         {/* Top Bar */}
         <header className="border-b border-slate-800/80 px-4 sm:px-8 py-2.5 lg:py-3 flex items-center justify-between gap-4 2xl:gap-6">
