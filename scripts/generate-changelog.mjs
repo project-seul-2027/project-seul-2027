@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 const RELEASES = [
   { from: null, series: '1.0' }, // 1.0.0, 1.0.1, 1.0.2 ...
   { from: '3a0f64a', series: '1.1' } // 3a0f64a = 1.1.0, poi 1.1.1, 1.1.2 ...
+  { from: 'b9ba4e7', series: '1.2' }
 ];
 const FALLBACK_REPO = 'https://github.com/IamAxell/project-seul-2027';
 // ---------------------------------------------------------------------------------------------------------
