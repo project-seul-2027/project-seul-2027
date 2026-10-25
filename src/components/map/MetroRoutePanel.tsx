@@ -64,6 +64,8 @@ interface MetroRoutePanelProps {
   onActivateRealGps: () => void;
   onStopGps: () => void;
   onActivateSimulatedGps: (preset: SeoulSimulationPreset) => void;
+  /** Versione per telefono: partenza e arrivo si scelgono nella barra in alto, qui restano percorso e GPS */
+  compact?: boolean;
 }
 
 export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
@@ -85,7 +87,8 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
   geoState,
   onActivateRealGps,
   onStopGps,
-  onActivateSimulatedGps
+  onActivateSimulatedGps,
+  compact = false
 }) => {
   const [destQuery, setDestQuery] = useState('');
   const [destCategory, setDestCategory] = useState<string>('all');
@@ -179,16 +182,14 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
       })
     : null;
 
-  return (
-    <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
-      {/* 1. SELEZIONE PUNTO DI PARTENZA: POSIZIONE GPS ATTUALE O ALLOGGIO */}
-      <section className="space-y-2.5">
+  const originSection = (
+      <section className={compact ? 'space-y-2.5 pt-3 border-t border-slate-800/80' : 'space-y-2.5'}>
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
             <Home className="w-3.5 h-3.5 text-cyan-400" />
-            1. Punto di partenza (GPS Live o Alloggio)
+            {compact ? 'La mia posizione (GPS)' : '1. Punto di partenza (GPS Live o Alloggio)'}
           </span>
-          <span className="text-[11px] text-slate-500">Scegli o clicca sulla mappa</span>
+          {!compact && <span className="text-[11px] text-slate-500">Scegli o clicca sulla mappa</span>}
         </div>
 
         {/* Scheda Geolocalizzazione Dispositivo in Tempo Reale */}
@@ -372,6 +373,8 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
           )}
         </div>
 
+        {!compact && (
+          <>
         {/* Griglia dei 4 Alloggi come punto di partenza alternativo */}
         <div className="grid grid-cols-2 gap-1.5">
           {accommodations.map((acc) => {
@@ -398,9 +401,12 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
             );
           })}
         </div>
+          </>
+        )}
       </section>
+  );
 
-      {/* 2. SELEZIONE DESTINAZIONE (TUTTE LE TAPPE + I 4 ALLOGGI) */}
+  const destSection = (
       <section className="space-y-2 pt-2 border-t border-slate-800/80">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
@@ -528,10 +534,10 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
           </div>
         )}
       </section>
+  );
 
-      {/* 3. RISULTATO DEL PERCORSO METRO */}
-      {currentRoute && (
-        <section className="space-y-3 pt-2 border-t border-slate-800/80">
+  const routeSection = currentRoute && (
+        <section className={`space-y-3 ${compact ? '' : 'pt-2 border-t border-slate-800/80'}`}>
           {!currentRoute.reachable ? (
             /* STATO: ERRORE DISTANZA DALLA METRO O TAPPA NON SERVITA */
             <div
@@ -939,10 +945,9 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
             </>
           )}
         </section>
-      )}
+  );
 
-      {/* 4. CONFRONTO RAPIDO DAI 4 ALLOGGI VERSO QUESTA DESTINAZIONE */}
-      {selectedDestination && allAccommodationsComparison.length > 0 && (
+  const compareSection = selectedDestination && allAccommodationsComparison.length > 0 && (
         <section className="pt-3 border-t border-slate-800/80 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
@@ -999,6 +1004,23 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
             })}
           </div>
         </section>
+  );
+
+  return (
+    <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+      {compact ? (
+        <>
+          {routeSection}
+          {compareSection}
+          {originSection}
+        </>
+      ) : (
+        <>
+          {originSection}
+          {destSection}
+          {routeSection}
+          {compareSection}
+        </>
       )}
     </div>
   );

@@ -198,6 +198,7 @@ function TripPortal() {
       {/* Sticky Global Top Container con Header e Orologio Mondiale Live */}
       <div
         ref={stickyRef}
+        data-app-sticky
         className="sticky top-0 z-50 bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20 pt-[env(safe-area-inset-top)]"
       >
         {/* Top Bar */}
@@ -737,7 +738,8 @@ function TripPortal() {
 
         {activeTab === 'map' && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {/* Su telefono la mappa occupa tutto lo schermo e il titolo non serve */}
+            <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h2 className="text-xl font-bold font-display text-white">
                   Mappa Interattiva (Tappe e Alloggi in Italiano)
@@ -908,6 +910,7 @@ function TripPortal() {
       {/* ============================================================ */}
       <nav
         aria-label="Navigazione principale"
+        data-app-bottomnav
         className="lg:hidden fixed bottom-0 inset-x-0 z-[60] bg-[#0b111d]/95 backdrop-blur-lg border-t border-slate-800/90 pb-[env(safe-area-inset-bottom)]"
       >
         <div className="grid grid-cols-5 max-w-xl mx-auto">

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import { MAP_LOCATIONS, MapLocation, ITINERARY_DAYS, getNaverMapSearchUrl } from '../data/tripData';
 import {
@@ -31,6 +31,8 @@ import { MetroLayer } from './map/metroLayer';
 import { MetroPanel, LineBadge } from './map/MetroPanel';
 import { MetroRoutePanel, type LiveGeoState } from './map/MetroRoutePanel';
 import { RealMetroDataDrawer } from './map/RealMetroDataDrawer';
+import { CATEGORY_STYLE } from './map/categoryStyle';
+import { MobileMapOverlay, sheetHeight, useIsMobileMap, type SheetSnap } from './map/MobileMapUI';
 
 interface InteractiveMapProps {
   selectedLocationId?: string | null;
@@ -81,25 +83,16 @@ function writeMetroPrefs(prefs: MetroPrefs) {
   }
 }
 
-const CATEGORY_STYLE: Record<string, { badge: string; ring: string; letter: string }> = {
-  alloggio: { badge: '#3b82f6', ring: 'rgba(59, 130, 246, 0.6)', letter: '🏠' },
-  nightlife: { badge: '#ec4899', ring: 'rgba(236, 72, 153, 0.5)', letter: '🍸' },
-  food: { badge: '#f59e0b', ring: 'rgba(245, 158, 11, 0.5)', letter: '🍜' },
-  cultura: { badge: '#8b5cf6', ring: 'rgba(139, 92, 246, 0.5)', letter: '🏯' },
-  natura: { badge: '#10b981', ring: 'rgba(16, 185, 129, 0.5)', letter: '🌲' },
-  gita: { badge: '#0ea5e9', ring: 'rgba(14, 165, 133, 0.5)', letter: '🚆' },
-  logistica: { badge: '#94a3b8', ring: 'rgba(148, 163, 184, 0.4)', letter: '✈️' }
-};
-
 function makeMarkerIcon(
   loc: MapLocation,
   isSelected: boolean,
-  routeRole?: 'origin' | 'destination' | 'dimmed' | null
+  routeRole?: 'origin' | 'destination' | 'dimmed' | null,
+  touch = false
 ): L.DivIcon {
   const style = CATEGORY_STYLE[loc.category] ?? { badge: '#06b6d4', ring: 'rgba(6, 182, 212, 0.4)', letter: '📍' };
   const isAccommodation = loc.category === 'alloggio';
   const isRouteActiveNode = routeRole === 'origin' || routeRole === 'destination';
-  const size = isRouteActiveNode ? 42 : isSelected ? 38 : isAccommodation ? 34 : 30;
+  const size = (isRouteActiveNode ? 42 : isSelected ? 38 : isAccommodation ? 34 : 30) + (touch ? 6 : 0);
   const borderColor =
     routeRole === 'origin'
       ? '#38bdf8'
@@ -196,7 +189,40 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const gpsAccuracyCircleRef = useRef<L.Circle | null>(null);
 
   // Modalità Principale: 'explore' (Esplora Mappa & Legenda) vs 'route' (Calcola Percorso Metro)
-  const [mapMode, setMapMode] = useState<MapInteractionMode>('explore');
+  const isMobile = useIsMobileMap();
+  const isMobileRef = useRef(isMobile);
+  isMobileRef.current = isMobile;
+
+  // Foglio trascinabile della versione per telefono
+  const [sheetSnap, setSheetSnap] = useState<SheetSnap>(() => (selectedLocationId ? 'mid' : 'peek'));
+  const sheetSnapRef = useRef<SheetSnap>(sheetSnap);
+  sheetSnapRef.current = sheetSnap;
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [shellTop, setShellTop] = useState(64);
+  const [shellH, setShellH] = useState(0);
+  const [shellBottom, setShellBottom] = useState<number | null>(null);
+  const [topInset, setTopInset] = useState(116);
+  const topInsetRef = useRef(116);
+  const handleTopInset = useCallback((px: number) => {
+    topInsetRef.current = px;
+    setTopInset(px);
+  }, []);
+  const [mapNotice, setMapNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
+  const showNotice = useCallback((msg: string) => {
+    setMapNotice(msg);
+    if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => setMapNotice(null), 7000);
+  }, []);
+  const focusRef = useRef<(latlng: LatLng, zoom: number, snap?: SheetSnap) => void>(() => {});
+  const pendingFocusRef = useRef<{ latlng: LatLng; zoom: number } | null>(null);
+
+  const [mapMode, setMapModeState] = useState<MapInteractionMode>('explore');
+  /** Cambia modalità; sul telefono porta il foglio all'altezza giusta (percorso: a metà) */
+  const setMapMode = useCallback((m: MapInteractionMode) => {
+    setMapModeState(m);
+    setSheetSnap(m === 'route' ? 'mid' : selectedIdRef.current ? 'mid' : 'peek');
+  }, []);
   const [isRealDataOpen, setIsRealDataOpen] = useState<boolean>(false);
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -248,7 +274,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }
   }, []);
 
-  const handleActivateRealGps = useCallback(() => {
+  const handleActivateRealGps = useCallback((opts?: { route?: boolean; recenter?: boolean }) => {
     clearGpsWatchers();
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setGeoState({
@@ -273,12 +299,25 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       simulatedPreset: null
     }));
     setSelectedOriginId('gps_origin');
-    setMapMode('route');
+    // Il pulsante "posizione" del telefono centra soltanto la mappa; gli altri aprono anche il percorso
+    if (opts?.route !== false) setMapMode('route');
+    let pendingRecenter = opts?.recenter === true;
 
     const onPosSuccess = (pos: GeolocationPosition) => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       const acc = pos.coords.accuracy;
+      if (pendingRecenter) {
+        pendingRecenter = false;
+        const km = L.latLng(lat, lng).distanceTo(L.latLng(37.5568, 126.9738)) / 1000;
+        if (km < 120) {
+          focusRef.current([lat, lng], 15);
+        } else {
+          showNotice(
+            `Sei a circa ${Math.round(km).toLocaleString('it-IT')} km da Seul. Per provare il percorso apri "Percorso" e simula una posizione a Seul.`
+          );
+        }
+      }
       setGeoState({
         enabled: true,
         status: 'active',
@@ -308,6 +347,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         isSimulated: false,
         simulatedPreset: null
       }));
+      showNotice(msg);
     };
 
     const geoOpts: PositionOptions = {
@@ -323,7 +363,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     pollIntervalRef.current = window.setInterval(() => {
       navigator.geolocation.getCurrentPosition(onPosSuccess, () => {}, geoOpts);
     }, 5000);
-  }, [clearGpsWatchers]);
+  }, [clearGpsWatchers, setMapMode, showNotice]);
 
   const handleActivateSimulatedGps = useCallback(
     (preset: SeoulSimulationPreset) => {
@@ -350,7 +390,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         );
       }, 5000);
     },
-    [clearGpsWatchers]
+    [clearGpsWatchers, setMapMode]
   );
 
   const handleStopGps = useCallback(() => {
@@ -435,6 +475,37 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     return computeMetroRoute(metroNetwork, activeOriginLocation, dest);
   }, [mapMode, metroNetwork, activeOriginLocation, koreanDestinations, selectedDestinationId]);
 
+  /** Margini della mappa coperti da barra in alto e foglio (solo telefono) con il foglio nella posizione indicata */
+  const insetsFor = (snap: SheetSnap) => {
+    if (!isMobileRef.current) return { top: 0, bottom: 0 };
+    const H = shellRef.current?.clientHeight ?? 0;
+    const top = topInsetRef.current;
+    return { top, bottom: Math.min(sheetHeight(snap, H, top), Math.round(H * 0.62)) };
+  };
+
+  /** Centra la mappa su un punto; sul telefono lo porta al centro della parte non coperta dal foglio */
+  const focusLatLng = (latlng: LatLng, zoom: number, snap: SheetSnap = sheetSnapRef.current) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const { top, bottom } = insetsFor(snap);
+    const dy = (bottom - top) / 2;
+    const base = L.latLng(latlng[0], latlng[1]);
+    const target = dy ? map.unproject(map.project(base, zoom).add([0, dy]), zoom) : base;
+    map.setView(target, zoom, { animate: true });
+  };
+  focusRef.current = focusLatLng;
+
+  /** Prima di spostare la mappa da un pannello: se il foglio è tutto aperto lo abbassa, così il punto resta visibile */
+  const prepareMapView = () => {
+    if (!isMobileRef.current) return;
+    let snap = sheetSnapRef.current;
+    if (snap === 'full') {
+      snap = 'mid';
+      setSheetSnap('mid');
+    }
+    if (metroLayerRef.current) metroLayerRef.current.insets = insetsFor(snap);
+  };
+
   // Sync external selectedLocationId
   useEffect(() => {
     if (selectedLocationId) {
@@ -448,11 +519,57 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           }
         } else {
           setCurrentSelectedLoc(loc);
-          mapInstanceRef.current?.setView([loc.lat, loc.lng], 15, { animate: true });
+          if (isMobileRef.current) setSheetSnap('mid');
+          if (mapInstanceRef.current) {
+            focusLatLng([loc.lat, loc.lng], 15, 'mid');
+          } else {
+            // la mappa si crea subito dopo: la vista viene impostata appena è pronta
+            pendingFocusRef.current = { latlng: [loc.lat, loc.lng], zoom: 15 };
+          }
         }
       }
     }
   }, [selectedLocationId]);
+
+  // Telefono: la mappa occupa lo spazio tra l'intestazione dell'app e la barra in basso
+  useLayoutEffect(() => {
+    if (!isMobile) return;
+    const sticky = document.querySelector('[data-app-sticky]') as HTMLElement | null;
+    const bottomNav = document.querySelector('[data-app-bottomnav]') as HTMLElement | null;
+    const update = () => {
+      setShellTop(Math.round(sticky ? sticky.getBoundingClientRect().bottom : 64));
+      // la mappa finisce dove inizia la barra di navigazione in basso
+      if (bottomNav) setShellBottom(Math.max(0, Math.round(window.innerHeight - bottomNav.getBoundingClientRect().top)));
+      setShellH(shellRef.current?.clientHeight ?? 0);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (sticky) ro.observe(sticky);
+    if (bottomNav) ro.observe(bottomNav);
+    if (shellRef.current) ro.observe(shellRef.current);
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, [isMobile]);
+
+  // Telefono: la pagina dietro la mappa non scorre (si muove solo la mappa)
+  useEffect(() => {
+    if (!isMobile) return;
+    const html = document.documentElement;
+    const prev = { overflow: html.style.overflow, over: html.style.overscrollBehavior };
+    // la pagina riparte dall'alto, così l'intestazione fissa è al suo posto e la mappa le sta sotto
+    window.scrollTo(0, 0);
+    html.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'none';
+    return () => {
+      html.style.overflow = prev.overflow;
+      html.style.overscrollBehavior = prev.over;
+    };
+  }, [isMobile]);
 
   // Sync external day filter if changed
   useEffect(() => {
@@ -502,7 +619,22 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         .addTo(map);
 
       mapInstanceRef.current = map;
+
+      if (pendingFocusRef.current) {
+        const { latlng, zoom } = pendingFocusRef.current;
+        pendingFocusRef.current = null;
+        focusRef.current(latlng, zoom, 'mid');
+      }
     }
+  }, []);
+
+  // La mappa segue le dimensioni del contenitore (rotazione, tastiera, foglio che cambia layout)
+  useEffect(() => {
+    const el = mapContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => mapInstanceRef.current?.invalidateSize({ pan: false }));
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   // Aggiorna in tempo reale il pallino GPS e il cerchio di precisione sulla mappa SENZA spostare la vista
@@ -632,6 +764,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     metroLayerRef.current?.setSelected(selectedLine);
   }, [selectedLine, metroNetwork]);
 
+  // Le inquadrature della metro evitano le parti coperte da barra e foglio (telefono)
+  useEffect(() => {
+    if (metroLayerRef.current) metroLayerRef.current.insets = insetsFor(sheetSnap);
+  }, [isMobile, sheetSnap, shellH, topInset, metroNetwork]);
+
   // Traccia l'ultima coppia origine/destinazione inquadrata per non spostare la vista a ogni tick GPS di 5 secondi
   const lastFittedKeyRef = useRef<string>('');
 
@@ -683,21 +820,23 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   /** Su telefono mappa e pannello sono uno sopra l'altro: porta in vista quello che è cambiato. */
   const isStacked = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
   const revealMap = () => {
-    if (isStacked()) mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (isStacked() && !isMobileRef.current) mapContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
   const revealPanel = () => {
-    if (isStacked()) sidebarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (isStacked() && !isMobileRef.current) sidebarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const selectLineFromPanel = (id: string | null) => {
     selectLine(id);
     if (id) {
+      prepareMapView();
       metroLayerRef.current?.fitLine(id);
       revealMap();
     }
   };
 
   const focusStation = (key: string, lineId?: string) => {
+    prepareMapView();
     metroLayerRef.current?.focusStation(key, lineId);
     revealMap();
   };
@@ -708,10 +847,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     stationKey?: string,
     lineId?: string
   ) => {
+    prepareMapView();
     if (stationKey && metroLayerRef.current) {
       metroLayerRef.current.focusStation(stationKey, lineId);
     } else {
-      mapInstanceRef.current?.setView(latLng, zoom, { animate: true });
+      focusLatLng(latLng, zoom, sheetSnapRef.current === 'full' ? 'mid' : sheetSnapRef.current);
     }
     revealMap();
   };
@@ -729,6 +869,25 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   };
 
   const selectedLineDef = selectedLine ? metroNetwork?.lines.find((l) => l.id === selectedLine) : undefined;
+
+  // Telefono: scegliendo una categoria o un giorno la mappa inquadra i risultati (come una ricerca su Google Maps)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !isMobileRef.current || mapMode !== 'explore') return;
+    if (activeCategory === 'all' && activeDay === 'all') return;
+    const inKorea = filteredLocations.filter((l) => l.city === 'Seul' || l.city === 'Dintorni / Gite');
+    const pts = (inKorea.length > 0 ? inKorea : filteredLocations).map((l) => [l.lat, l.lng] as LatLng);
+    if (pts.length === 0) return;
+    const { top, bottom } = insetsFor(sheetSnapRef.current === 'full' ? 'mid' : sheetSnapRef.current);
+    map.fitBounds(L.latLngBounds(pts), {
+      paddingTopLeft: [28, top + 16],
+      paddingBottomRight: [28, bottom + 16],
+      maxZoom: 14,
+      animate: true
+    });
+    // solo quando cambiano i filtri scelti dall'utente
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory, activeDay]);
 
   // Segnaposto delle tappe: si ricreano quando cambiano i filtri o la modalità
   useEffect(() => {
@@ -751,16 +910,19 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           : null;
 
       const marker = L.marker([loc.lat, loc.lng], {
-        icon: makeMarkerIcon(loc, selectedIdRef.current === loc.id, routeRole),
+        icon: makeMarkerIcon(loc, selectedIdRef.current === loc.id, routeRole, isMobile),
         zIndexOffset: routeRole === 'origin' || routeRole === 'destination' ? 500 : 0
       });
 
-      marker.bindTooltip(poiTooltipHtml(loc, mapMode, isGpsOriginActive), {
-        direction: 'top',
-        offset: [0, -16],
-        className: 'poi-tooltip',
-        opacity: 1
-      });
+      // Sul telefono non c'è il passaggio del mouse: i dettagli stanno nel foglio in basso
+      if (!isMobile) {
+        marker.bindTooltip(poiTooltipHtml(loc, mapMode, isGpsOriginActive), {
+          direction: 'top',
+          offset: [0, -16],
+          className: 'poi-tooltip',
+          opacity: 1
+        });
+      }
 
       marker.on('click', () => {
         if (mapModeRef.current === 'route') {
@@ -773,6 +935,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           } else {
             setSelectedDestinationId(loc.id);
           }
+        } else if (isMobileRef.current) {
+          handleSelectLocationRef.current(loc);
         } else {
           selectLocation(loc);
         }
@@ -781,16 +945,16 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       marker.addTo(map);
       markersRef.current[loc.id] = marker;
     });
-  }, [filteredLocations, mapMode, selectedOriginId, selectedDestinationId]);
+  }, [filteredLocations, mapMode, selectedOriginId, selectedDestinationId, isMobile]);
 
   // Evidenzia il segnaposto selezionato senza ricrearlo (in modalità explore)
   useEffect(() => {
     if (mapMode === 'route') return;
     Object.entries(markersRef.current).forEach(([id, marker]) => {
       const loc = MAP_LOCATIONS.find((l) => l.id === id);
-      if (loc) marker.setIcon(makeMarkerIcon(loc, id === currentSelectedLoc?.id, null));
+      if (loc) marker.setIcon(makeMarkerIcon(loc, id === currentSelectedLoc?.id, null, isMobile));
     });
-  }, [currentSelectedLoc, mapMode]);
+  }, [currentSelectedLoc, mapMode, isMobile]);
 
   /** Seleziona una tappa (o toglie la selezione con null): aggiorna il riquadro e il segnaposto. */
   const selectLocation = (loc: MapLocation | null) => {
@@ -800,8 +964,59 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   const handleSelectLocation = (loc: MapLocation) => {
     selectLocation(loc);
-    mapInstanceRef.current?.setView([loc.lat, loc.lng], 15, { animate: true });
+    if (isMobileRef.current) {
+      // Telefono: il foglio sale a metà con i dettagli e la tappa resta visibile sopra di esso
+      setSheetSnap('mid');
+      focusLatLng([loc.lat, loc.lng], 15, 'mid');
+    } else {
+      mapInstanceRef.current?.setView([loc.lat, loc.lng], 15, { animate: true });
+    }
   };
+  const handleSelectLocationRef = useRef(handleSelectLocation);
+  handleSelectLocationRef.current = handleSelectLocation;
+
+  const closePlace = () => {
+    selectLocation(null);
+    setSheetSnap('peek');
+  };
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setActiveCategory('all');
+    setActiveCity('all');
+    setActiveDay('all');
+  };
+
+  /** Pulsante "Percorso" del telefono: se c'è una tappa aperta diventa la destinazione */
+  const startRouteFromUi = () => {
+    if (
+      currentSelectedLoc &&
+      (currentSelectedLoc.city === 'Seul' || currentSelectedLoc.city === 'Dintorni / Gite')
+    ) {
+      setSelectedDestinationId(currentSelectedLoc.id);
+    }
+    setMapMode('route');
+  };
+
+  const handleOriginChange = (id: string) => {
+    if (id !== 'gps_origin') {
+      setSelectedOriginId(id);
+    } else if (geoState.status === 'active') {
+      setSelectedOriginId('gps_origin');
+    } else {
+      handleActivateRealGps({ route: false });
+    }
+  };
+
+  const handleLocate = () => {
+    if (geoState.status === 'active' && geoState.coords) {
+      focusLatLng(geoState.coords, 15);
+    } else {
+      handleActivateRealGps({ route: false, recenter: true });
+    }
+  };
+
+  const toggleDayChip = (d: number | 'all') => setActiveDay(d);
 
   /** Passa direttamente alla modalità Calcola Percorso Metro verso una specifica tappa o alloggio */
   const startRouteToLocation = (loc: MapLocation) => {
@@ -842,9 +1057,133 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const activeDestObj =
     MAP_LOCATIONS.find((d) => d.id === selectedDestinationId) ?? koreanDestinations[0];
 
+  const routePanelEl = (
+    <MetroRoutePanel
+    compact={isMobile}
+    network={metroNetwork}
+    loading={!metroNetwork && !metroError}
+    error={metroError}
+    onRetry={() => setMetroAttempt((n) => n + 1)}
+    accommodations={accommodations}
+    destinations={koreanDestinations}
+    activeOriginLocation={activeOriginLocation}
+    selectedOriginId={selectedOriginId}
+    onSelectOrigin={setSelectedOriginId}
+    selectedDestinationId={selectedDestinationId}
+    onSelectDestination={setSelectedDestinationId}
+    currentRoute={currentMetroRoute}
+    onFitRoute={() => {
+      metroLayerRef.current?.fitActiveRoute();
+      metroLayerRef.current?.replayRouteAnimation();
+      revealMap();
+    }}
+    onReplayAnimation={() => {
+      metroLayerRef.current?.fitActiveRoute();
+      metroLayerRef.current?.replayRouteAnimation();
+      revealMap();
+    }}
+    onFocusPoint={handleFocusRoutePoint}
+    geoState={geoState}
+    onActivateRealGps={handleActivateRealGps}
+    onStopGps={handleStopGps}
+    onActivateSimulatedGps={handleActivateSimulatedGps}
+  />
+  );
+
+  const metroPanelEl = (
+    <MetroPanel
+    network={metroNetwork}
+    loading={!metroNetwork && !metroError}
+    error={metroError}
+    onRetry={() => setMetroAttempt((n) => n + 1)}
+    visible={metroVisible}
+    onToggleLine={toggleMetroLine}
+    onSetVisible={(ids) => setMetroVisible(new Set(ids))}
+    selected={selectedLine}
+    onSelectLine={selectLineFromPanel}
+    onFitLine={(id) => metroLayerRef.current?.fitLine(id)}
+    onFocusStation={focusStation}
+    showGoogleLines={showGoogleLines}
+    onToggleGoogleLines={() => setShowGoogleLines((v) => !v)}
+  />
+  );
+
+  const realDataDrawer = (
+    <RealMetroDataDrawer
+    isOpen={isRealDataOpen}
+    onClose={() => setIsRealDataOpen(false)}
+    network={metroNetwork}
+    onSelectLineOnMap={(lineId) => {
+      setMapMode('explore');
+      setSidebarTab('metro');
+      selectLineFromPanel(lineId);
+    }}
+  />
+  );
+
+  const sourcesSection = (
+  <section
+    id="fonti-ufficiali-metro"
+    className="p-4 rounded-2xl border border-slate-800/90 bg-slate-900/70 space-y-3"
+  >
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div>
+        <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+          <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+          Fonti Ufficiali e Riferimenti Verificati · Rete Metropolitana di Seul
+        </h3>
+        <p className="text-[11px] text-slate-400 mt-0.5">
+          Tutti i dati su linee, numero stazioni, orari prima/ultima corsa, frequenze medie, tariffe T-money / Climate Card e tracciati ferroviari sono reali e verificati presso gli enti gestori ufficiali:
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setIsRealDataOpen(true);
+          if (isMobile) document.getElementById('map-data-overlay')?.scrollTo({ top: 0, behavior: 'smooth' });
+          else window.scrollTo({ top: 320, behavior: 'smooth' });
+        }}
+        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold shrink-0 whitespace-nowrap"
+      >
+        Apri tabella dati reali ↑
+      </button>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
+      {OFFICIAL_METRO_SOURCES.map((source) => (
+        <a
+          key={source.id}
+          href={source.officialUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-3 rounded-xl bg-slate-950/90 border border-slate-800/90 hover:border-cyan-500/40 transition-colors flex flex-col justify-between gap-1.5 group"
+        >
+          <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-bold text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
+                {source.organizationIt}
+              </span>
+              <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 shrink-0" />
+            </div>
+            <div className="text-[10px] font-mono text-slate-400">
+              {source.organizationKo} · {source.organizationEn}
+            </div>
+            <p className="text-[11px] text-slate-400 leading-snug pt-0.5">{source.roleIt}</p>
+          </div>
+          <div className="text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900 flex items-center justify-between">
+            <span className="truncate">{source.officialUrl.replace(/^https?:\/\//, '')}</span>
+            <span className="shrink-0 text-emerald-400">Verificato {source.verifiedDate}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+  );
+
   return (
-    <div className="space-y-3">
+    <div className={isMobile ? undefined : 'space-y-3'}>
       {/* BARRA ESTERNA SOPRA LA MAPPA: MENU DATI REALI A TENDINA A SINISTRA + SWITCH MODALITÀ */}
+      {!isMobile && (
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-2xl border border-slate-800 bg-slate-900/95">
         <div className="flex flex-wrap items-center gap-2">
           {/* Pulsante a sinistra per aprire il menu a tendina con i Dati Reali verificati della Metro di Seul */}
@@ -939,22 +1278,27 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           )}
         </div>
       </div>
+      )}
 
       {/* MENU A TENDINA SULLA SINISTRA CON I DATI REALI DELLA METRO DI SEUL */}
-      <RealMetroDataDrawer
-        isOpen={isRealDataOpen}
-        onClose={() => setIsRealDataOpen(false)}
-        network={metroNetwork}
-        onSelectLineOnMap={(lineId) => {
-          setMapMode('explore');
-          setSidebarTab('metro');
-          selectLineFromPanel(lineId);
-        }}
-      />
+      {!isMobile && realDataDrawer}
 
       {/* CONTENITORE PRINCIPALE MAPPA + SIDEBAR */}
-      <div className="flex flex-col lg:flex-row lg:h-[860px] w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl relative">
+      <div
+        ref={shellRef}
+        className={
+          isMobile
+            ? 'map-shell-mobile fixed inset-x-0 z-40 isolate overflow-hidden bg-slate-950 overscroll-contain'
+            : 'flex flex-col lg:flex-row lg:h-[860px] w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl relative'
+        }
+        style={
+          isMobile
+            ? { top: shellTop, bottom: shellBottom ?? 'calc(4rem + env(safe-area-inset-bottom))' }
+            : undefined
+        }
+      >
         {/* Sidebar Controls & Location Directory / Route Planner */}
+        {!isMobile && (
         <div
           ref={sidebarRef}
           className="order-2 lg:order-none w-full lg:w-[430px] h-[640px] lg:h-auto flex flex-col bg-slate-900/95 border-t lg:border-t-0 lg:border-r border-slate-800 backdrop-blur-md z-10 shrink-0"
@@ -1065,35 +1409,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
           {mapMode === 'route' ? (
             /* MODALITÀ CALCOLO PERCORSO METRO */
-            <MetroRoutePanel
-              network={metroNetwork}
-              loading={!metroNetwork && !metroError}
-              error={metroError}
-              onRetry={() => setMetroAttempt((n) => n + 1)}
-              accommodations={accommodations}
-              destinations={koreanDestinations}
-              activeOriginLocation={activeOriginLocation}
-              selectedOriginId={selectedOriginId}
-              onSelectOrigin={setSelectedOriginId}
-              selectedDestinationId={selectedDestinationId}
-              onSelectDestination={setSelectedDestinationId}
-              currentRoute={currentMetroRoute}
-              onFitRoute={() => {
-                metroLayerRef.current?.fitActiveRoute();
-                metroLayerRef.current?.replayRouteAnimation();
-                revealMap();
-              }}
-              onReplayAnimation={() => {
-                metroLayerRef.current?.fitActiveRoute();
-                metroLayerRef.current?.replayRouteAnimation();
-                revealMap();
-              }}
-              onFocusPoint={handleFocusRoutePoint}
-              geoState={geoState}
-              onActivateRealGps={handleActivateRealGps}
-              onStopGps={handleStopGps}
-              onActivateSimulatedGps={handleActivateSimulatedGps}
-            />
+            routePanelEl
           ) : (
             /* MODALITÀ ESPLORA MAPPA & LEGENDA */
             <>
@@ -1129,21 +1445,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               </div>
 
               {sidebarTab === 'metro' ? (
-                <MetroPanel
-                  network={metroNetwork}
-                  loading={!metroNetwork && !metroError}
-                  error={metroError}
-                  onRetry={() => setMetroAttempt((n) => n + 1)}
-                  visible={metroVisible}
-                  onToggleLine={toggleMetroLine}
-                  onSetVisible={(ids) => setMetroVisible(new Set(ids))}
-                  selected={selectedLine}
-                  onSelectLine={selectLineFromPanel}
-                  onFitLine={(id) => metroLayerRef.current?.fitLine(id)}
-                  onFocusStation={focusStation}
-                  showGoogleLines={showGoogleLines}
-                  onToggleGoogleLines={() => setShowGoogleLines((v) => !v)}
-                />
+                metroPanelEl
               ) : (
                 <>
                   {/* Filter Categories */}
@@ -1340,10 +1642,20 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             </>
           )}
         </div>
+        )}
 
         {/* Map Canvas */}
-        <div className="isolate order-1 lg:order-none lg:flex-1 h-[62vh] min-h-[360px] max-h-[560px] lg:h-full lg:max-h-none relative">
+        <div
+          className={
+            isMobile
+              ? 'absolute inset-0 isolate'
+              : 'isolate order-1 lg:order-none lg:flex-1 h-[62vh] min-h-[360px] max-h-[560px] lg:h-full lg:max-h-none relative'
+          }
+        >
           <div ref={mapContainerRef} className="w-full h-full" />
+
+          {!isMobile && (
+          <>
 
           {/* Interruttore rapido delle linee metro (solo in modalità Esplora) */}
           {metroNetwork && mapMode === 'explore' && (
@@ -1539,65 +1851,90 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
+
+        {/* VERSIONE PER TELEFONO: ricerca, chip, pulsanti e foglio trascinabile sopra la mappa a tutto schermo */}
+        {isMobile && (
+          <>
+            <MobileMapOverlay
+              shellH={shellH}
+              topInset={topInset}
+              onTopInset={handleTopInset}
+              snap={sheetSnap}
+              onSnap={setSheetSnap}
+              mapMode={mapMode}
+              onExitRoute={() => setMapMode('explore')}
+              onStartRoute={startRouteFromUi}
+              searchQuery={searchQuery}
+              onSearchQuery={setSearchQuery}
+              activeCategory={activeCategory}
+              onCategory={(c) => setActiveCategory((prev) => (prev === c ? 'all' : c))}
+              activeDay={activeDay}
+              onDay={toggleDayChip}
+              onResetFilters={resetFilters}
+              places={filteredLocations}
+              selected={currentSelectedLoc}
+              onPickPlace={handleSelectLocation}
+              onClosePlace={closePlace}
+              onRouteTo={(loc) => {
+                setSelectedDestinationId(loc.id);
+                setMapMode('route');
+              }}
+              onRouteFrom={(loc) => {
+                setSelectedOriginId(loc.id);
+                setMapMode('route');
+              }}
+              sheetTab={sidebarTab}
+              onSheetTab={setSidebarTab}
+              metroReady={Boolean(metroNetwork)}
+              metroVisibleCount={metroVisible.size}
+              metroLineCount={metroNetwork?.lines.length ?? 0}
+              onToggleAllMetro={toggleAllMetro}
+              selectedLine={selectedLineDef}
+              selectedLineStations={selectedLineDef ? lineStationKeys(selectedLineDef).length : 0}
+              onClearLine={() => setSelectedLine(null)}
+              onShowLineStations={() => {
+                setSidebarTab('metro');
+                setSheetSnap('mid');
+              }}
+              mapTheme={mapTheme}
+              onMapTheme={setMapTheme}
+              showGoogleLines={showGoogleLines}
+              onToggleGoogleLines={() => setShowGoogleLines((v) => !v)}
+              onOpenRealData={() => setIsRealDataOpen(true)}
+              geoState={geoState}
+              onLocate={handleLocate}
+              notice={mapNotice}
+              accommodations={accommodations}
+              destinations={koreanDestinations}
+              originId={activeOriginLocation.id}
+              destinationId={selectedDestinationId}
+              onOrigin={handleOriginChange}
+              onDestination={setSelectedDestinationId}
+              route={currentMetroRoute}
+              onFitRoute={() => {
+                prepareMapView();
+                metroLayerRef.current?.fitActiveRoute();
+                metroLayerRef.current?.replayRouteAnimation();
+              }}
+              metroPanel={metroPanelEl}
+              routePanel={routePanelEl}
+            />
+
+            {isRealDataOpen && (
+              <div id="map-data-overlay" className="absolute inset-0 z-[600] overflow-y-auto overscroll-contain bg-slate-950 p-3 space-y-3">
+                {realDataDrawer}
+                {sourcesSection}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* SEZIONE FONTI UFFICIALI E VERIFICATE A FONDO MAPPA */}
-      <section
-        id="fonti-ufficiali-metro"
-        className="p-4 rounded-2xl border border-slate-800/90 bg-slate-900/70 space-y-3"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-              Fonti Ufficiali e Riferimenti Verificati · Rete Metropolitana di Seul
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Tutti i dati su linee, numero stazioni, orari prima/ultima corsa, frequenze medie, tariffe T-money / Climate Card e tracciati ferroviari sono reali e verificati presso gli enti gestori ufficiali:
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setIsRealDataOpen(true);
-              window.scrollTo({ top: 320, behavior: 'smooth' });
-            }}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold shrink-0 whitespace-nowrap"
-          >
-            Apri tabella dati reali ↑
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
-          {OFFICIAL_METRO_SOURCES.map((source) => (
-            <a
-              key={source.id}
-              href={source.officialUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-3 rounded-xl bg-slate-950/90 border border-slate-800/90 hover:border-cyan-500/40 transition-colors flex flex-col justify-between gap-1.5 group"
-            >
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
-                    {source.organizationIt}
-                  </span>
-                  <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 shrink-0" />
-                </div>
-                <div className="text-[10px] font-mono text-slate-400">
-                  {source.organizationKo} · {source.organizationEn}
-                </div>
-                <p className="text-[11px] text-slate-400 leading-snug pt-0.5">{source.roleIt}</p>
-              </div>
-              <div className="text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-900 flex items-center justify-between">
-                <span className="truncate">{source.officialUrl.replace(/^https?:\/\//, '')}</span>
-                <span className="shrink-0 text-emerald-400">Verificato {source.verifiedDate}</span>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
+      {!isMobile && sourcesSection}
     </div>
   );
 };
