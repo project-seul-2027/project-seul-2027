@@ -222,6 +222,17 @@ export class MetroLayer {
     this.renderActiveRoute(true);
   }
 
+  /** Margini coperti da pannelli sopra la mappa (telefono): le inquadrature li evitano. */
+  insets = { top: 0, bottom: 0 };
+
+  private fitOptions(pad: number, extra: L.FitBoundsOptions = {}): L.FitBoundsOptions {
+    return {
+      paddingTopLeft: [pad, pad + this.insets.top],
+      paddingBottomRight: [pad, pad + this.insets.bottom],
+      ...extra
+    };
+  }
+
   /** Inquadra l'intero percorso attivo (alloggio/GPS, stazioni, tratta metro e tappa). */
   fitActiveRoute() {
     const route = this.activeRoute;
@@ -239,14 +250,14 @@ export class MetroLayer {
     }
     if (pts.length >= 2) {
       const bounds = L.latLngBounds(pts);
-      this.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 15, animate: true });
+      this.map.fitBounds(bounds, this.fitOptions(48, { maxZoom: 15, animate: true }));
     }
   }
 
   /** Inquadra tutta la linea. */
   fitLine(id: string) {
     const line = this.lines.get(id);
-    if (line) this.map.fitBounds(line.bounds, { padding: [36, 36], maxZoom: 14 });
+    if (line) this.map.fitBounds(line.bounds, this.fitOptions(36, { maxZoom: 14 }));
   }
 
   /** Centra la mappa su una stazione e apre la sua scheda. */
@@ -256,7 +267,10 @@ export class MetroLayer {
     const pos = (lineId && st.at[lineId]) || Object.values(st.at)[0];
     const zoom = Math.max(this.map.getZoom(), 15);
     this.map.once('moveend', () => this.openStationPopup(key, pos));
-    this.map.setView(pos, zoom, { animate: true });
+    // Con pannelli sopra la mappa la stazione va al centro della parte visibile
+    const dy = (this.insets.bottom - this.insets.top) / 2;
+    const center = dy ? this.map.unproject(this.map.project(pos, zoom).add([0, dy]), zoom) : L.latLng(pos);
+    this.map.setView(center, zoom, { animate: true });
   }
 
   private cancelRouteAnimation() {

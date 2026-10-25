@@ -358,3 +358,15 @@ body {
     user-select: none;
   }
 }
+
+/* ── Mappa a tutto schermo su telefono ── */
+.map-shell-mobile .leaflet-control-zoom,
+.map-shell-mobile .leaflet-control-attribution {
+  display: none !important;
+}
+.map-shell-mobile .leaflet-container {
+  -webkit-tap-highlight-color: transparent;
+}
+.map-shell-mobile ::selection {
+  background: transparent;
+}
