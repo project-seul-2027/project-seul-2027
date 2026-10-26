@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FLIGHTS_SCHEDULE, BEIJING_TRANSIT_BUDGET, SKYSCANNER_FLIGHTS_URL } from '../data/tripData';
+import { FLIGHTS_SCHEDULE, BEIJING_TRANSIT_BUDGET, FLIGHTS_BOOKING_URL } from '../data/tripData';
 import { 
   Plane, Clock, MapPin, AlertTriangle, ShieldCheck, 
   CreditCard, Wifi, Thermometer, Luggage, CheckCircle2, ChevronRight, FileText, ExternalLink, Users, ShoppingBag
@@ -10,7 +10,7 @@ export const FlightsAndLayoverView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Navigation Sub-Tabs & Direct Skyscanner Action */}
+      {/* Navigation Sub-Tabs & Direct GoToGate Action */}
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-3">
         <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2">
           <button
@@ -50,17 +50,17 @@ export const FlightsAndLayoverView: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Header CTA to Skyscanner */}
+        {/* Quick Header CTA to GoToGate */}
         <a
-          href={SKYSCANNER_FLIGHTS_URL}
+          href={FLIGHTS_BOOKING_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex w-full sm:w-auto justify-center items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-sky-200 bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/40 hover:border-sky-400 shadow-md shadow-sky-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] group"
-          title="Apri i voli selezionati su Skyscanner in una nuova scheda"
+          title="Apri i voli selezionati su GoToGate in una nuova scheda"
         >
           <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
           <Plane className="w-3.5 h-3.5 text-sky-400 transform rotate-45" />
-          <span>Voli su Skyscanner</span>
+          <span>Voli su GoToGate</span>
           <ExternalLink className="w-3.5 h-3.5 text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </a>
       </div>
@@ -68,7 +68,7 @@ export const FlightsAndLayoverView: React.FC = () => {
       {/* Tab 1: Flights Schedule & Cards */}
       {activeTab === 'flights' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* Main Skyscanner Hero Booking Banner */}
+          {/* Main GoToGate Hero Booking Banner */}
           <div className="bg-gradient-to-r from-sky-950/80 via-slate-900 to-cyan-950/50 border border-sky-500/35 rounded-2xl p-5 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div className="absolute top-0 right-0 w-96 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -76,7 +76,7 @@ export const FlightsAndLayoverView: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className="px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 font-mono text-[11px] font-bold border border-sky-500/40 flex items-center gap-1.5">
                   <Plane className="w-3.5 h-3.5 text-sky-400 transform rotate-45" />
-                  Skyscanner · Voli Selezionati
+                  GoToGate · Voli Selezionati
                 </span>
                 <span className="text-[11px] text-slate-300 font-mono bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800 max-w-full break-words leading-relaxed">
                   Air China · Milano (MXP) ⇄ Seul (ICN) via Pechino
@@ -105,13 +105,13 @@ export const FlightsAndLayoverView: React.FC = () => {
 
             <div className="shrink-0 relative z-10 flex flex-col sm:flex-row lg:flex-col gap-2">
               <a
-                href={SKYSCANNER_FLIGHTS_URL}
+                href={FLIGHTS_BOOKING_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-cyan-500 hover:from-sky-400 hover:via-blue-500 hover:to-cyan-400 text-white font-bold text-sm shadow-xl shadow-sky-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] group"
               >
                 <Plane className="w-4 h-4 transform rotate-45 group-hover:scale-110 transition-transform" />
-                <span>Apri Voli su Skyscanner</span>
+                <span>Apri Voli su GoToGate</span>
                 <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </a>
               <span className="text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5 font-mono">
@@ -140,13 +140,13 @@ export const FlightsAndLayoverView: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <a
-                    href={SKYSCANNER_FLIGHTS_URL}
+                    href={FLIGHTS_BOOKING_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] font-mono px-2 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-semibold border border-sky-500/30 flex items-center gap-1 transition-colors"
-                    title="Vedi su Skyscanner"
+                    title="Vedi su GoToGate"
                   >
-                    <span>Skyscanner</span>
+                    <span>GoToGate</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                   <span className="text-xs font-mono px-2.5 py-1 rounded bg-slate-800 text-cyan-300 font-semibold border border-slate-700">
@@ -236,13 +236,13 @@ export const FlightsAndLayoverView: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <a
-                    href={SKYSCANNER_FLIGHTS_URL}
+                    href={FLIGHTS_BOOKING_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] font-mono px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold border border-amber-500/30 flex items-center gap-1 transition-colors"
-                    title="Vedi su Skyscanner"
+                    title="Vedi su GoToGate"
                   >
-                    <span>Skyscanner</span>
+                    <span>GoToGate</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                   <span className="text-xs font-mono px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40">
@@ -427,13 +427,13 @@ export const FlightsAndLayoverView: React.FC = () => {
                 Scalo programmato con volo Air China CA 124 (ICN 13:10) e CA 949 (PEK 02:15 per MXP)
               </span>
               <a
-                href={SKYSCANNER_FLIGHTS_URL}
+                href={FLIGHTS_BOOKING_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition-colors"
               >
                 <Plane className="w-3.5 h-3.5" />
-                <span>Vedi Voli su Skyscanner</span>
+                <span>Vedi Voli su GoToGate</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
