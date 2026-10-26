@@ -133,7 +133,8 @@ export const TRIP_META = {
   base: 'Opzioni Enko Stay: Myeongdong, Seoul Station, Mapo o Sinseol-dong',
   airline: 'Air China',
   specialHighlight: 'VALORANT MASTERS SEOUL 2027',
-  pdfPath: `${import.meta.env.BASE_URL}assets/aistudio/Itinerario_Seul_2027_aggiornato.pdf`
+  // ?v= forza il browser e il service worker a scaricare di nuovo il PDF aggiornato
+  pdfPath: `${import.meta.env.BASE_URL}assets/aistudio/Itinerario_Seul_2027_aggiornato.pdf?v=2026-10-26b`
 };
 
 export const FLIGHTS_BOOKING_URL =
