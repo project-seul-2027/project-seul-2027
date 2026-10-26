@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { authApi, NotAllowedError } from '../services/authService';
 import { isFirebaseConfigured } from '../firebase/client';
+import { disablePush } from '../notifications';
 import {
   type AccommodationId,
   type CompletedUserAccount,
@@ -123,6 +124,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = useCallback(async () => {
+    // Prima di uscire: questo telefono non deve più ricevere le notifiche di questo account
+    if (accountRef.current) await disablePush(accountRef.current.id).catch(() => undefined);
     await authApi.signOut();
   }, []);
 
@@ -138,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteAccount = useCallback(async () => {
     if (!accountRef.current) return;
+    await disablePush(accountRef.current.id).catch(() => undefined);
     await authApi.deleteAccount(accountRef.current);
   }, []);
 

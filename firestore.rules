@@ -57,6 +57,22 @@ service cloud.firestore {
         && (!('customAvatar' in request.resource.data) || shortString(request.resource.data.customAvatar, 150000));
     }
 
+    // Notifiche push: un documento per telefono (id = uid + "_" + hash del token).
+    // Lo scrive e lo cancella solo il titolare; lo script del deploy lo legge con l'account di servizio.
+    match /pushTokens/{tokenId} {
+      allow read, delete: if isOwner(resource.data.uid);
+      allow create, update: if isOwner(request.resource.data.uid)
+        && tokenId.matches('^' + request.auth.uid + '_[0-9a-f]{32}$')
+        && request.resource.data.keys().hasOnly(['uid', 'token', 'prefs', 'platform', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['uid', 'token', 'prefs', 'platform', 'updatedAt'])
+        && shortString(request.resource.data.token, 400)
+        && shortString(request.resource.data.platform, 20)
+        && request.resource.data.prefs is map
+        && request.resource.data.prefs.keys().hasOnly(['updates'])
+        && request.resource.data.prefs.get('updates', false) is bool
+        && request.resource.data.updatedAt is number;
+    }
+
     // Dati condivisi con il gruppo
     match /members/{uid} {
       allow read: if isParticipant();

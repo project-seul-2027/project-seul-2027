@@ -28,6 +28,8 @@ import { LoginScreen } from './components/auth/LoginScreen';
 import { OnboardingScreen } from './components/auth/OnboardingScreen';
 import { useAuth } from './auth/AuthContext';
 import { useInstallPrompt, useMediaQuery, useUpdateAvailable, BUILD_ID } from './pwa';
+import { useSyncPushRegistration } from './notifications';
+import { PushToggle } from './components/PushToggle';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
   CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus, Wallet, History
@@ -96,6 +98,7 @@ function TripPortal() {
   const [isInstallHelpOpen, setIsInstallHelpOpen] = useState(false);
   const install = useInstallPrompt();
   const { updateAvailable, newVersion, applyUpdate } = useUpdateAvailable();
+  useSyncPushRegistration(currentUser.id);
   const [installBannerHidden, setInstallBannerHidden] = useState(() => {
     try {
       return localStorage.getItem('seoul2027_install_banner_hidden') === '1';
@@ -405,6 +408,7 @@ function TripPortal() {
                   <Users className="w-3.5 h-3.5" />
                   Partecipanti ({group.length}/4)
                 </button>
+                <PushToggle variant="menu" />
                 {!install.standalone && (
                   <button
                     role="menuitem"
@@ -1031,6 +1035,7 @@ function TripPortal() {
                 </button>
               )}
             </div>
+            <PushToggle variant="sheet" />
           </div>
         </div>
       )}

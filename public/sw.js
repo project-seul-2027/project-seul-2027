@@ -87,6 +87,43 @@ async function staleWhileRevalidate(request, cacheName, event) {
   return (await update) || Response.error();
 }
 
+// Notifiche push (Firebase Cloud Messaging): messaggi "solo dati" con title, body, url e tag.
+// Su iPhone ogni push deve mostrare un avviso, quindi lo mostriamo sempre.
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { data: { body: event.data ? event.data.text() : '' } };
+  }
+  const d = Object.assign({}, payload.data || {}, payload.notification || {});
+  const options = {
+    body: d.body || '',
+    icon: './icons/icon-192.png',
+    tag: d.tag || 'seul2027',
+    renotify: true,
+    data: { url: d.url || './' }
+  };
+  event.waitUntil(self.registration.showNotification(d.title || 'Seul 2027', options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || './', self.registration.scope).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of windows) {
+        if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
+          await client.focus();
+          return;
+        }
+      }
+      await self.clients.openWindow(target);
+    })()
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;

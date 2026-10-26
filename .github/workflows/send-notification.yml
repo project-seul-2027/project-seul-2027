@@ -1,0 +1,33 @@
+# Manda a mano una notifica a chi le ha attivate (es. "Il volo è cambiato").
+# Uso: GitHub → Actions → "Invia notifica" → Run workflow → scrivi titolo e testo.
+name: Invia notifica
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: Titolo della notifica
+        required: true
+      body:
+        description: Testo della notifica
+        required: true
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock firebase-admin@13
+      - name: Invia
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          export SITE_URL="https://${owner}.github.io/${GITHUB_REPOSITORY#*/}/"
+          node scripts/send-push.mjs
+        env:
+          PUSH_TITLE: ${{ inputs.title }}
+          PUSH_BODY: ${{ inputs.body }}
