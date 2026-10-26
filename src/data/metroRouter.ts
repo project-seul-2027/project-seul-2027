@@ -70,6 +70,16 @@ export interface MetroRouteResult {
   totalTransfers: number;
   totalWalkMeters: number;
   estimatedTotalMinutes: number;
+  /** Linee escluse dal calcolo (es. AREX), se l'utente ha scelto di evitarle */
+  excludedLineIds?: string[];
+}
+
+/** Identificativo della linea AREX (treno per l'aeroporto) nei dati della rete */
+export const AREX_LINE_ID = 'A';
+
+export interface MetroRouteOptions {
+  /** Linee da non usare mai (si va solo con le altre linee e a piedi) */
+  excludeLineIds?: readonly string[];
 }
 
 /** Distanza geodetica in metri tra due coordinate [lat, lng] */
@@ -476,9 +486,39 @@ export function findNearbyMetroStations(
 export function computeMetroRoute(
   network: MetroNetwork,
   origin: MapLocation,
-  destination: MapLocation
+  destination: MapLocation,
+  options: MetroRouteOptions = {}
+): MetroRouteResult {
+  const excluded = new Set(options.excludeLineIds ?? []);
+  if (excluded.size === 0) return computeRoute(network, origin, destination, excluded);
+
+  const result = computeRoute(network, origin, destination, excluded);
+  if (!result.reachable && !result.originOutOfMetroCoverage) {
+    // Se senza esclusioni il percorso esiste, il problema è proprio la linea evitata: lo si dice chiaramente
+    const unrestricted = computeRoute(network, origin, destination, new Set());
+    if (unrestricted.reachable) {
+      const names = [...excluded]
+        .map((id) => (id === AREX_LINE_ID ? "l'AREX" : `la linea ${network.lines.find((l) => l.id === id)?.it ?? id}`))
+        .join(' e ');
+      return {
+        ...result,
+        reasonIfUnreachable: `Senza ${names} non c'è un collegamento in metro tra questi due punti: il percorso esiste solo usandola. Riattivala per vederlo.`,
+        excludedLineIds: [...excluded]
+      };
+    }
+  }
+  return { ...result, excludedLineIds: [...excluded] };
+}
+
+function computeRoute(
+  network: MetroNetwork,
+  origin: MapLocation,
+  destination: MapLocation,
+  excluded: Set<string>
 ): MetroRouteResult {
   const graph = getOrBuildGraph(network);
+  /** Una stazione serve se almeno una delle sue linee non è esclusa */
+  const isServed = (st: MetroStation) => excluded.size === 0 || Object.keys(st.at).some((id) => !excluded.has(id));
   const originLatLng: LatLng = [origin.lat, origin.lng];
   const destLatLng: LatLng = [destination.lat, destination.lng];
 
@@ -492,7 +532,7 @@ export function computeMetroRoute(
   const startCandidates: { stationKey: string; distMeters: number }[] = [];
   for (const [key, st] of Object.entries(network.stations)) {
     const pos = Object.values(st.at)[0];
-    if (!pos) continue;
+    if (!pos || !isServed(st)) continue;
     const d = haversineMeters(originLatLng, pos);
     if (d <= maxOriginWalkM) {
       startCandidates.push({ stationKey: key, distMeters: d });
@@ -597,7 +637,7 @@ export function computeMetroRoute(
   const endCandidates = new Map<string, number>();
   for (const [key, st] of Object.entries(network.stations)) {
     const pos = Object.values(st.at)[0];
-    if (!pos) continue;
+    if (!pos || !isServed(st)) continue;
     const d = haversineMeters(destLatLng, pos);
     if (d <= maxDestWalkM) {
       endCandidates.set(key, d);
@@ -643,6 +683,7 @@ export function computeMetroRoute(
     const stNodes = graph.nodesByStation.get(cand.stationKey) ?? [];
     const initialCost = cand.distMeters / WALK_COST_DIVISOR;
     for (const meta of stNodes) {
+      if (excluded.has(meta.lineId)) continue;
       const prevCost = dist.get(meta.nodeId);
       if (prevCost === undefined || initialCost < prevCost) {
         dist.set(meta.nodeId, initialCost);
@@ -675,6 +716,7 @@ export function computeMetroRoute(
 
     const edges = graph.adj.get(current.nodeId) ?? [];
     for (const edge of edges) {
+      if (excluded.has(edge.lineId)) continue;
       const nextCost = current.cost + edge.cost;
       const known = dist.get(edge.toNode);
       if (known === undefined || nextCost < known) {
@@ -931,7 +973,8 @@ export function computeMetroRoute(
 export function compareAccommodationsForDestination(
   network: MetroNetwork,
   accommodations: MapLocation[],
-  destination: MapLocation
+  destination: MapLocation,
+  options: MetroRouteOptions = {}
 ): MetroRouteResult[] {
-  return accommodations.map((acc) => computeMetroRoute(network, acc, destination));
+  return accommodations.map((acc) => computeMetroRoute(network, acc, destination, options));
 }

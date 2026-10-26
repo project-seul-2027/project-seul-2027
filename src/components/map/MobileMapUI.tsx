@@ -142,6 +142,8 @@ export interface MobileMapOverlayProps {
   accommodations: MapLocation[];
   origins: MapLocation[];
   destinations: MapLocation[];
+  avoidArex: boolean;
+  onToggleAvoidArex: () => void;
   originId: string;
   destinationId: string;
   onOrigin: (id: string) => void;
@@ -657,6 +659,26 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                   );
                 })}
               </SelectField>
+              <button
+                type="button"
+                onClick={p.onToggleAvoidArex}
+                aria-pressed={p.avoidArex}
+                data-testid="avoid-arex"
+                className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold active:scale-[0.98] transition-colors ${
+                  p.avoidArex
+                    ? 'bg-cyan-500/15 border-cyan-400/60 text-cyan-200'
+                    : 'bg-slate-950/70 border-slate-700 text-slate-300'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`relative shrink-0 inline-flex h-4 w-7 rounded-full transition-colors ${p.avoidArex ? 'bg-cyan-500' : 'bg-slate-700'}`}
+                >
+                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${p.avoidArex ? 'left-[0.875rem]' : 'left-0.5'}`} />
+                </span>
+                Senza AREX
+                <span className="font-normal text-[11px] text-slate-400">solo metro e piedi</span>
+              </button>
             </div>
           </div>
         )}

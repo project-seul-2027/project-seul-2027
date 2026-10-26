@@ -22,6 +22,7 @@ import {
 import { type LatLng, type MetroNetwork } from '../../data/seoulMetro';
 import { type MapLocation, getNaverMapSearchUrl } from '../../data/tripData';
 import {
+  AREX_LINE_ID,
   computeMetroRoute,
   compareAccommodationsForDestination,
   findNearbyMetroStations,
@@ -67,6 +68,9 @@ interface MetroRoutePanelProps {
   onActivateSimulatedGps: (preset: SeoulSimulationPreset) => void;
   /** Versione per telefono: partenza e arrivo si scelgono nella barra in alto, qui restano percorso e GPS */
   compact?: boolean;
+  /** Percorsi senza AREX (solo le altre linee e a piedi) */
+  avoidArex?: boolean;
+  onToggleAvoidArex?: () => void;
 }
 
 export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
@@ -89,8 +93,11 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
   onActivateRealGps,
   onStopGps,
   onActivateSimulatedGps,
-  compact = false
+  compact = false,
+  avoidArex = false,
+  onToggleAvoidArex
 }) => {
+  const routeOptions = useMemo(() => (avoidArex ? { excludeLineIds: [AREX_LINE_ID] } : {}), [avoidArex]);
   const [destQuery, setDestQuery] = useState('');
   const [destCategory, setDestCategory] = useState<string>('all');
   const [showDestPicker, setShowDestPicker] = useState(false);
@@ -115,7 +122,7 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
     const map = new Map<string, { reachable: boolean; mins: number; transfers: number }>();
     if (!network || !activeOriginLocation) return map;
     for (const dest of destinations) {
-      const res = computeMetroRoute(network, activeOriginLocation, dest);
+      const res = computeMetroRoute(network, activeOriginLocation, dest, routeOptions);
       map.set(dest.id, {
         reachable: res.reachable,
         mins: res.estimatedTotalMinutes,
@@ -123,7 +130,7 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
       });
     }
     return map;
-  }, [network, activeOriginLocation, destinations]);
+  }, [network, activeOriginLocation, destinations, routeOptions]);
 
   const filteredDestinations = useMemo(() => {
     return destinations.filter((d) => {
@@ -144,8 +151,8 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
   // Confronto tra tutti i 4 alloggi per la tappa selezionata
   const allAccommodationsComparison = useMemo(() => {
     if (!network || !selectedDestination) return [];
-    return compareAccommodationsForDestination(network, accommodations, selectedDestination);
-  }, [network, accommodations, selectedDestination]);
+    return compareAccommodationsForDestination(network, accommodations, selectedDestination, routeOptions);
+  }, [network, accommodations, selectedDestination, routeOptions]);
 
   const toggleSegmentStops = (idx: number) => {
     setExpandedSegments((prev) => ({ ...prev, [idx]: !prev[idx] }));
@@ -1007,6 +1014,33 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
         </section>
   );
 
+  // Interruttore "Senza AREX" (sul telefono sta nella scheda della partenza/destinazione)
+  const arexSection =
+    onToggleAvoidArex && !compact ? (
+      <button
+        type="button"
+        onClick={onToggleAvoidArex}
+        aria-pressed={avoidArex}
+        data-testid="avoid-arex"
+        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${
+          avoidArex ? 'bg-cyan-950/50 border-cyan-500/60' : 'bg-slate-950 border-slate-800 hover:border-slate-600'
+        }`}
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block text-xs font-bold text-white">Senza AREX</span>
+          <span className="block text-[11px] text-slate-400 leading-snug">
+            Percorsi solo con le altre linee metro e a piedi: niente treno per l&apos;aeroporto.
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className={`relative shrink-0 inline-flex h-5 w-9 rounded-full transition-colors ${avoidArex ? 'bg-cyan-500' : 'bg-slate-700'}`}
+        >
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${avoidArex ? 'left-[1.125rem]' : 'left-0.5'}`} />
+        </span>
+      </button>
+    ) : null;
+
   return (
     <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
       {compact ? (
@@ -1019,6 +1053,7 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
         <>
           {originSection}
           {destSection}
+          {arexSection}
           {routeSection}
           {compareSection}
         </>

@@ -22,7 +22,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { loadSeoulMetro, lineStationKeys, type LatLng, type MetroNetwork } from '../data/seoulMetro';
-import { computeMetroRoute } from '../data/metroRouter';
+import { AREX_LINE_ID, computeMetroRoute } from '../data/metroRouter';
 import {
   OFFICIAL_METRO_SOURCES,
   type SeoulSimulationPreset
@@ -252,6 +252,25 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       ),
     []
   );
+  // "Senza AREX": percorsi solo con le altre linee e a piedi (la scelta resta salvata sul dispositivo)
+  const [avoidArex, setAvoidArex] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('seul2027:map:avoid-arex') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleAvoidArex = useCallback(() => {
+    setAvoidArex((prev) => {
+      try {
+        localStorage.setItem('seul2027:map:avoid-arex', prev ? '0' : '1');
+      } catch {
+        // archiviazione bloccata: la scelta vale solo per questa sessione
+      }
+      return !prev;
+    });
+  }, []);
+  const routeOptions = useMemo(() => (avoidArex ? { excludeLineIds: [AREX_LINE_ID] } : {}), [avoidArex]);
   const [selectedOriginId, setSelectedOriginId] = useState<string>(() => accommodations[0]?.id ?? 'acc_a');
   const [selectedDestinationId, setSelectedDestinationId] = useState<string>(
     () => koreanDestinations.find((d) => d.id === 'gyeongbokgung')?.id ?? koreanDestinations[0]?.id ?? ''
@@ -484,8 +503,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       MAP_LOCATIONS.find((d) => d.id === selectedDestinationId) ??
       koreanDestinations[0];
     if (!activeOriginLocation || !dest) return null;
-    return computeMetroRoute(metroNetwork, activeOriginLocation, dest);
-  }, [mapMode, metroNetwork, activeOriginLocation, koreanDestinations, selectedDestinationId]);
+    return computeMetroRoute(metroNetwork, activeOriginLocation, dest, routeOptions);
+  }, [mapMode, metroNetwork, activeOriginLocation, koreanDestinations, selectedDestinationId, routeOptions]);
 
   /** Margini della mappa coperti da barra in alto e foglio (solo telefono) con il foglio nella posizione indicata */
   const insetsFor = (snap: SheetSnap) => {
@@ -788,7 +807,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   useEffect(() => {
     if (!metroLayerRef.current) return;
     if (mapMode === 'route' && currentMetroRoute) {
-      const routeKey = `${selectedOriginId}|${selectedDestinationId}|${
+      const routeKey = `${selectedOriginId}|${selectedDestinationId}|${avoidArex ? 'no-arex' : 'all'}|${
         geoState.isSimulated ? geoState.simulatedPreset?.id ?? 'sim' : 'real'
       }`;
       const shouldAutoFit = lastFittedKeyRef.current !== routeKey && currentMetroRoute.reachable;
@@ -1072,6 +1091,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const routePanelEl = (
     <MetroRoutePanel
     compact={isMobile}
+    avoidArex={avoidArex}
+    onToggleAvoidArex={toggleAvoidArex}
     network={metroNetwork}
     loading={!metroNetwork && !metroError}
     error={metroError}
@@ -1918,6 +1939,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               accommodations={accommodations}
               origins={originCandidates}
               destinations={koreanDestinations}
+              avoidArex={avoidArex}
+              onToggleAvoidArex={toggleAvoidArex}
               originId={activeOriginLocation.id}
               destinationId={selectedDestinationId}
               onOrigin={handleOriginChange}
