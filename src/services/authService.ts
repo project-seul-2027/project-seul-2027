@@ -79,6 +79,7 @@ function friendlyAuthError(err: unknown): ApiError {
 
 const userRef = (uid: string) => doc(firebase().db, 'users', uid);
 const memberRef = (uid: string) => doc(firebase().db, 'members', uid);
+const statusRef = (uid: string) => doc(firebase().db, 'statuses', uid);
 const slotRef = (slot: TravelerSlotId) => doc(firebase().db, 'slots', slot);
 
 export const authApi = {
@@ -222,6 +223,7 @@ export const authApi = {
   async deleteAccount(account: UserAccount): Promise<void> {
     const batch = writeBatch(firebase().db);
     batch.delete(memberRef(account.id));
+    batch.delete(statusRef(account.id));
     if (account.profileCompleted && account.travelerId) batch.delete(slotRef(account.travelerId));
     batch.delete(userRef(account.id));
     await batch.commit();
