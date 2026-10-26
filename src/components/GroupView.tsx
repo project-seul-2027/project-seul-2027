@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Phone, Utensils, Home, UserPlus, MessageCircle, X, Lock } from 'lucide-react';
+import { Users, Phone, Utensils, Home, UserPlus, MessageCircle, X, Lock, Check, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { ACCOMMODATIONS } from '../data/tripData';
 import { OPTIONAL_SHARE_FIELDS, type GroupMember, type OptionalShareField } from '../shared/travelerProfile';
+import { CHECKLIST_ITEMS, countDone } from '../shared/tripChecklist';
+import { useGroupChecklists } from './useGroupChecklists';
 
 const FIELD_LABELS: Record<OptionalShareField, string> = {
   birthDate: 'Data di nascita',
@@ -107,6 +109,7 @@ export const GroupView: React.FC = () => {
   const { user, group, travelers } = useAuth();
   const [openId, setOpenId] = useState<string | null>(null);
 
+  const { all: checklists, toggle, error: checklistError } = useGroupChecklists(user?.id);
   const openMember = group.find((m) => m.id === openId) ?? null;
   const openSlot = openMember ? travelers.find((s) => s.id === openMember.travelerId) : undefined;
 
@@ -240,10 +243,133 @@ export const GroupView: React.FC = () => {
                   </dd>
                 </div>
               </dl>
+
+              {(() => {
+                const done = countDone(checklists[member.id]);
+                const total = CHECKLIST_ITEMS.length;
+                return (
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-slate-400">Preparativi</span>
+                      <span className={done === total ? 'text-emerald-400 font-bold' : 'text-slate-300 font-mono'}>
+                        {done === total ? 'Tutto pronto' : `${done}/${total}`}
+                      </span>
+                    </div>
+                    <div
+                      className="h-1.5 rounded-full bg-slate-800 overflow-hidden"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={total}
+                      aria-valuenow={done}
+                      aria-label={`Preparativi di ${member.firstName}`}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${(done / total) * 100}%`, backgroundColor: done === total ? '#34d399' : slot.color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
       </div>
+
+      {/* Checklist dei preparativi: righe = cosa fare, colonne = i 4 posti. Ognuno spunta solo le proprie caselle. */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden" aria-labelledby="checklist-title">
+        <div className="flex items-start gap-3 p-4 pb-3">
+          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+            <ClipboardCheck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 id="checklist-title" className="font-bold text-white">A che punto siamo</h3>
+            <p className="text-xs text-slate-400">
+              Spunta le tue caselle quando fai un passo: gli altri vedono subito chi è già a posto e chi no.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-4 pb-4 overflow-x-auto">
+          <div
+            className="grid items-stretch min-w-[19rem]"
+            style={{ gridTemplateColumns: 'minmax(0,1fr) repeat(4, 2.75rem)' }}
+          >
+            <div />
+            {travelers.map((slot) => {
+              const m = group.find((g) => g.travelerId === slot.id);
+              const isMe = !!m && m.id === user?.id;
+              return (
+                <div key={slot.id} className="flex flex-col items-center gap-1.5 pb-2 pt-1" title={m ? `${m.firstName} ${m.lastName}` : `Posto ${slot.id.slice(1)} libero`}>
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden ${m ? '' : 'opacity-30'} ${isMe ? 'ring-2 ring-cyan-400' : ''}`}
+                    style={{ backgroundColor: slot.color }}
+                  >
+                    {m?.avatarUrl ? (
+                      <img src={m.avatarUrl} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    ) : m ? (
+                      <>
+                        {m.firstName.slice(0, 1)}
+                        {m.lastName.slice(0, 1)}
+                      </>
+                    ) : (
+                      '?'
+                    )}
+                  </div>
+                  <span className={`text-[10px] leading-none max-w-full truncate ${isMe ? 'text-cyan-300 font-bold' : 'text-slate-500'}`}>
+                    {m ? (isMe ? 'Tu' : m.firstName) : 'Libero'}
+                  </span>
+                </div>
+              );
+            })}
+
+            {CHECKLIST_ITEMS.map((item) => (
+              <React.Fragment key={item.key}>
+                <div className="py-2 pr-2 border-t border-slate-800/80 min-w-0">
+                  <div className="text-sm text-slate-100 leading-tight">{item.label}</div>
+                  <div className="text-[11px] text-slate-500 leading-snug">{item.hint}</div>
+                </div>
+                {travelers.map((slot) => {
+                  const m = group.find((g) => g.travelerId === slot.id);
+                  const isMe = !!m && m.id === user?.id;
+                  const done = !!m && checklists[m.id]?.[item.key] === true;
+                  const base = 'w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors';
+                  const look = done
+                    ? 'bg-emerald-500 border-emerald-500 text-slate-950'
+                    : m
+                      ? 'border-slate-700 text-transparent'
+                      : 'border-slate-800 border-dashed text-transparent';
+                  return (
+                    <div key={slot.id} className="py-1.5 border-t border-slate-800/80 flex items-center justify-center">
+                      {isMe ? (
+                        <button
+                          type="button"
+                          onClick={() => void toggle(item.key)}
+                          aria-pressed={done}
+                          aria-label={`${item.label}: ${done ? 'fatto, tocca per togliere' : 'da fare, tocca per segnare come fatto'}`}
+                          className={`${base} ${look} ${done ? '' : 'hover:border-cyan-400'} active:scale-90`}
+                        >
+                          <Check className="w-4 h-4" strokeWidth={3} />
+                        </button>
+                      ) : (
+                        <span
+                          role="img"
+                          aria-label={`${m ? m.firstName : `Posto ${slot.id.slice(1)}`}: ${item.label} ${done ? 'fatto' : m ? 'da fare' : 'non disponibile'}`}
+                          className={`${base} ${look}`}
+                        >
+                          <Check className="w-4 h-4" strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+          {checklistError && <p className="mt-2 text-xs text-red-400">{checklistError}</p>}
+        </div>
+      </section>
+
 
       {openMember && (
         <MemberSheet

@@ -57,6 +57,29 @@ service cloud.firestore {
         && (!('customAvatar' in request.resource.data) || shortString(request.resource.data.customAvatar, 150000));
     }
 
+    // Checklist dei preparativi (pagina Partecipanti): la legge tutto il gruppo, la scrive solo il titolare.
+    // Le chiavi devono coincidere con CHECKLIST_ITEMS in src/shared/tripChecklist.ts.
+    function checkItem(m, k) {
+      return !(k in m) || m[k] is bool;
+    }
+
+    match /statuses/{uid} {
+      allow read: if isParticipant();
+      allow delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['checklist', 'updatedAt'])
+        && request.resource.data.checklist is map
+        && request.resource.data.checklist.keys().hasOnly(
+             ['ok', 'biglietto', 'affitto', 'passaporto', 'assicurazione', 'pagamenti'])
+        && checkItem(request.resource.data.checklist, 'ok')
+        && checkItem(request.resource.data.checklist, 'biglietto')
+        && checkItem(request.resource.data.checklist, 'affitto')
+        && checkItem(request.resource.data.checklist, 'passaporto')
+        && checkItem(request.resource.data.checklist, 'assicurazione')
+        && checkItem(request.resource.data.checklist, 'pagamenti')
+        && request.resource.data.updatedAt is number;
+    }
+
     // Notifiche push: un documento per telefono (id = uid + "_" + hash del token).
     // Lo scrive e lo cancella solo il titolare; lo script del deploy lo legge con l'account di servizio.
     match /pushTokens/{tokenId} {
