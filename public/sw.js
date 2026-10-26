@@ -135,6 +135,8 @@ self.addEventListener('fetch', (event) => {
   }
   if (url.origin === self.location.origin) {
     if (url.pathname.endsWith('/sw.js') || url.pathname.endsWith('/version.json')) return;
+    // I video usano richieste a intervalli (206): li gestisce direttamente il browser
+    if (/\.(mp4|webm)$/i.test(url.pathname)) return;
     if (HASHED_ASSET.test(url.pathname)) event.respondWith(cacheFirst(request, ASSET_CACHE));
     else event.respondWith(staleWhileRevalidate(request, ASSET_CACHE, event));
     return;

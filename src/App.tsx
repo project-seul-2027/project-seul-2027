@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import HeroVideo, { HeroVideoToggle, useHeroAnimation } from './components/HeroVideo';
 import { BrandIcon } from './components/BrandIcon';
 import { TRIP_META } from './data/tripData';
 import { OFFICIAL_METRO_SOURCES } from './data/seoulMetroOfficialData';
@@ -92,6 +93,7 @@ function TripPortal() {
   const currentUser = user!;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const heroAnim = useHeroAnimation();
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -577,26 +579,19 @@ function TripPortal() {
 
       {/* Hero Atmosphere Section */}
       <div
-        className={`relative border-b border-slate-800/80 bg-gradient-to-b from-slate-900 via-slate-900/60 to-transparent py-6 sm:py-12 px-4 sm:px-8 ${
+        className={`relative isolate overflow-hidden border-b border-slate-800/80 bg-slate-950 py-6 sm:py-12 px-4 sm:px-8 ${
           activeTab === 'itinerary' ? '' : 'hidden lg:block'
         }`}
       >
+        <HeroVideo enabled={heroAnim.enabled} className="-z-10" />
+        <HeroVideoToggle enabled={heroAnim.enabled} onToggle={heroAnim.toggle} />
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400 font-mono">
-                <span className="text-cyan-400">Corea del Sud</span>
-                <span aria-hidden="true">·</span>
-                <span>2 - 19 Marzo 2027</span>
-                <span aria-hidden="true">·</span>
-                <span>Pietro (2-8 Mar) & 3 Amici (2-19 Mar)</span>
-              </div>
+            <div className="space-y-2 max-w-2xl [text-shadow:0_2px_12px_rgba(2,6,23,0.85)]">
+              <div className="text-xs font-mono font-semibold text-cyan-300">Corea del Sud</div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-display tracking-tight text-white leading-tight">
-                Seul 2027 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">· Viaggio di Gruppo</span>
+                Seul 2027 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-indigo-300 [text-shadow:none] drop-shadow-[0_2px_10px_rgba(2,6,23,0.9)]">· Viaggio di Gruppo</span>
               </h1>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                Itinerario ufficiale aggiornato dal PDF: 4 partecipanti all'inizio con rientro di Pietro l'8 marzo (6 notti, 37-66 €) e permanenza degli altri 3 amici fino al 19 marzo (17 notti, 129-227 €), evento Valorant Masters (3 mar), White Day sul fiume Han, 4 alloggi a confronto, scalo 240h a Pechino e preventivo trasparente.
-              </p>
             </div>
 
             {/* Countdown Badge */}
