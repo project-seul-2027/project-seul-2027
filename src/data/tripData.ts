@@ -137,7 +137,7 @@ export const TRIP_META = {
 };
 
 export const FLIGHTS_BOOKING_URL =
-  'https://it.gotogate.com/rf/result?selectionKey=CA950-01Mar27-T_CA123-02Mar27-T_CA124-19Mar27-T_CA949-20Mar27-T%2C7ryjxv%2C%3A%3Ag_0.0.0.0%3Ah_0.0.1.1%3Aa_KU.EG.LY.3R%3Ab_1O%3Ac_27%3Ad_109e60%3Ae_-f69a%3Af_2%3Ai_2.0.0%3Aj_E0%3Az_egwc2e';
+  'https://it.gotogate.com/rf/result?selectionKey=CA950-01Mar27-T_CA123-02Mar27-T_CA124-19Mar27-T_CA949-20Mar27-T%2C7ryjxv%2C%3A%3Ag_0.0.0.0%3Ah_0.0.1.1%3Aa_KU.EG.LY.3R%3Ab_1O%3Ac_27%3Ad_84f30%3Ae_-67ca%3Af_2%3Ai_1.0.0%3Aj_E0%3Az_bgs0dc';
 
 
 // 4 ALLOGGI A CONFRONTO (ENKO STAY, 2-19 MARZO, 4 PERSONE)
