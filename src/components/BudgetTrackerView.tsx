@@ -121,7 +121,7 @@ export const BudgetTrackerView: React.FC = () => {
                 Preventivo Ufficiale dal PDF (Seul 2027)
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Stima calcolata sul documento per 17 notti (Pietro per 6 notti dal 2 al 7 marzo, gli altri 3 per tutte le 17 notti fino al 19 marzo). Voci suddivise per persona e totali di gruppo.
+                Stima calcolata sul documento per 17 notti (Pietro per 8 notti dal 2 al 9 marzo, gli altri 3 per tutte le 17 notti fino al 19 marzo). Voci suddivise per persona e totali di gruppo.
               </p>
             </div>
 
@@ -130,7 +130,7 @@ export const BudgetTrackerView: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
                 <div className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
                   <PiggyBank className="w-4 h-4 text-cyan-400" />
-                  Ripartizione Affitto Fissata nel PDF (Pietro 6 notti vs Altri 3 per 17 notti)
+                  Ripartizione Affitto Fissata nel PDF (Pietro 8 notti vs Altri 3 per 17 notti)
                 </div>
                 <div className="text-[11px] font-mono text-slate-400">
                   Formula: <span className="text-white font-semibold">Costo notte / n° persone</span>
@@ -145,8 +145,8 @@ export const BudgetTrackerView: React.FC = () => {
                   </div>
                   <div className="text-[11px] text-slate-400">~25 € / notte</div>
                   <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (6n): <strong>37 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>129 €</strong></span>
+                    <span className="text-purple-300">Pietro (8n): <strong>50 €</strong></span>
+                    <span className="text-cyan-300">Ognuno dei 3: <strong>125 €</strong></span>
                   </div>
                 </div>
 
@@ -157,8 +157,8 @@ export const BudgetTrackerView: React.FC = () => {
                   </div>
                   <div className="text-[11px] text-slate-400">~39 € / notte</div>
                   <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (6n): <strong>58 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>200 €</strong></span>
+                    <span className="text-purple-300">Pietro (8n): <strong>78 €</strong></span>
+                    <span className="text-cyan-300">Ognuno dei 3: <strong>194 €</strong></span>
                   </div>
                 </div>
 
@@ -169,8 +169,8 @@ export const BudgetTrackerView: React.FC = () => {
                   </div>
                   <div className="text-[11px] text-slate-400">~44 € / notte</div>
                   <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (6n): <strong>66 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>227 €</strong></span>
+                    <span className="text-purple-300">Pietro (8n): <strong>88 €</strong></span>
+                    <span className="text-cyan-300">Ognuno dei 3: <strong>220 €</strong></span>
                   </div>
                 </div>
 
@@ -181,8 +181,8 @@ export const BudgetTrackerView: React.FC = () => {
                   </div>
                   <div className="text-[11px] text-slate-400">~38 € / notte</div>
                   <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (6n): <strong>57 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>195 €</strong></span>
+                    <span className="text-purple-300">Pietro (8n): <strong>75 €</strong></span>
+                    <span className="text-cyan-300">Ognuno dei 3: <strong>189 €</strong></span>
                   </div>
                 </div>
               </div>

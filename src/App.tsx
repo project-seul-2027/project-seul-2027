@@ -222,7 +222,7 @@ function TripPortal() {
               SEUL 2027
             </span>
             <span className="hidden sm:max-[1839px]:inline-block text-[11px] text-slate-400 ml-2 font-mono">
-              4 Amici · Pietro (6 notti) + 3 (17 notti)
+              4 Amici · Pietro (8 notti) + 3 (17 notti)
             </span>
           </div>
         </button>
@@ -658,7 +658,7 @@ function TripPortal() {
             <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
               <span className="text-[10px] text-slate-500 uppercase font-mono">Partecipanti</span>
               <div className="text-sm sm:text-base font-bold text-cyan-400 mt-0.5">4 Viaggiatori</div>
-              <div className="text-[10px] text-amber-300 font-mono mt-0.5">Pietro (6n) + 3 (17n)</div>
+              <div className="text-[10px] text-amber-300 font-mono mt-0.5">Pietro (8n) + 3 (17n)</div>
             </div>
             <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
               <span className="text-[10px] text-slate-500 uppercase font-mono">Durata Soggiorno</span>

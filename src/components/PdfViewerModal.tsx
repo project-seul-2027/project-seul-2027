@@ -7,18 +7,20 @@ export const PdfViewerModal: React.FC = () => {
   const [selectedPageTopic, setSelectedPageTopic] = useState<number>(1);
   const [fullscreen, setFullscreen] = useState(false);
 
-  // Cosa racconta ciascuna pagina del PDF aggiornato (10 pagine)
+  // Cosa racconta ciascuna pagina del PDF aggiornato (12 pagine)
   const pageTopics = [
-    { page: 1, title: 'Pag. 1: Calendario, voli e ritrovo a Malpensa', summary: 'Date, voli Air China di andata e ritorno, ritrovo al T1 alle 10:00 del 1 marzo, regole d\'oro e Valorant Masters (sede da annunciare).' },
-    { page: 2, title: 'Pag. 2: Dove dormire, 4 alloggi a confronto', summary: 'Enko Stay: prezzi mensili, totali per 17 notti, metro e bus, e come dividere l\'affitto (chi parte l\'8 paga 6 notti).' },
-    { page: 3, title: 'Pag. 3: Cancellazioni e note per alloggio', summary: 'Regole di rimborso Enko, pro e contro di A, B, C, D e la guida "Quale scegliere" per movida, risparmio o letti.' },
-    { page: 4, title: 'Pag. 4: Come sono organizzate le serate', summary: 'Strade, noraebang, sale giochi, pocha, live house e club, con costi e limiti di età (19 anni), più come gestire il gruppo che si divide.' },
-    { page: 5, title: 'Pag. 5: Budget serate e prima settimana (2 - 7 marzo)', summary: 'Budget serate (stretto, equilibrato, largo) e il programma giorno per giorno: arrivo, Valorant, Palazzi e Gangnam, Seongsu, Itaewon, mercati.' },
-    { page: 6, title: 'Pag. 6: Rientro (8 marzo) e seconda settimana (9 - 15 marzo)', summary: 'Rientro di chi parte l\'8, poi museo, Incheon, COEX e Sinchon, Suwon, Hongdae del sabato, White Day sul fiume Han e DMZ.' },
-    { page: 7, title: 'Pag. 7: Ultima parte (16 - 19 marzo)', summary: 'Bukhansan e Yeonnam, souvenir e ultima serata grande, ultimo giorno pieno e partenza del 19 marzo.' },
-    { page: 8, title: 'Pag. 8: 19 marzo, mattina a Seul e Pechino', summary: 'Prerequisiti per il transito 240h (passaporto, Arrival Card, internet, pagamenti) e la tabella della mattina a Seul fino al volo delle 13:10.' },
-    { page: 9, title: 'Pag. 9: Arrivo a Pechino passo per passo', summary: 'Bagagli, carta d\'arrivo, banco del transito 240h, controllo passaporti, uscita e la tabella delle prime ore a PEK.' },
-    { page: 10, title: 'Pag. 10: Serata a Pechino, costi e rischi', summary: 'Qianmen e anatra laccata, rientro al T3 entro le 21:15, volo delle 02:15, budget dello scalo (190-310 CNY) e cose da verificare.' }
+    { page: 1, title: 'Pag. 1: Calendario, voli e ritrovo a Malpensa', summary: 'Il riquadro Valorant Masters (torneo dal 20 febbraio al 3 marzo, finale e sede ancora da annunciare) e il calendario dei giorni. I voli Air China: andata il 1 marzo alle 12:30, ritorno il 19 marzo da Incheon alle 13:10; chi riparte prima lascia Seul il 10 marzo alle 11:10. Poi il ritrovo del 1 marzo al T1 di Malpensa entro le 10:00, con orari dei treni, check-in e regole d\'oro.' },
+    { page: 2, title: 'Pag. 2: 2 marzo, scalo a Pechino e arrivo a Seul', summary: 'Atterraggio a Pechino alle 05:35 e coincidenza per Incheon alle 08:40 (3 ore e 5 minuti di scalo, solo "International Transfer"). Tabella ora per ora fino all\'arrivo a Seul alle 11:40, AREX in città, check-in alle 16:00 o deposito bagagli. In fondo il margine di sicurezza se il primo volo ritarda.' },
+    { page: 3, title: 'Pag. 3: Dove dormire, 4 alloggi a confronto', summary: 'Enko Stay, 2-19 marzo: Myeongdong, Seoul Station, Mapo e Sinseol-dong a confronto per annuncio, prezzo mensile, totale per 17 notti, tipo di casa, metro, bus, distanza da Hongdae e cosa vedere vicino. Il riquadro "Come dividere l\'affitto": chi parte il 10 paga 8 notti (50-88 €), gli altri tre 17 notti (125-220 €), con l\'esempio di calcolo su Mapo.' },
+    { page: 4, title: 'Pag. 4: Cancellazione, note e quale scegliere', summary: 'Regole di rimborso e pagamento Enko (uguali per tutti e quattro, commissione non rimborsabile, calendario fino al 2 marzo). Pro e contro di A, B, C e D e la guida "Quale scegliere": C per movida, A per spendere meno, D per dormire meglio, B solo se conta la stazione.' },
+    { page: 5, title: 'Pag. 5: Come sono organizzate le serate', summary: 'Tabella di otto tipi di serata (strade di Hongdae, noraebang, sale giochi, pocha, live house, language exchange, serate di ballo, club) con ambiente, costo a testa ed età. Il limite dei 19 anni per alcol e club, il passaporto sempre con sé e come gestire il gruppo quando una parte entra in un club.' },
+    { page: 6, title: 'Pag. 6: Budget serate e prima settimana (2 - 7 marzo)', summary: 'Budget delle serate per tutto il soggiorno: stretto 150-200 €, equilibrato 220-300 € (consigliato), largo 350-450 €, con i trucchi per restare nella fascia giusta. Poi la prima settimana in quattro: arrivo, Valorant Masters il 3, palazzi e Gangnam, Seongsu e Hongdae del venerdì, Itaewon, mercati e noraebang.' },
+    { page: 7, title: 'Pag. 7: 8 - 15 marzo, saluti e seconda settimana', summary: 'L\'8 Namsan e language exchange, il 9 museo e ultima serata in quattro a Kondae. Il 10 una persona riparte (uscita alle 5:45-6:00 per il volo delle 11:10) e gli altri vanno a Incheon. Poi COEX e Sinchon, Suwon, il sabato grande a Hongdae, il White Day sul fiume Han e il tour DMZ.' },
+    { page: 8, title: 'Pag. 8: Ultima parte (16 - 19 marzo)', summary: 'Bukhansan e pocha a Yeonnam, souvenir e ultima serata grande a Hongdae, ultimo giorno pieno (valigie da 23 kg, modulo d\'ingresso per la Cina, prenotazione di Tiananmen) e la giornata di partenza del 19: check-out, volo CA124, serata a Pechino e volo CA949 delle 02:15.' },
+    { page: 9, title: 'Pag. 9: 19 marzo, la mattina a Seul e la sera a Pechino', summary: 'Tabella ora per ora della mattina a Seul, dalla sveglia alle 6:30 al decollo delle 13:10 (check-out, colazione, AREX, tax refund, check-in Air China). Poi l\'idea della serata a Pechino con il permesso di transito 240h e il riquadro "Prima di partire": passaporto, Arrival Card, internet bloccato, pagamenti con Alipay o WeChat Pay, power bank 3C e freddo.' },
+    { page: 10, title: 'Pag. 10: Bagagli, Arrival Card e arrivo a Pechino passo per passo', summary: 'Come gestire le valigie (etichettate fino a Milano oppure deposito al T3), la guida all\'Arrival Card cinese (sito ufficiale, quando compilarla, dati richiesti, piano B) e i sei passaggi all\'arrivo a PEK: banco transito 240h, controllo passaporti, dogana, uscita. Inizia la tabella oraria di Pechino.' },
+    { page: 11, title: 'Pag. 11: Serata a Pechino, costi e rischi', summary: 'Seconda parte della tabella di Pechino: Airport Express, metro fino a Qianmen, cena con anatra laccata e partenza tassativa alle 21:15 per il volo delle 02:15. Costi dello scalo (190-310 CNY, 25-40 € a persona) e i rischi: code, transito non concesso, Tiananmen su prenotazione.' },
+    { page: 12, title: 'Pag. 12: 20 marzo, da Malpensa a Milano Centrale e costi', summary: 'Il rientro: atterraggio alle 06:30, passaporti, bagagli, Malpensa Express verso le 9:00-9:30 e treni di casa non prima delle 11:30, con margini in caso di ritardo. In chiusura "Costi e cose da verificare": serate, Valorant, tragitti su Naver Map, tariffe, tour DMZ e regole del transito.' }
   ];
 
   // Chiudi il pannello a schermo intero con Esc
@@ -44,7 +46,7 @@ export const PdfViewerModal: React.FC = () => {
               Documento Ufficiale Aggiornato: Itinerario Seul 2027
             </h3>
             <p className="text-xs text-slate-400">
-              PDF aggiornato di 10 pagine: alloggi a confronto, serate, programma giorno per giorno e lo scalo di 240 ore a Pechino. Scegli una pagina qui sotto per vedere cosa contiene.
+              PDF aggiornato di 12 pagine: voli e ritrovo, alloggi a confronto, serate, programma giorno per giorno, lo scalo di 240 ore a Pechino e il rientro a Milano. Scegli una pagina qui sotto per leggere cosa contiene e aprirla nel visualizzatore.
             </p>
           </div>
         </div>
@@ -85,7 +87,7 @@ export const PdfViewerModal: React.FC = () => {
               <span>{pt.title}</span>
               <BookOpen className="w-3.5 h-3.5 text-slate-500" />
             </div>
-            <p className="text-[11px] text-slate-400 line-clamp-2">
+            <p className="text-[11px] text-slate-400 leading-relaxed">
               {pt.summary}
             </p>
           </div>

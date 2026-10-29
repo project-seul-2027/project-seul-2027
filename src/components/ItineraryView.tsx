@@ -32,11 +32,11 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
   }, [focusDay?.nonce]);
 
   const phases = [
-    { id: 'all', label: 'Tutti i 19 Giorni' },
+    { id: 'all', label: 'Tutti i giorni' },
     { id: 'Partenza', label: 'Partenza (1 Mar)' },
-    { id: 'Prima settimana', label: 'Settimana 1 (2 - 8 Mar)' },
-    { id: 'Seconda settimana', label: 'Settimana 2 (9 - 15 Mar)' },
-    { id: 'Ultima parte', label: 'Ultima parte (16 - 19 Mar)' }
+    { id: 'Prima settimana', label: 'Settimana 1 (2 - 9 Mar)' },
+    { id: 'Seconda settimana', label: 'Settimana 2 (10 - 15 Mar)' },
+    { id: 'Ultima parte', label: 'Ultima parte (16 - 20 Mar)' }
   ];
 
   const filteredDays = ITINERARY_DAYS.filter((day) => {
@@ -149,14 +149,14 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
                           VALORANT MASTERS (3 MAR) · ARENA TBD
                         </span>
                       )}
-                      {day.id === 6 && (
+                      {day.id === 8 && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                          👋 SALUTO A PIETRO (RIPARTE L'8)
+                          👋 SERATA DI SALUTI (PIETRO RIPARTE IL 10)
                         </span>
                       )}
-                      {day.id === 7 && (
+                      {day.id === 9 && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                          ✈️ RIENTRO DI PIETRO A MILANO
+                          ✈️ RIENTRO DI PIETRO A MILANO (VOLO 11:10)
                         </span>
                       )}
                       {day.id === 13 && (

@@ -1580,26 +1580,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                         onChange={(e) => setActiveDay(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                         className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 text-xs focus:outline-none focus:border-cyan-500 max-w-[220px]"
                       >
-                        <option value="all">Tutti i giorni (1 - 19 Mar)</option>
-                        <option value="0">1 Mar · Ritrovo Malpensa</option>
-                        <option value="1">2 Mar · Arrivo Seul, Mangwon & Hongdae</option>
-                        <option value="2">3 Mar · VALORANT MASTERS SEOUL & Pocha</option>
-                        <option value="3">4 Mar · Palazzi in Hanbok, Bukchon & Sinchon</option>
-                        <option value="4">5 Mar · Seongsu-dong, Seoul Forest & Club</option>
-                        <option value="5">6 Mar · Itaewon (Relax & Serata Cosmopolita)</option>
-                        <option value="6">7 Mar · Gwangjang, DDP & Saluto a Pietro (Noraebang)</option>
-                        <option value="7">8 Mar · Rientro Pietro a Milano, Namsan & Myeongdong</option>
-                        <option value="8">9 Mar · Museo Nazionale & Kondae (Konkuk)</option>
-                        <option value="9">10 Mar · Gita Incheon (Chinatown & Wolmido)</option>
-                        <option value="10">11 Mar · COEX (Starfield Library), Bongeunsa & Gangnam</option>
-                        <option value="11">12 Mar · Gita Suwon (Fortezza Hwaseong & Ingye-dong)</option>
-                        <option value="12">13 Mar · Sabato Sera Grande (Hongdae o Itaewon)</option>
-                        <option value="13">14 Mar · White Day (Fiume Han con Ramyeon)</option>
-                        <option value="14">15 Mar · Tour DMZ & Language Exchange</option>
-                        <option value="15">16 Mar · Parco Bukhansan Hike & Pocha Sinchon</option>
-                        <option value="16">17 Mar · Souvenir (Olive Young) & Sera Grande Hongdae</option>
-                        <option value="17">18 Mar · Ultimo Giorno Pieno (Valigie 23kg & Modulo Cina)</option>
-                        <option value="18">19 Mar · Seul + Scalo Pechino 240h (Qianmen & Anatra)</option>
+                        <option value="all">Tutti i giorni (1 - 20 Mar)</option>
+                        {ITINERARY_DAYS.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.dateStr.split(' ')[0]} Mar · {d.title}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
