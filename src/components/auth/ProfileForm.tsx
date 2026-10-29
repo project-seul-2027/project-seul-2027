@@ -556,7 +556,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[10px] font-bold font-mono text-cyan-400">Alloggio {acc.code}</span>
-                    <span className="text-[10px] font-mono text-emerald-400">{acc.costPerPerson4} €/testa</span>
+                    <span className="text-[10px] font-mono text-emerald-400">{acc.other3Cost17Nights} € · 17 notti</span>
                   </div>
                   <div className="text-[11px] font-semibold text-slate-200 truncate mt-0.5">{acc.district}</div>
                 </button>

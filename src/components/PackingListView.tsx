@@ -1217,7 +1217,7 @@ export const PackingListView: React.FC = () => {
                             {member.firstName} {member.lastName}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono">
-                            Posto {member.travelerId.slice(1)} ({member.travelerId === 't1' ? 'Pietro 6 notti' : '17 notti'})
+                            Posto {member.travelerId.slice(1)} ({member.travelerId === 't1' ? 'Pietro 8 notti' : '17 notti'})
                           </div>
                         </div>
                       </div>

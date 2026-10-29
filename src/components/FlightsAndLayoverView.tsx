@@ -315,12 +315,12 @@ export const FlightsAndLayoverView: React.FC = () => {
             </div>
           </div>
 
-          {/* Pietro Early Departure Card - 8 March */}
+          {/* Pietro Early Departure Card - 10 March */}
           <div className="bg-gradient-to-r from-purple-950/40 via-slate-900 to-slate-900 border border-purple-500/30 rounded-2xl p-5 shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-sm">
-                  8 MAR
+                  10 MAR
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -328,16 +328,16 @@ export const FlightsAndLayoverView: React.FC = () => {
                       Rientro Anticipato di Pietro a Milano
                     </h3>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/40">
-                      6 Notti (2-7 Mar)
+                      8 Notti (2-9 Mar)
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Partenza da Seul (Incheon o Gimpo in base al biglietto acquistato) ➔ Milano Malpensa
+                    Incheon 11:10 ➔ Milano Malpensa, arrivo alle 6:30 dell'11 marzo
                   </p>
                 </div>
               </div>
               <div className="text-xs text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800 font-mono">
-                Quota affitto Pietro: <strong className="text-purple-400">37 - 66 €</strong>
+                Quota affitto Pietro: <strong className="text-purple-400">50 - 88 €</strong>
               </div>
             </div>
 
@@ -348,7 +348,7 @@ export const FlightsAndLayoverView: React.FC = () => {
                   Check-out & Partenza per Aeroporto
                 </div>
                 <p className="text-slate-300 leading-relaxed">
-                  Sveglia la mattina presto e colazione insieme. Lasciare l'alloggio con circa <strong>4 - 4,5 ore di anticipo</strong> rispetto all'orario del volo per avere ampio margine con i trasporti verso Incheon o Gimpo.
+                  Lasciare l'alloggio verso le <strong>5:45 - 6:00</strong> per essere a Incheon circa <strong>3 ore prima</strong> del volo delle 11:10. Il primo AREX parte verso le 5:30 (da verificare); alternativa taxi o bus aeroporto.
                 </p>
               </div>
 
@@ -358,7 +358,7 @@ export const FlightsAndLayoverView: React.FC = () => {
                   Saluto alla Stazione
                 </div>
                 <p className="text-slate-300 leading-relaxed">
-                  Gli altri amici accompagnano Pietro alla stazione più vicina da cui parte per l'aeroporto (es. fermata AREX di Hongdae, Seoul Station o fermata bus) e lo salutano lì, rientrando poi con calma.
+                  Gli altri amici accompagnano Pietro alla stazione da cui parte per l'aeroporto e lo salutano lì; poi chi resta torna a dormire e fa colazione con calma. La sera prima, il 9 marzo, c'è l'ultima uscita in quattro.
                 </p>
               </div>
 
@@ -368,7 +368,7 @@ export const FlightsAndLayoverView: React.FC = () => {
                   Gestione Alloggio & Chiavi
                 </div>
                 <p className="text-slate-300 leading-relaxed">
-                  Avvisare formalmente l'host Enko Stay che da domenica 8 marzo l'appartamento sarà occupato solo da 3 persone. Verificare che Pietro non lasci oggetti e che le chiavi/codici restino al gruppo.
+                  Avvisare l'host Enko Stay che da mercoledì 10 marzo restano meno ospiti (prezzo invariato, da confermare). Verificare che Pietro non lasci oggetti e che le chiavi/codici restino al gruppo.
                 </p>
               </div>
             </div>

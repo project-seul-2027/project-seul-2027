@@ -92,7 +92,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
                 Dove Dormire: 4 Alloggi a Confronto
               </h2>
               <p className="text-xs text-slate-400">
-                Enko Stay · 2-19 marzo 2027 (17 notti) · 4 persone all'inizio (Pietro riparte l'8 marzo, gli altri 3 fino al 19)
+                Enko Stay · 2-19 marzo 2027 (17 notti) · 4 persone all'inizio (Pietro riparte il 10 marzo, gli altri 3 fino al 19)
               </p>
             </div>
           </div>
@@ -154,7 +154,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
         </div>
 
         <p className="text-xs text-slate-300 leading-relaxed">
-          Siete in <strong>4 dall'inizio</strong>. <strong>Pietro riparte l'8 marzo</strong> e paga <strong>6 notti</strong> (2-7 marzo). Gli altri tre amici restano fino al 19 marzo e pagano tutte le 17 notti. Il prezzo di ogni alloggio è fisso.
+          Siete in <strong>4 dall'inizio</strong>. <strong>Pietro riparte il 10 marzo</strong> e paga <strong>8 notti</strong> (2-9 marzo). Gli altri tre amici restano fino al 19 marzo e pagano tutte le 17 notti. Il prezzo di ogni alloggio è fisso.
         </p>
 
         {/* Tabella riassuntiva quote */}
@@ -164,7 +164,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
               <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
                 <th className="py-2.5 px-3">Alloggio</th>
                 <th className="py-2.5 px-3 text-right">Totale 17 notti</th>
-                <th className="py-2.5 px-3 text-right text-amber-300">Pietro (2-7 mar · 6 notti)</th>
+                <th className="py-2.5 px-3 text-right text-amber-300">Pietro (2-9 mar · 8 notti)</th>
                 <th className="py-2.5 px-3 text-right text-emerald-400">Ognuno dei 3 (fino al 19 mar)</th>
                 <th className="py-2.5 px-3 text-center">Scheda</th>
               </tr>
@@ -188,7 +188,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
                     {acc.totalEur17Nights} €
                   </td>
                   <td className="py-3 px-3 text-right text-amber-300 font-bold">
-                    {acc.pietroCost6Nights} €
+                    {acc.pietroCost8Nights} €
                   </td>
                   <td className="py-3 px-3 text-right text-emerald-400 font-bold">
                     {acc.other3Cost17Nights} €
@@ -214,7 +214,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
             Esempio di calcolo per C (748 €, 44 € a notte):
           </strong>
           <p>
-            Pietro paga 6 × 44 / 4 = <strong className="text-amber-300">66 €</strong>. Ognuno dei tre paga 66 € per le notti in comune (2-7 marzo) più 11 × 44 / 3 = 161 € per le notti dall'8 al 18, cioè <strong className="text-emerald-400">227 €</strong>. Importi arrotondati all'euro.
+            Pietro paga 8 × 44 / 4 = <strong className="text-amber-300">88 €</strong>. Ognuno dei tre paga 88 € per le notti in comune (2-9 marzo) più 9 × 44 / 3 = 132 € per le notti dal 10 al 18, cioè <strong className="text-emerald-400">220 €</strong>. Importi arrotondati all'euro.
           </p>
         </div>
       </div>
@@ -286,9 +286,9 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
                   <div className="pt-1.5 border-t border-slate-800/60 space-y-1 font-mono text-xs">
                     <div className="flex items-center justify-between text-amber-300">
                       <span className="text-[11px] font-sans flex items-center gap-1">
-                        <User className="w-3 h-3" /> Pietro (6 notti):
+                        <User className="w-3 h-3" /> Pietro (8 notti):
                       </span>
-                      <span className="font-bold">{acc.pietroCost6Nights} €</span>
+                      <span className="font-bold">{acc.pietroCost8Nights} €</span>
                     </div>
                     <div className="flex items-center justify-between text-emerald-400">
                       <span className="text-[11px] font-sans flex items-center gap-1">
@@ -375,7 +375,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
                   {acc.totalEur17Nights} € totali
                 </div>
                 <div className="text-amber-300 font-bold text-xs font-mono">
-                  Pietro (6 notti): {acc.pietroCost6Nights} €
+                  Pietro (8 notti): {acc.pietroCost8Nights} €
                 </div>
                 <div className="text-emerald-400 font-bold text-xs font-mono">
                   Ognuno dei 3 (17 notti): {acc.other3Cost17Nights} €
@@ -467,7 +467,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
               • Per movida e nightlife: C (Mapo)
             </h4>
             <p className="text-slate-300 leading-relaxed">
-              A pari merito comodità e posizione. Per i tre che restano costa circa <strong>27-32 € a testa in più</strong> rispetto a B e D, ma risparmi tempo e taxi la notte. Hongdae a 1 sola fermata di AREX.
+              A pari merito comodità e posizione. Per i tre che restano costa circa <strong>26-31 € a testa in più</strong> rispetto a B e D, ma risparmi tempo e taxi la notte. Hongdae a 1 sola fermata di AREX.
             </p>
           </div>
 
@@ -476,7 +476,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
               • Per spendere meno: A (Myeongdong)
             </h4>
             <p className="text-slate-300 leading-relaxed">
-              Se i letti bastano per quattro e non temete le scale del 4° piano. Per i tre che restano sono <strong>129 € a testa (Pietro 37 €)</strong>, circa 98 € in meno di Mapo.
+              Se i letti bastano per quattro e non temete le scale del 4° piano. Per i tre che restano sono <strong>125 € a testa (Pietro 50 €)</strong>, circa 95 € in meno di Mapo.
             </p>
           </div>
 

@@ -39,7 +39,7 @@ export interface AccommodationOption {
   totalEur17Nights: number;
   /** Calcolati da totalEur17Nights (vedi ACCOMMODATIONS) */
   nightlyRateEur: number;
-  pietroCost6Nights: number;
+  pietroCost8Nights: number;
   other3Cost17Nights: number;
   costPerPerson4: number;
   costPerPerson3: number;
@@ -134,7 +134,7 @@ export const TRIP_META = {
   airline: 'Air China',
   specialHighlight: 'VALORANT MASTERS SEOUL 2027',
   // ?v= forza il browser e il service worker a scaricare di nuovo il PDF aggiornato
-  pdfPath: `${import.meta.env.BASE_URL}assets/aistudio/Itinerario_Seul_2027_aggiornato.pdf?v=2026-10-26b`
+  pdfPath: `${import.meta.env.BASE_URL}assets/aistudio/Itinerario_Seul_2027_aggiornato.pdf?v=2026-10-29`
 };
 
 export const FLIGHTS_BOOKING_URL =
@@ -142,7 +142,7 @@ export const FLIGHTS_BOOKING_URL =
 
 
 // 4 ALLOGGI A CONFRONTO (ENKO STAY, 2-19 MARZO, 4 PERSONE)
-const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroCost6Nights' | 'other3Cost17Nights'>[] = [
+const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroCost8Nights' | 'other3Cost17Nights'>[] = [
   {
     id: 'acc_a',
     code: 'A',
@@ -161,7 +161,7 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
     hongdaeTransit: 'circa 25-30 min con AREX o Metro Linea 2.',
     nearbyAttractions: 'Myeongdong, Mercato di Namdaemun, Monte Namsan a 10 min.',
     pro: [
-      'Il più economico in assoluto: soli 106 € a testa per 17 notti (circa 80 € in meno rispetto a Mapo!)',
+      'Il più economico in assoluto: 424 € in tutto, cioè 125 € a testa per chi resta 17 notti (circa 95 € in meno di Mapo)',
       'Super centrale: due bagni completi, comodissimi per 4 persone',
       'Vicinissimo a Myeongdong, al mercato di Namdaemun e alla salita per il Namsan'
     ],
@@ -171,7 +171,7 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
       'Quartiere commerciale vivace di giorno ma meno attivo per la vita notturna',
       'Luce a consumo da pagare a parte a fine soggiorno'
     ],
-    highlightBadge: 'Il Più Economico (106 €/testa)',
+    highlightBadge: 'Il Più Economico (125 €/testa)',
     highlightBadgeColor: 'emerald',
     importantNotes: 'Consigliatissimo per risparmiare al massimo se non temete le scale del 4° piano e se i posti letto sono idonei.'
   },
@@ -199,7 +199,7 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
     contro: [
       'È un seminterrato (da verificare illuminazione naturale e umidità)',
       'Un solo bagno per 4 persone',
-      'Prezzo più alto di A (659 € totali) senza offrire grandi vantaggi'
+      'Prezzo più alto di A (659 € totali) senza grandi vantaggi'
     ],
     highlightBadge: 'Hub Trasporti & Treni',
     highlightBadgeColor: 'sky',
@@ -228,14 +228,14 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
       'Palazzo moderno con ascensore comodo e lavatrice in casa'
     ],
     contro: [
-      'L\'alloggio più caro del gruppo (187 € a testa per 17 notti)',
+      'L\'alloggio più caro del gruppo (220 € a testa per chi resta 17 notti)',
       'Monolocale stretto per 4 persone con divano letto',
       'Biancheria e asciugamani non forniti (da richiedere all\'host)',
       'Niente prodotti da bagno (shampoo/bagnoschiuma)'
     ],
     highlightBadge: 'Top per Movida & Hongdae',
     highlightBadgeColor: 'pink',
-    importantNotes: 'In quattro costa circa 22-27 € in più a testa rispetto a B e D, ma fa risparmiare tempo e soldi nei taxi notturni dopo le serate.'
+    importantNotes: 'Per i tre che restano costa circa 26-31 € a testa in più rispetto a B e D, ma fa risparmiare tempo e soldi nei taxi notturni dopo le serate.'
   },
   {
     id: 'acc_d',
@@ -270,16 +270,16 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
 
 /**
  * Quote calcolate con la regola del gruppo: ogni notte costa totale / 17 e la pagano i presenti.
- * Pietro: 6 notti divise per 4. Gli altri 3: le stesse 6 notti / 4 + le 11 notti successive / 3.
+ * Chi riparte il 10 marzo (Pietro): 8 notti (2-9 marzo) divise per 4. Gli altri 3: le stesse 8 notti / 4 + le 9 notti successive (10-18 marzo) / 3.
  */
 export const ACCOMMODATIONS: AccommodationOption[] = ACCOMMODATIONS_BASE.map((acc) => {
   const nightly = acc.totalEur17Nights / 17;
-  const sharedPart = (6 * nightly) / 4;
+  const sharedPart = (8 * nightly) / 4;
   return {
     ...acc,
     nightlyRateEur: Math.round(nightly),
-    pietroCost6Nights: Math.round(sharedPart),
-    other3Cost17Nights: Math.round(sharedPart + (11 * nightly) / 3)
+    pietroCost8Nights: Math.round(sharedPart),
+    other3Cost17Nights: Math.round(sharedPart + (9 * nightly) / 3)
   };
 });
 
@@ -296,7 +296,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     lat: 37.5615,
     lng: 126.9795,
     dayNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    description: 'Opzione Enko Stay A: 106 € a testa in 4 (424 € totali per 17 notti). Il più economico. 4° piano privato, 2 bagni, cucina. Metro City Hall a 7 min.',
+    description: 'Opzione Enko Stay A: 424 € totali per 17 notti (50 € per chi parte il 10, 125 € per chi resta fino al 19). Il più economico. 4° piano privato, 2 bagni, cucina. Metro City Hall a 7 min.',
     tips: '4° piano senza ascensore; luce a consumo a parte.',
     accommodationCode: 'A'
   },
@@ -311,7 +311,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     lat: 37.5532,
     lng: 126.9698,
     dayNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    description: 'Opzione Enko Stay B: 165 € a testa in 4 (659 € totali per 17 notti). Seminterrato ristrutturato con 2 camere, 1 bagno. A 7 min da Seoul Station (AREX e KTX).',
+    description: 'Opzione Enko Stay B: 659 € totali per 17 notti (78 € per chi parte il 10, 194 € per chi resta fino al 19). Seminterrato ristrutturato con 2 camere, 1 bagno. A 7 min da Seoul Station (AREX e KTX).',
     tips: 'Ottimo per i treni e aeroporto; un solo bagno.',
     accommodationCode: 'B'
   },
@@ -326,7 +326,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     lat: 37.5398,
     lng: 126.9458,
     dayNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    description: 'Opzione Enko Stay C: 187 € a testa in 4 (748 € totali per 17 notti). Monolocale officetel con ascensore e lavatrice. A 1 fermata AREX da Hongdae (top per la movida).',
+    description: 'Opzione Enko Stay C: 748 € totali per 17 notti (88 € per chi parte il 10, 220 € per chi resta fino al 19). Monolocale officetel con ascensore e lavatrice. A 1 fermata AREX da Hongdae (top per la movida).',
     tips: 'Top per la vita notturna; divano letto, biancheria non fornita.',
     accommodationCode: 'C'
   },
@@ -341,7 +341,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     lat: 37.5758,
     lng: 127.0248,
     dayNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-    description: 'Opzione Enko Stay D: 160 € a testa in 4 (641 € totali per 17 notti). Il più comodo per dormire: 2 camere, 3 letti queen size, cucina e soggiorno. Metro a 1 min.',
+    description: 'Opzione Enko Stay D: 641 € totali per 17 notti (75 € per chi parte il 10, 189 € per chi resta fino al 19). Il più comodo per dormire: 2 camere, 3 letti queen size, cucina e soggiorno. Metro a 1 min.',
     tips: 'Massimo comfort letti; più lontano da Hongdae.',
     accommodationCode: 'D'
   },
@@ -825,9 +825,23 @@ export const MAP_LOCATIONS: MapLocation[] = [
     category: 'logistica',
     lat: 45.6301,
     lng: 8.7231,
-    dayNumbers: [0, 18],
-    description: 'Punto d\'incontro del gruppo: 1 marzo ore 10:00 davanti ai banchi check-in Air China.',
+    dayNumbers: [0, 18, 19],
+    description: 'Punto d\'incontro del gruppo: 1 marzo ore 10:00 davanti ai banchi check-in Air China. Il 20 marzo alle 06:30 è anche l\'arrivo del volo di rientro.',
     tips: 'Raggiungibile autonomamente con mezzi propri o treno ordinario.'
+  },
+  {
+    id: 'milano_centrale',
+    name: 'Milano Centrale',
+    italianName: 'Stazione di Milano Centrale',
+    koreanName: 'Milano Centrale',
+    district: 'Milano',
+    city: 'Milano',
+    category: 'logistica',
+    lat: 45.4859,
+    lng: 9.2046,
+    dayNumbers: [19],
+    description: 'Arrivo del Malpensa Express (circa 50 minuti da Malpensa T1) il 20 marzo verso le 10:00-10:30. Da qui ognuno prende il suo treno verso casa, dalle 11:30.',
+    tips: 'Meglio biglietti flessibili per i treni di casa. Deposito bagagli a pagamento (da verificare).'
   }
 ];
 
@@ -871,10 +885,10 @@ export const FLIGHTS_SCHEDULE: FlightLeg[] = [
     arrivalAirport: 'Pechino Capitale',
     arrivalAirportCode: 'PEK',
     arrivalTerminal: 'T3',
-    arrivalTime: '05:30 (+1)',
+    arrivalTime: '05:35',
     arrivalDate: '2 marzo 2027',
     duration: '10h 00m',
-    layoverNotice: 'Scalo tecnico a Pechino',
+    layoverNotice: 'Scalo a Pechino di 3h05: International Transfer, senza uscire dall\'aeroporto',
     baggageInfo: '23 kg bagaglio in stiva incluso + 8 kg a mano',
     notes: [
       'Ritrovo entro le 10:00 al T1 davanti ai banchi Air China',
@@ -920,7 +934,7 @@ export const FLIGHTS_SCHEDULE: FlightLeg[] = [
     arrivalTime: '14:20',
     arrivalDate: '19 marzo 2027',
     duration: '2h 10m',
-    layoverNotice: 'Scalo lungo con uscita città: 14:20 -> 02:15 (circa 12 ore di sosta!)',
+    layoverNotice: 'Scalo lungo con uscita città: 14:20 -> 02:15 (circa 11h55 di sosta)',
     baggageInfo: 'Chiedere a Incheon se le valigie (23 kg) vanno fino a Milano (così si esce solo con zaino)',
     notes: [
       'Check-in a Incheon ore 10:10 (apre 3 ore prima)',
@@ -942,7 +956,7 @@ export const FLIGHTS_SCHEDULE: FlightLeg[] = [
     arrivalAirport: 'Milano Malpensa',
     arrivalAirportCode: 'MXP',
     arrivalTerminal: 'T1',
-    arrivalTime: '06:50',
+    arrivalTime: '06:30',
     arrivalDate: '20 marzo 2027',
     duration: '11h 35m',
     baggageInfo: 'Ritiro bagagli finale a Malpensa',
@@ -956,10 +970,10 @@ export const FLIGHTS_SCHEDULE: FlightLeg[] = [
 
 export const BEIJING_TRANSIT_BUDGET = [
   { item: 'Airport Express A/R (PEK - Dongzhimen)', cny: '50 CNY', eur: '6,70 €', notes: '25 CNY a tratta, 20-25 min' },
-  { item: 'Metro in città (Linea 2 A/R)', cny: '6 - 10 CNY', eur: '0,90 - 1,40 €', notes: '3 CNY a corsa' },
+  { item: 'Metro in città', cny: '10 - 20 CNY', eur: '1,50 - 2,70 €', notes: 'Linea 2 fino a Qianmen, circa 3 CNY a corsa' },
   { item: 'Deposito bagagli T3 (se serve)', cny: '20 - 40 CNY', eur: '2,70 - 5,40 €', notes: 'Solo se le valigie non vanno dirette a Milano' },
-  { item: 'Cena con Anatra Laccata (condivisa)', cny: '70 - 110 CNY', eur: '9,50 - 15,00 €', notes: 'Quanjude Qianmen o Siji Minfu condivisa in 4' },
-  { item: 'Snack, tè e bevande', cny: '20 - 35 CNY', eur: '2,70 - 4,70 €', notes: 'Street food economico' }
+  { item: 'Cena con Anatra Laccata (condivisa)', cny: '80 - 150 CNY', eur: '11 - 20 €', notes: 'Quanjude Qianmen o Siji Minfu condivisa' },
+  { item: 'Snack, tè e bevande', cny: '30 - 50 CNY', eur: '4 - 6,70 €', notes: 'Street food economico' }
 ];
 
 export const PDF_BUDGET_ESTIMATES = [
@@ -999,7 +1013,7 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
     description: "Ritrovo a Milano Malpensa T1 davanti ai banchi Air China entro le 10:00. Check-in e bagagli tutti insieme, poi decollo per la Cina e per Seul (arrivo a Incheon il 2 marzo alle 11:40).",
     schedule: [
       { time: "Prima", activity: "Verificare mezzo e orario per arrivare al T1 entro le 10:00. Condividere nel gruppo orari di treno/volo e un numero di telefono raggiungibile." },
-      { time: "Da Milano Centrale", activity: "Malpensa Express subito (cartelli 'Malpensa Express / Aeroporti'): circa 50 min, biglietto ~15 €, meglio comprarlo in anticipo su Trenord. Treni consigliati 8:25 o 8:55 (da verificare)." },
+      { time: "Da Milano Centrale", activity: "Malpensa Express subito (cartelli 'Malpensa Express / Aeroporti'): circa 50 min, biglietto ~15 €, meglio comprarlo in anticipo su Trenord. Treni consigliati: 8:25 (arrivo al T1 verso le 9:16) oppure 8:55 (arrivo verso le 9:46). Orari da verificare su Trenord." },
       { time: "Entro 10:00", activity: "RITROVO a T1 partenze, banchi Air China. Il check-in apre circa 3 ore prima del volo (12:30, da riconfermare).", isHighlight: true },
       { time: "10:00 - 10:45", activity: "Check-in e consegna bagagli (23 kg inclusi) tutti insieme. Chiedere le carte d'imbarco di tutti i tratti e le valigie etichettate fino a Seul." },
       { time: "10:45 - 11:45", activity: "Controlli di sicurezza e passaporto, colazione o pranzo, poi gate." },
@@ -1024,25 +1038,34 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
     dateStr: "2 marzo 2027",
     dayOfWeek: "Martedì",
     phase: "Prima settimana",
-    title: "Arrivo a Seul & sistemazione",
-    subtitle: "Atterraggio 11:40, AREX in città e deposito bagagli",
-    description: "Atterraggio a Incheon alle 11:40. Treno AREX fino in città, pranzo veloce e deposito bagagli se il check-in non è ancora pronto. Nel pomeriggio check-in, spesa al supermercato, SIM/eSIM e T-money.",
+    title: "Scalo a Pechino & arrivo a Seul",
+    subtitle: "Pechino 05:35, volo per Incheon alle 08:40, atterraggio a Seul alle 11:40",
+    description: "Atterraggio a Pechino alle 05:35 (ora cinese, un'ora indietro rispetto a Seul) e secondo volo alle 08:40: 3 ore e 5 minuti di scalo. Bastano se si hanno già le carte d'imbarco di entrambi i voli (da chiedere a Malpensa) e si segue subito 'International Transfer', senza uscire dall'aeroporto e senza usare il transito 240h. A Incheon alle 11:40, poi AREX in città, check-in alle 16:00, spesa, SIM/eSIM e T-money.",
     schedule: [
-      { time: "11:40", activity: "Atterraggio a Incheon (ICN). Controlli passaporto e ritiro bagagli.", isHighlight: true },
-      { time: "12:45", activity: "Treno AREX fino in città (per l'alloggio scelto, con cambio se serve)." },
-      { time: "Pomeriggio", activity: "Check-in, spesa al supermercato, SIM/eSIM e T-money." },
+      { time: "05:35", activity: "Atterraggio a Pechino (PEK), Terminal 3. Sbarco e indicazioni 'International Transfer'.", isHighlight: true },
+      { time: "05:50 - 06:30", activity: "Controllo di sicurezza di transito e controllo delle carte d'imbarco. Se mancano quelle del secondo volo, rivolgersi subito al banco transiti Air China." },
+      { time: "06:30 - 07:30", activity: "Tempo cuscinetto: colazione, bagno, telefoni in carica, ricerca del gate (a PEK i gate possono essere lontani, a volte con navetta interna)." },
+      { time: "07:30 - 08:00", activity: "Arrivo al gate. L'imbarco inizia circa 40 minuti prima della partenza." },
+      { time: "08:40", activity: "Decollo per Incheon (volo di circa 2 ore).", isHighlight: true },
+      { time: "11:40 (Seul)", activity: "Atterraggio a Incheon. Orologio avanti di 1 ora.", isHighlight: true },
+      { time: "11:40 - 13:15", activity: "Controllo passaporti, ritiro bagagli, SIM/eSIM e T-money." },
+      { time: "13:15 - 14:45", activity: "AREX in città (circa 60 minuti), poi trasferimento con le valigie fino all'alloggio." },
+      { time: "14:45 - 16:00", activity: "Check-in alle 16:00 (anticipato da chiedere all'host) oppure deposito bagagli e pranzo tardivo." },
+      { time: "Pomeriggio", activity: "Check-in, spesa al supermercato." },
       { time: "Sera", activity: "Prima passeggiata a Hongdae con street food: serata corta per il fuso orario (~10 €).", isHighlight: true }
     ],
     bulletPoints: [
-      "Atterraggio 11:40, AREX verso il centro",
-      "Pranzo veloce e deposito bagagli se il check-in non è pronto",
-      "SIM/eSIM e T-money per metro e bus",
+      "Scalo di 3h05 a Pechino: 'International Transfer', senza uscire e senza transito 240h",
+      "Se il primo volo ritarda fino a circa un'ora, lo scalo regge",
+      "Atterraggio a Incheon alle 11:40, AREX verso il centro (circa 60 min)",
+      "Check-in alle 16:00: chiedere all'host l'anticipo o il deposito bagagli",
       "Sera corta: il fuso orario si fa sentire"
     ],
     costsEstimate: "~10 € (AREX + street food serale)",
-    locationIds: ["incheon_airport", "acc_c", "hongdae_district"],
-    tags: ["Arrivo", "AREX", "Alloggio", "T-money"],
+    locationIds: ["beijing_airport_t3", "incheon_airport", "acc_c", "hongdae_district"],
+    tags: ["Scalo", "Pechino", "Arrivo", "AREX", "Alloggio", "T-money"],
     tips: [
+      "Verificare che i due voli siano nella stessa prenotazione: con un biglietto unico la compagnia riprotegge la coincidenza, con biglietti separati no.",
       "Prendere la T-money in aeroporto o al convenience store (GS25/CU) e caricarla con contanti."
     ]
   },
@@ -1055,8 +1078,8 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
     subtitle: "Evento esports clou del viaggio · sede e orari in attesa di annuncio",
     description: "Giornata dedicata al Valorant Masters Seoul 2027, il cui torneo va dal 20 febbraio al 3 marzo. Sede, orari della finale e biglietti non sono ancora pubblicati: la giornata resta riservata e il piano va aggiornato appena escono le informazioni.",
     schedule: [
-      { time: "Mattina", activity: "Mattina libera per riposo e colazione." },
-      { time: "Pomeriggio", activity: "VALORANT MASTERS SEOUL 2027: sede e orari da confermare, in attesa dell'annuncio ufficiale.", isHighlight: true },
+      { time: "Mattina", activity: "Mattina libera." },
+      { time: "Poi", activity: "VALORANT MASTERS SEOUL 2027: orari e sede da confermare, in attesa dell'annuncio ufficiale.", isHighlight: true },
       { time: "Dopo il match", activity: "Cena e pocha a Hongdae per chiudere la serata insieme (~15 €)." }
     ],
     bulletPoints: [
@@ -1142,90 +1165,97 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
     dateStr: "7 marzo 2027",
     dayOfWeek: "Domenica",
     phase: "Prima settimana",
-    title: "Mercati + serata di saluto",
-    subtitle: "Gwangjang, Cheonggyecheon, DDP e serata con chi riparte l'8",
-    description: "Mercato di Gwangjang, Cheonggyecheon e DDP. Sera con noraebang e sala giochi: serata di saluto con chi riparte l'8 marzo (~12 €).",
+    title: "Mercati + noraebang",
+    subtitle: "Gwangjang, Cheonggyecheon, DDP e serata di noraebang",
+    description: "Mercato di Gwangjang, Cheonggyecheon e DDP. Sera: noraebang e sala giochi (~12 €).",
     schedule: [
       { time: "Giorno", activity: "Mercato di Gwangjang, Cheonggyecheon e DDP." },
-      { time: "Sera", activity: "Noraebang e sala giochi: saluto con chi riparte l'8 (~12 €).", isHighlight: true }
+      { time: "Sera", activity: "Noraebang e sala giochi (~12 €).", isHighlight: true }
     ],
     bulletPoints: [
       "Mercato di Gwangjang",
       "Passeggiata lungo Cheonggyecheon",
       "DDP per la sera e le luci",
-      "Noraebang e sala giochi per salutarsi"
+      "Noraebang e sala giochi per la serata"
     ],
     costsEstimate: "~12 € a testa",
     locationIds: ["gwangjang_market", "cheonggyecheon", "ddp_dongdaemun"],
-    tags: ["Mercati", "Noraebang", "Saluto"]
+    tags: ["Mercati", "Noraebang", "Sala giochi"]
   },
   {
     id: 7,
     dateStr: "8 marzo 2027",
     dayOfWeek: "Lunedì",
     phase: "Prima settimana",
-    title: "Rientro di una persona del gruppo",
-    subtitle: "Colazione insieme, check-out e poi Namsan e Myeongdong per chi resta",
-    description: "Sveglia presto, colazione insieme e check-out di chi parte: lasciare l'alloggio circa 4-4,5 ore prima del volo. Accompagnare alla stazione più vicina da cui parte per l'aeroporto. Chi resta: Namsan a piedi (gratis), Myeongdong e Insadong (~10 €). Sera: language exchange.",
+    title: "Namsan + language exchange",
+    subtitle: "Mattina libera, Namsan a piedi e serata di scambio linguistico",
+    description: "Mattina libera. Pomeriggio: Namsan a piedi (gratis), Myeongdong e Insadong (~10 €). Sera: language exchange (Meetup/HelloTalk), il modo più naturale per fare conoscenze (~10 €).",
     schedule: [
-      { time: "Mattina", activity: "Sveglia, colazione insieme e check-out di chi parte." },
-      { time: "Saluti", activity: "Accompagnare alla stazione più vicina da cui parte per l'aeroporto.", isHighlight: true },
+      { time: "Mattina", activity: "Mattina libera." },
       { time: "Pomeriggio", activity: "Namsan a piedi (gratis), Myeongdong e Insadong (~10 €)." },
-      { time: "Sera", activity: "Language exchange." }
+      { time: "Sera", activity: "Language exchange (Meetup/HelloTalk): il modo più naturale per fare conoscenze (~10 €).", isHighlight: true }
     ],
     bulletPoints: [
-      "Lasciare l'alloggio circa 4-4,5 ore prima del volo",
-      "Avvisare l'host che da oggi restano meno ospiti",
-      "Tenere chiavi o codice e confermare la procedura",
-      "Namsan e Myeongdong per chi resta"
+      "Namsan a piedi, gratis",
+      "Myeongdong e Insadong",
+      "Language exchange su Meetup o HelloTalk"
     ],
-    costsEstimate: "~10 € a testa (per chi resta)",
+    costsEstimate: "~10 € il pomeriggio + ~10 € la serata",
     locationIds: ["namsan_tower", "myeongdong", "insadong"],
-    tags: ["Rientro", "Namsan", "Myeongdong", "Insadong"],
-    tips: [
-      "Il prezzo dell'alloggio non cambia quando parte una persona: chiedere all'host come gestire le chiavi."
-    ]
+    tags: ["Namsan", "Myeongdong", "Insadong", "Language exchange"]
   },
   {
     id: 8,
     dateStr: "9 marzo 2027",
     dayOfWeek: "Martedì",
-    phase: "Seconda settimana",
-    title: "Museo + Kondae",
-    subtitle: "National Museum of Korea e serata a Konkuk",
-    description: "National Museum of Korea (gratis). Sera a Konkuk (Kondae): zona studentesca, economica e molto frequentata (~15 €).",
+    phase: "Prima settimana",
+    title: "Museo + serata di saluti",
+    subtitle: "National Museum of Korea e ultima uscita in quattro a Kondae",
+    description: "National Museum of Korea (gratis). Pomeriggio: la valigia di chi riparte è già pronta, con peso controllato (massimo 23 kg). Sera: ultima uscita in quattro in zona Kondae, cena e pocha, rientro entro le 22:30 (~15 €). Domani sveglia molto presto.",
     schedule: [
       { time: "Giorno", activity: "National Museum of Korea (gratis)." },
-      { time: "Sera", activity: "Konkuk (Kondae): zona studentesca ed economica (~15 €).", isHighlight: true }
+      { time: "Pomeriggio", activity: "La valigia di chi riparte è già pronta, con peso controllato (massimo 23 kg)." },
+      { time: "Sera", activity: "Ultima uscita in quattro in zona Kondae: cena e pocha, rientro entro le 22:30 (~15 €).", isHighlight: true }
     ],
     bulletPoints: [
       "Museo nazionale gratuito",
-      "Kondae: economica e molto frequentata"
+      "Valigia di chi riparte pronta e pesata (max 23 kg)",
+      "Ultima uscita in quattro a Kondae, rientro entro le 22:30",
+      "Domani sveglia molto presto"
     ],
     costsEstimate: "~15 € a testa",
     locationIds: ["national_museum", "kondae_konkuk"],
-    tags: ["Museo", "Kondae"]
+    tags: ["Museo", "Kondae", "Saluti"],
+    tips: [
+      "Rientrare entro le 22:30: domattina chi riparte si sveglia prestissimo."
+    ]
   },
   {
     id: 9,
     dateStr: "10 marzo 2027",
     dayOfWeek: "Mercoledì",
     phase: "Seconda settimana",
-    title: "Gita a Incheon",
-    subtitle: "Chinatown e Wolmido, rientro per una cena tranquilla",
-    description: "Chinatown e Wolmido, circa un'ora di treno. Rientro per cena e serata tranquilla a Hongdae (~12 €).",
+    title: "Una persona riparte + Incheon",
+    subtitle: "Saluti in stazione al mattino, Chinatown e Wolmido per chi resta",
+    description: "Mattina presto: chi riparte lascia l'alloggio verso le 5:45-6:00 per essere a Incheon circa 3 ore prima del volo delle 11:10 (primo AREX verso le 5:30, da verificare; alternativa taxi o bus aeroporto). Saluti in stazione. Arrivo a Malpensa l'11 marzo alle 6:30. Chi resta torna a dormire, poi nel pomeriggio gita a Chinatown e Wolmido e serata tranquilla a Hongdae (~12 €).",
     schedule: [
-      { time: "Giorno", activity: "Chinatown e Wolmido, circa un'ora di treno.", isHighlight: true },
+      { time: "Mattina presto", activity: "Chi riparte lascia l'alloggio verso le 5:45-6:00 per essere a Incheon circa 3 ore prima del volo delle 11:10 (primo AREX verso le 5:30, da verificare; alternativa taxi o bus aeroporto). Saluti in stazione. Arrivo a Malpensa l'11 marzo alle 6:30.", isHighlight: true },
+      { time: "Mattina", activity: "Chi resta torna a dormire e fa colazione con calma. Avvisare l'host che restano meno ospiti (prezzo invariato, da confermare)." },
+      { time: "Pomeriggio", activity: "Chinatown e Wolmido a Incheon, circa un'ora di treno.", isHighlight: true },
       { time: "Sera", activity: "Rientro per cena e serata tranquilla a Hongdae (~12 €)." }
     ],
     bulletPoints: [
-      "Chinatown di Incheon",
-      "Wolmido sul mare",
-      "Rientro in serata a Hongdae"
+      "Chi riparte esce verso le 5:45-6:00: volo delle 11:10 da Incheon",
+      "Primo AREX verso le 5:30 (da verificare), alternativa taxi o bus aeroporto",
+      "Avvisare l'host che restano meno ospiti",
+      "Chinatown e Wolmido nel pomeriggio, rientro per cena a Hongdae"
     ],
-    costsEstimate: "~12 € a testa",
-    locationIds: ["incheon_chinatown_wolmido", "hongdae_district"],
-    tags: ["Incheon", "Chinatown", "Wolmido"]
+    costsEstimate: "~12 € a testa (per chi resta)",
+    locationIds: ["incheon_airport", "incheon_chinatown_wolmido", "hongdae_district"],
+    tags: ["Rientro", "Incheon", "Chinatown", "Wolmido"],
+    tips: [
+      "Il prezzo dell'alloggio non cambia quando parte una persona: chiedere all'host come gestire le chiavi."
+    ]
   },
   {
     id: 10,
@@ -1426,7 +1456,7 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
       "Seul: check-out alle 7:30, AREX e volo alle 13:10",
       "Pechino 14:20: transito 240h per il permesso temporaneo senza visto",
       "Airport Express (25 CNY) e metro Linea 2 (3 CNY) fino a Qianmen",
-      "Cena con anatra laccata condivisa tra i 4 amici",
+      "Cena con anatra laccata condivisa tra i 3 amici",
       "Piazza Tiananmen illuminata solo con prenotazione",
       "Rientro al T3 dal centro entro le 21:15"
     ],
@@ -1438,6 +1468,40 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
       "Passaporto valido almeno 6 mesi dopo il rientro. Power bank con marchio 3C.",
       "A Pechino Google, WhatsApp e Instagram sono bloccati: usare eSIM o roaming sulla rete italiana.",
       "Pagamenti: Alipay (Tour Pass) o WeChat Pay con carta, più 200-300 CNY in contanti."
+    ]
+  },
+  {
+    id: 19,
+    dateStr: "20 marzo 2027",
+    dayOfWeek: "Sabato",
+    phase: "Ultima parte",
+    title: "Da Malpensa a Milano Centrale",
+    subtitle: "Atterraggio 06:30, Malpensa Express verso le 9:00-9:30 e treni di casa dalle 11:30",
+    description: "Atterraggio previsto alle 06:30 al Terminal 1, in tre e con tutti i bagagli. Il piano punta al Malpensa Express verso le 9:00-9:30, senza correre, e a tenere i treni verso casa non prima delle 11:30. Se ci sono ritardi, non cambia nulla: si passa al treno successivo.",
+    schedule: [
+      { time: "06:30", activity: "Atterraggio previsto. Dopo l'atterraggio l'aereo può impiegare 10-15 minuti per arrivare al gate. Avvisare casa che si è arrivati.", isHighlight: true },
+      { time: "06:45 - 07:30", activity: "Sbarco e controllo passaporti (arrivo da fuori Schengen: nelle ore di punta la coda può durare 20-45 minuti)." },
+      { time: "07:30 - 08:15", activity: "Ritiro bagagli. Dopo uno scalo le valigie possono arrivare per ultime: aspettare tutti vicino al nastro e controllare etichette e chiusure. Se una valigia manca, fare la denuncia all'ufficio bagagli prima di uscire." },
+      { time: "08:15 - 08:45", activity: "Colazione al T1 (5-8 €), bagno, telefoni in carica. Nel frattempo acquistare i biglietti del Malpensa Express sull'app Trenord (circa 15 € a testa)." },
+      { time: "08:45 - 09:00", activity: "Verso la stazione del Malpensa Express, seguendo le indicazioni 'Treni / Trains'." },
+      { time: "09:00 - 09:30", activity: "Malpensa Express per Milano Centrale (circa 50 minuti, un treno ogni 30 minuti; orari da verificare su Trenord). Se si perde il primo treno, si prende il successivo.", isHighlight: true },
+      { time: "10:00 - 10:30", activity: "Arrivo a Milano Centrale: valigie, caffè, panino e tabellone dei treni." },
+      { time: "Dalle 11:30", activity: "Treni verso casa, ognuno il suo. Meglio biglietti flessibili (cambio gratuito o tariffa base) oppure da acquistare all'arrivo a Centrale.", isHighlight: true }
+    ],
+    bulletPoints: [
+      "Atterraggio alle 06:30 al T1, in tre e con tutti i bagagli",
+      "Malpensa Express verso le 9:00-9:30, un treno ogni 30 minuti",
+      "Treni verso casa non prima delle 11:30",
+      "Se si perde il gruppo: punto di ritrovo al nastro bagagli, poi al binario del Malpensa Express"
+    ],
+    costsEstimate: "Malpensa Express ~15 € a testa, colazione 5-8 €",
+    locationIds: ["mxp_terminal1", "milano_centrale"],
+    tags: ["Rientro", "Malpensa", "Milano Centrale", "Malpensa Express"],
+    tips: [
+      "Ritardo di circa 2 ore sul volo: atterraggio verso le 8:30, bagagli alle 9:30-10:00, Malpensa Express verso le 10:30, arrivo a Centrale verso le 11:30 e treni di casa dalle 12:30. Per questo i biglietti di casa non vanno presi rigidi prima di mezzogiorno.",
+      "Treni di casa già acquistati: se non sono flessibili, sceglierne non prima delle 12:00-12:30.",
+      "Il sabato valgono gli orari festivi di Trenord: controllarli il giorno prima.",
+      "Costi del rientro: Malpensa Express circa 15 € a testa, colazione 5-8 €, eventuale deposito bagagli a Milano Centrale (a pagamento, da verificare). I treni verso casa sono a parte."
     ]
   }
 ];
