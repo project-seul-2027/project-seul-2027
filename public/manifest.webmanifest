@@ -10,16 +10,99 @@
   "orientation": "portrait",
   "background_color": "#090d16",
   "theme_color": "#090d16",
-  "categories": ["travel"],
+  "categories": [
+    "travel"
+  ],
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Mappa e metro", "short_name": "Mappa", "url": "./?tab=map", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Galleria condivisa", "short_name": "Galleria", "url": "./?tab=gallery", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Valigia", "short_name": "Valigia", "url": "./?tab=packing", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
-  ]
+    {
+      "name": "Wallet: biglietti e tessere",
+      "short_name": "Wallet",
+      "url": "./?tab=wallet",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "SOS ed emergenze",
+      "short_name": "SOS",
+      "url": "./?tab=sos",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Nuova spesa veloce",
+      "short_name": "Spesa",
+      "url": "./?tab=expenses&add=1",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Luoghi condivisi",
+      "short_name": "Luoghi",
+      "url": "./?tab=places",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mappa e metro",
+      "short_name": "Mappa",
+      "url": "./?tab=map",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

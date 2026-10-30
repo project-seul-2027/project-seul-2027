@@ -6,6 +6,17 @@ import { registerServiceWorker } from './pwa';
 
 registerServiceWorker();
 
+// Aperto dall'icona "Wallet Seul" (?app=wallet): nome e manifest propri, così "Aggiungi a Home" crea un'icona dedicata
+try {
+  if (new URLSearchParams(window.location.search).get('app') === 'wallet') {
+    document.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.setAttribute('href', './manifest-wallet.webmanifest');
+    document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', 'Wallet Seul');
+    document.title = 'Wallet Seul 2027';
+  }
+} catch {
+  /* non essenziale */
+}
+
 createRoot(document.getElementById('root')!).render(
   <AuthProvider>
     <App />

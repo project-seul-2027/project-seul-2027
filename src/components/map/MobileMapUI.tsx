@@ -121,6 +121,8 @@ export interface MobileMapOverlayProps {
   sheetTab: 'places' | 'metro';
   onSheetTab: (t: 'places' | 'metro') => void;
   metroReady: boolean;
+  /** Sfondo offline (OpenFreeMap) al posto di Google */
+  offlineBg?: boolean;
   metroVisibleCount: number;
   metroLineCount: number;
   onToggleAllMetro: () => void;
@@ -825,7 +827,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         }}
       >
         <div className="text-[10px] leading-tight text-slate-300 bg-slate-950/75 rounded-md px-1.5 py-1 backdrop-blur-sm max-w-[55%] pointer-events-auto">
-          Mappa © Google{p.metroReady ? ' · Linee metro © OpenStreetMap' : ''}
+          {p.offlineBg ? 'Mappa © OpenFreeMap © OpenMapTiles, dati OpenStreetMap' : 'Mappa © Google'}{p.metroReady ? ' · Linee metro © OpenStreetMap' : ''}
         </div>
         <div
           className="flex flex-col gap-2.5 shrink-0 transition-opacity duration-150"

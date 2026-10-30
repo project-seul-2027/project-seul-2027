@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 
@@ -27,6 +27,34 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
+      {
+        // Elenco dei file dell'app: serve al pulsante "Scarica per l'offline" per salvarli tutti sul telefono
+        name: 'emit-offline-manifest',
+        generateBundle(_options: unknown, bundle: Record<string, { fileName: string; type: string; code?: string; source?: string | Uint8Array }>) {
+          const files: { url: string; bytes: number }[] = [];
+          for (const f of Object.values(bundle)) {
+            if (f.fileName === 'version.json' || f.fileName === 'sw.js') continue;
+            const bytes = f.type === 'chunk' ? Buffer.byteLength(f.code ?? '') : typeof f.source === 'string' ? Buffer.byteLength(f.source) : (f.source?.byteLength ?? 0);
+            files.push({ url: f.fileName, bytes });
+          }
+          // File di public/: icone, immagini. Video, schermate di avvio e PDF restano fuori (il PDF lo aggiunge l'app con la sua versione).
+          const skipDir = new Set(['splash']);
+          const skipFile = /\.(mp4|webm|pdf)$|^sw\.js$/i;
+          const walk = (dir: string, rel: string) => {
+            for (const name of readdirSync(path.join(dir, rel))) {
+              const relPath = rel ? `${rel}/${name}` : name;
+              const full = path.join(dir, relPath);
+              if (statSync(full).isDirectory()) {
+                if (!skipDir.has(name)) walk(dir, relPath);
+              } else if (!skipFile.test(name) && !files.some((x) => x.url === relPath)) {
+                files.push({ url: relPath, bytes: statSync(full).size });
+              }
+            }
+          };
+          try { walk(path.resolve(import.meta.dirname, 'public'), ''); } catch { /* nessuna cartella public */ }
+          this.emitFile({ type: 'asset', fileName: 'offline-manifest.json', source: JSON.stringify({ build: BUILD_ID, files }) });
+        },
+      },
       {
         name: 'emit-version-json',
         generateBundle() {

@@ -23,11 +23,18 @@ import {
 } from 'lucide-react';
 import { loadSeoulMetro, lineStationKeys, type LatLng, type MetroNetwork } from '../data/seoulMetro';
 import { AREX_LINE_ID, computeMetroRoute } from '../data/metroRouter';
+import { useRoutePreference } from '../data/routePreference';
 import {
   OFFICIAL_METRO_SOURCES,
   type SeoulSimulationPreset
 } from '../data/seoulMetroOfficialData';
 import { MetroLayer } from './map/metroLayer';
+import { getMapPackState, loadOfflineStyle, MAP_PACK_EVENT } from '../offline/mapPack';
+import { useGroupLive } from './group/groupLiveStore';
+import { useAuth } from '../auth/AuthContext';
+import { categoryOf, directionsUrl } from '../shared/places';
+import { focusPlace, usePlaces } from './places/placesStore';
+import { activeShare, fixedPoint, formatAgo, isLost, seoulClock, upcomingMeetups } from '../shared/groupLive';
 import { MetroPanel, LineBadge } from './map/MetroPanel';
 import { MetroRoutePanel, type LiveGeoState } from './map/MetroRoutePanel';
 import { RealMetroDataDrawer } from './map/RealMetroDataDrawer';
@@ -38,6 +45,8 @@ interface InteractiveMapProps {
   selectedLocationId?: string | null;
   onSelectLocation?: (location: MapLocation | null) => void;
   selectedDayFilter?: number | null;
+  /** Apre la mappa in modalità percorso: dalla posizione GPS (o dall'alloggio) verso la destinazione */
+  routeRequest?: { destinationId: string; nonce: number } | null;
 }
 
 export type MapInteractionMode = 'explore' | 'route';
@@ -179,7 +188,8 @@ function poiTooltipHtml(
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   selectedLocationId,
   onSelectLocation,
-  selectedDayFilter: initialDayFilter = null
+  selectedDayFilter: initialDayFilter = null,
+  routeRequest = null
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -270,7 +280,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       return !prev;
     });
   }, []);
-  const routeOptions = useMemo(() => (avoidArex ? { excludeLineIds: [AREX_LINE_ID] } : {}), [avoidArex]);
+  const routePref = useRoutePreference();
+  const routeOptions = useMemo(() => ({ ...(avoidArex ? { excludeLineIds: [AREX_LINE_ID] } : {}), preference: routePref }), [avoidArex, routePref]);
   const [selectedOriginId, setSelectedOriginId] = useState<string>(() => accommodations[0]?.id ?? 'acc_a');
   const [selectedDestinationId, setSelectedDestinationId] = useState<string>(
     () => koreanDestinations.find((d) => d.id === 'gyeongbokgung')?.id ?? koreanDestinations[0]?.id ?? ''
@@ -726,6 +737,28 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }
   }, [geoState]);
 
+  // Sfondo di riserva senza rete: riquadri OpenFreeMap salvati con il pulsante "Scarica lo sfondo della mappa"
+  const [offlineBg, setOfflineBg] = useState(false);
+  const checkOfflineBg = useCallback(async () => {
+    const st = await getMapPackState();
+    setOfflineBg(st.installed);
+    return st.installed;
+  }, []);
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) checkOfflineBg();
+    const onOffline = () => { checkOfflineBg(); };
+    const onOnline = () => setOfflineBg(false);
+    const onPack = () => { if (!navigator.onLine) checkOfflineBg(); else setOfflineBg(false); };
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online', onOnline);
+    window.addEventListener(MAP_PACK_EVENT, onPack);
+    return () => {
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener(MAP_PACK_EVENT, onPack);
+    };
+  }, [checkOfflineBg]);
+
   // Truly switch between Dark and Light tiles (e con/senza le linee dei trasporti di Google)
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -733,15 +766,54 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
     if (currentTileLayerRef.current) {
       map.removeLayer(currentTileLayerRef.current);
+      currentTileLayerRef.current = null;
     }
 
+    const setCredit = (text: string) => {
+      map.attributionControl?.removeAttribution('Mappa © Google');
+      map.attributionControl?.removeAttribution('Mappa © OpenFreeMap © OpenMapTiles, dati OpenStreetMap');
+      map.attributionControl?.addAttribution(text);
+    };
+
+    if (offlineBg) {
+      let cancelled = false;
+      (async () => {
+        try {
+          const style = await loadOfflineStyle(mapTheme === 'dark' ? 'dark' : 'light');
+          if (!style) throw new Error('no style');
+          const { createOfflineVectorLayer } = await import('./map/offlineVectorLayer');
+          const layer = await createOfflineVectorLayer(style);
+          if (cancelled) return;
+          layer.addTo(map);
+          currentTileLayerRef.current = layer as unknown as L.TileLayer;
+          setCredit('Mappa © OpenFreeMap © OpenMapTiles, dati OpenStreetMap');
+        } catch {
+          if (!cancelled) setOfflineBg(false);
+        }
+      })();
+      return () => { cancelled = true; };
+    }
+
+    setCredit('Mappa © Google');
     const newLayer = L.tileLayer(showGoogleLines ? GOOGLE_EN_TILE_URL : GOOGLE_EN_NO_TRANSIT_TILE_URL, {
       ...TILE_OPTIONS,
       className: mapTheme === 'dark' ? 'osm-dark-tiles' : 'osm-light-tiles'
     }).addTo(map);
 
+    // Senza rete i riquadri di Google non arrivano: se lo sfondo offline è scaricato lo uso, altrimenti restano linee, stazioni, luoghi e percorsi
+    let tileErrors = 0;
+    newLayer.on('tileerror', () => {
+      tileErrors += 1;
+      if (tileErrors === 6) {
+        getMapPackState().then((st) => {
+          if (st.installed) setOfflineBg(true);
+          else showNotice('Sfondo della mappa non disponibile (sei offline?). Restano linee, stazioni, luoghi e percorsi. Puoi scaricare uno sfondo offline da Oggi › Uso offline.');
+        });
+      }
+    });
+
     currentTileLayerRef.current = newLayer;
-  }, [mapTheme, showGoogleLines]);
+  }, [mapTheme, showGoogleLines, showNotice, offlineBg]);
 
   // Carica i tracciati delle linee (file separato, scaricato solo quando serve la mappa)
   useEffect(() => {
@@ -769,6 +841,98 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     setSelectedLine(id);
     if (id) setMetroVisible((prev) => (prev.has(id) ? prev : new Set([...prev, id])));
   }, []);
+
+  // Amici che condividono la posizione e punti di ritrovo
+  const groupLive = useGroupLive();
+  const { user: authUser, travelers: authTravelers } = useAuth();
+  const groupLayerRef = useRef<L.LayerGroup | null>(null);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (!groupLayerRef.current) groupLayerRef.current = L.layerGroup().addTo(map);
+    const layer = groupLayerRef.current;
+    layer.clearLayers();
+    const now = Date.now();
+    const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    for (const d of groupLive.live) {
+      const sh = activeShare(d, now);
+      if (!sh || d.uid === authUser?.id) continue;
+      const lost = isLost(d, now);
+      const t = authTravelers.find((x) => x.id === d.slot);
+      const name = t?.name ?? 'Amico';
+      const color = t?.color ?? '#22d3ee';
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        html: `<div style="width:34px;height:34px;border-radius:9999px;background:${lost ? '#e11d48' : color};border:3px solid #fff;box-shadow:0 0 0 ${lost ? 10 : 6}px ${lost ? '#e11d4888' : color + '55'},0 4px 12px #0008;display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px system-ui">${lost ? '!' : esc(name.slice(0, 2))}</div>`
+      });
+      L.marker([sh.lat, sh.lng], { icon, zIndexOffset: 900 })
+        .bindTooltip(`${lost ? 'HA PERSO IL GRUPPO · ' : ''}${esc(name)} · ${formatAgo(now - sh.at)}`, { direction: 'top', offset: [0, -16] })
+        .addTo(layer);
+    }
+    for (const m of upcomingMeetups(groupLive.meetups, now).slice(0, 3)) {
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [40, 40],
+        iconAnchor: [20, 38],
+        html: `<div style="display:flex;flex-direction:column;align-items:center"><div style="background:#fbbf24;color:#0f172a;font:800 11px system-ui;padding:3px 7px;border-radius:9999px;box-shadow:0 4px 12px #0008;white-space:nowrap">📍 ${seoulClock(m.at)}</div><div style="width:3px;height:14px;background:#fbbf24"></div></div>`
+      });
+      L.marker([m.lat, m.lng], { icon, zIndexOffset: 950 })
+        .bindTooltip(`Ritrovo: ${esc(m.label)}`, { direction: 'top', offset: [0, -36] })
+        .addTo(layer);
+    }
+    const fx = fixedPoint(groupLive.meetups, now);
+    if (fx) {
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [40, 40],
+        iconAnchor: [20, 38],
+        html: `<div style="display:flex;flex-direction:column;align-items:center"><div style="background:#22d3ee;color:#0f172a;font:800 11px system-ui;padding:3px 7px;border-radius:9999px;box-shadow:0 4px 12px #0008;white-space:nowrap">⚑ Punto fisso</div><div style="width:3px;height:14px;background:#22d3ee"></div></div>`
+      });
+      L.marker([fx.lat, fx.lng], { icon, zIndexOffset: 940 })
+        .bindTooltip(`Se ci perdiamo: ${esc(fx.label)}`, { direction: 'top', offset: [0, -36] })
+        .addTo(layer);
+    }
+  }, [groupLive.live, groupLive.meetups, authUser, authTravelers]);
+
+  // Luoghi condivisi: in viola, diversi dalle tappe ufficiali
+  const sharedPlaces = usePlaces();
+  const placesLayerRef = useRef<L.LayerGroup | null>(null);
+  const placeMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (!placesLayerRef.current) placesLayerRef.current = L.layerGroup().addTo(map);
+    const layer = placesLayerRef.current;
+    layer.clearLayers();
+    placeMarkersRef.current.clear();
+    const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    for (const p of sharedPlaces.places) {
+      const c = categoryOf(p.category);
+      const ring = p.priority === 'must' ? '#c4b5fd' : '#ffffff';
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        html: `<div style="width:30px;height:30px;border-radius:9px;background:${p.visited ? '#475569' : '#7c3aed'};border:2.5px solid ${ring};box-shadow:0 3px 10px #0009;display:flex;align-items:center;justify-content:center;font-size:15px;opacity:${p.visited ? 0.7 : 1}">${c.emoji}</div>`
+      });
+      const naver = `https://map.naver.com/p/search/${p.lat},${p.lng}`;
+      const popup = `<div style="font:600 13px system-ui;min-width:150px"><div>${esc(p.name)}</div><div style="font:400 11px system-ui;color:#64748b;margin:2px 0 6px">${esc(c.label)}${p.note ? ' · ' + esc(p.note) : ''}</div><a href="${naver}" target="_blank" rel="noopener noreferrer">Naver</a> · <a href="${directionsUrl(p)}" target="_blank" rel="noopener noreferrer">Indicazioni</a></div>`;
+      const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: 700 }).bindPopup(popup).bindTooltip(esc(p.name), { direction: 'top', offset: [0, -14] }).addTo(layer);
+      placeMarkersRef.current.set(p.id, marker);
+    }
+  }, [sharedPlaces.places]);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const id = sharedPlaces.focusId;
+    if (!map || !id) return;
+    const place = sharedPlaces.places.find((p) => p.id === id);
+    if (!place) return;
+    map.setView([place.lat, place.lng], Math.max(map.getZoom(), 17));
+    placeMarkersRef.current.get(id)?.openPopup();
+    focusPlace(null);
+  }, [sharedPlaces.focusId, sharedPlaces.places]);
 
   // Crea il livello delle linee quando mappa e dati sono pronti
   useEffect(() => {
@@ -807,7 +971,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   useEffect(() => {
     if (!metroLayerRef.current) return;
     if (mapMode === 'route' && currentMetroRoute) {
-      const routeKey = `${selectedOriginId}|${selectedDestinationId}|${avoidArex ? 'no-arex' : 'all'}|${
+      const routeKey = `${selectedOriginId}|${selectedDestinationId}|${avoidArex ? 'no-arex' : 'all'}|${routePref}|${
         geoState.isSimulated ? geoState.simulatedPreset?.id ?? 'sim' : 'real'
       }`;
       const shouldAutoFit = lastFittedKeyRef.current !== routeKey && currentMetroRoute.reachable;
@@ -1028,6 +1192,24 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }
     setMapMode('route');
   };
+
+  // Richiesta dalla scheda "Oggi": destinazione scelta, partenza dalla posizione GPS
+  const handledRouteNonceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!routeRequest || handledRouteNonceRef.current === routeRequest.nonce) return;
+    handledRouteNonceRef.current = routeRequest.nonce;
+    const dest = koreanDestinations.find((d) => d.id === routeRequest.destinationId);
+    if (!dest) return;
+    setSelectedDestinationId(dest.id);
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      handleActivateRealGps({ route: true, recenter: true });
+    } else {
+      // Senza GPS si parte dall'alloggio (o da un altro alloggio se la meta è l'alloggio stesso)
+      const start = accommodations.find((a) => a.id !== dest.id);
+      if (start) setSelectedOriginId(start.id);
+      setMapMode('route');
+    }
+  }, [routeRequest, koreanDestinations, accommodations, handleActivateRealGps, setMapMode]);
 
   const handleOriginChange = (id: string) => {
     if (id !== 'gps_origin') {
@@ -1904,6 +2086,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               sheetTab={sidebarTab}
               onSheetTab={setSidebarTab}
               metroReady={Boolean(metroNetwork)}
+              offlineBg={offlineBg}
               metroVisibleCount={metroVisible.size}
               metroLineCount={metroNetwork?.lines.length ?? 0}
               onToggleAllMetro={toggleAllMetro}
