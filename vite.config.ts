@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 
@@ -18,6 +18,7 @@ function appVersion(): string | undefined {
 }
 
 export default defineConfig(() => {
+  let outDir = '';
   return {
     define: {
       __BUILD_ID__: JSON.stringify(BUILD_ID),
@@ -28,31 +29,33 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       {
-        // Elenco dei file dell'app: serve al pulsante "Scarica per l'offline" per salvarli tutti sul telefono
+        // Elenco dei file dell'app: serve al pulsante "Scarica per l'offline" per salvarli tutti sul telefono.
+        // Si legge dalla cartella di uscita a build finita, così contiene solo file che esistono davvero
+        // (dall'elenco interno del bundler comparivano anche pezzi poi uniti ad altri e mai pubblicati: errore 404).
         name: 'emit-offline-manifest',
-        generateBundle(_options: unknown, bundle: Record<string, { fileName: string; type: string; code?: string; source?: string | Uint8Array }>) {
-          const files: { url: string; bytes: number }[] = [];
-          for (const f of Object.values(bundle)) {
-            if (f.fileName === 'version.json' || f.fileName === 'sw.js') continue;
-            const bytes = f.type === 'chunk' ? Buffer.byteLength(f.code ?? '') : typeof f.source === 'string' ? Buffer.byteLength(f.source) : (f.source?.byteLength ?? 0);
-            files.push({ url: f.fileName, bytes });
-          }
-          // File di public/: icone, immagini. Video, schermate di avvio e PDF restano fuori (il PDF lo aggiunge l'app con la sua versione).
+        enforce: 'post' as const,
+        apply: 'build' as const,
+        configResolved(config: { root: string; build: { outDir: string } }) {
+          outDir = path.resolve(config.root, config.build.outDir);
+        },
+        closeBundle() {
+          // Video, schermate di avvio e PDF restano fuori (il PDF lo aggiunge l'app con la sua versione)
           const skipDir = new Set(['splash']);
-          const skipFile = /\.(mp4|webm|pdf)$|^sw\.js$/i;
-          const walk = (dir: string, rel: string) => {
-            for (const name of readdirSync(path.join(dir, rel))) {
+          const skipFile = /\.(mp4|webm|pdf|map)$|^(sw\.js|version\.json|offline-manifest\.json)$/i;
+          const files: { url: string; bytes: number }[] = [];
+          const walk = (rel: string) => {
+            for (const name of readdirSync(path.join(outDir, rel))) {
               const relPath = rel ? `${rel}/${name}` : name;
-              const full = path.join(dir, relPath);
-              if (statSync(full).isDirectory()) {
-                if (!skipDir.has(name)) walk(dir, relPath);
-              } else if (!skipFile.test(name) && !files.some((x) => x.url === relPath)) {
-                files.push({ url: relPath, bytes: statSync(full).size });
+              const st = statSync(path.join(outDir, relPath));
+              if (st.isDirectory()) {
+                if (!skipDir.has(name)) walk(relPath);
+              } else if (!skipFile.test(name)) {
+                files.push({ url: relPath, bytes: st.size });
               }
             }
           };
-          try { walk(path.resolve(import.meta.dirname, 'public'), ''); } catch { /* nessuna cartella public */ }
-          this.emitFile({ type: 'asset', fileName: 'offline-manifest.json', source: JSON.stringify({ build: BUILD_ID, files }) });
+          walk('');
+          writeFileSync(path.join(outDir, 'offline-manifest.json'), JSON.stringify({ build: BUILD_ID, files }));
         },
       },
       {
