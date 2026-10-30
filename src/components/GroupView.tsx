@@ -5,6 +5,7 @@ import { ACCOMMODATIONS } from '../data/tripData';
 import { OPTIONAL_SHARE_FIELDS, type GroupMember, type OptionalShareField } from '../shared/travelerProfile';
 import { CHECKLIST_ITEMS, countDone } from '../shared/tripChecklist';
 import { useGroupChecklists } from './useGroupChecklists';
+import { GroupLiveCard } from './group/GroupLive';
 
 const FIELD_LABELS: Record<OptionalShareField, string> = {
   birthDate: 'Data di nascita',
@@ -105,7 +106,7 @@ const MemberSheet: React.FC<{ member: GroupMember; color: string; onClose: () =>
 };
 
 /** Elenco dei partecipanti registrati con Google: contatti e preferenze condivise. */
-export const GroupView: React.FC = () => {
+export const GroupView: React.FC<{ onRoute?: (placeId: string) => void; onShowMap?: () => void }> = ({ onRoute, onShowMap }) => {
   const { user, group, travelers } = useAuth();
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -127,6 +128,8 @@ export const GroupView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <GroupLiveCard onRoute={onRoute} onShowMap={onShowMap} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {travelers.map((slot) => {

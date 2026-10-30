@@ -77,9 +77,23 @@ export interface MetroRouteResult {
 /** Identificativo della linea AREX (treno per l'aeroporto) nei dati della rete */
 export const AREX_LINE_ID = 'A';
 
+/** Cosa privilegiare nella scelta del percorso */
+export type RoutePreference = 'fast' | 'fewTransfers' | 'lessWalking';
+
+export const ROUTE_PREFERENCE_PARAMS: Record<RoutePreference, { transferExtra: number; walkMul: number }> = {
+  /** Equilibrio standard (come prima) */
+  fast: { transferExtra: 0, walkMul: 1 },
+  /** Ogni cambio pesa come ~13 minuti: si accetta qualche fermata in più pur di non cambiare */
+  fewTransfers: { transferExtra: 8, walkMul: 1 },
+  /** Ogni metro a piedi pesa 3 volte tanto */
+  lessWalking: { transferExtra: 0, walkMul: 3 }
+};
+
 export interface MetroRouteOptions {
   /** Linee da non usare mai (si va solo con le altre linee e a piedi) */
   excludeLineIds?: readonly string[];
+  /** Più veloce (predefinito), meno cambi o meno camminata */
+  preference?: RoutePreference;
 }
 
 /** Distanza geodetica in metri tra due coordinate [lat, lng] */
@@ -490,12 +504,13 @@ export function computeMetroRoute(
   options: MetroRouteOptions = {}
 ): MetroRouteResult {
   const excluded = new Set(options.excludeLineIds ?? []);
-  if (excluded.size === 0) return computeRoute(network, origin, destination, excluded);
+  const pref = options.preference ?? 'fast';
+  if (excluded.size === 0) return computeRoute(network, origin, destination, excluded, pref);
 
-  const result = computeRoute(network, origin, destination, excluded);
+  const result = computeRoute(network, origin, destination, excluded, pref);
   if (!result.reachable && !result.originOutOfMetroCoverage) {
     // Se senza esclusioni il percorso esiste, il problema è proprio la linea evitata: lo si dice chiaramente
-    const unrestricted = computeRoute(network, origin, destination, new Set());
+    const unrestricted = computeRoute(network, origin, destination, new Set(), pref);
     if (unrestricted.reachable) {
       const names = [...excluded]
         .map((id) => (id === AREX_LINE_ID ? "l'AREX" : `la linea ${network.lines.find((l) => l.id === id)?.it ?? id}`))
@@ -514,8 +529,10 @@ function computeRoute(
   network: MetroNetwork,
   origin: MapLocation,
   destination: MapLocation,
-  excluded: Set<string>
+  excluded: Set<string>,
+  preference: RoutePreference = 'fast'
 ): MetroRouteResult {
+  const { transferExtra, walkMul } = ROUTE_PREFERENCE_PARAMS[preference];
   const graph = getOrBuildGraph(network);
   /** Una stazione serve se almeno una delle sue linee non è esclusa */
   const isServed = (st: MetroStation) => excluded.size === 0 || Object.keys(st.at).some((id) => !excluded.has(id));
@@ -666,7 +683,7 @@ function computeRoute(
   // 3. Dijkstra bilanciato tra meno cambi, meno fermate e distanza a piedi
   // Costo camminata: 1 unità ogni 135 metri (~1,7 min a piedi), così una stazione a 500m diretta
   // viene preferita rispetto a una a 250m che richiede un cambio di linea (costo 5.5).
-  const WALK_COST_DIVISOR = 135;
+  const WALK_COST_DIVISOR = 135 / walkMul;
 
   const dist = new Map<string, number>();
   const prev = new Map<string, { fromNode: string; edge: GraphEdge }>();
@@ -717,7 +734,7 @@ function computeRoute(
     const edges = graph.adj.get(current.nodeId) ?? [];
     for (const edge of edges) {
       if (excluded.has(edge.lineId)) continue;
-      const nextCost = current.cost + edge.cost;
+      const nextCost = current.cost + edge.cost + (edge.kind === 'transfer' ? transferExtra : 0);
       const known = dist.get(edge.toNode);
       if (known === undefined || nextCost < known) {
         dist.set(edge.toNode, nextCost);

@@ -91,8 +91,12 @@ service cloud.firestore {
         && shortString(request.resource.data.token, 400)
         && shortString(request.resource.data.platform, 20)
         && request.resource.data.prefs is map
-        && request.resource.data.prefs.keys().hasOnly(['updates'])
+        && request.resource.data.prefs.keys().hasOnly(['updates', 'schedule', 'bookings', 'group', 'quiet'])
         && request.resource.data.prefs.get('updates', false) is bool
+        && request.resource.data.prefs.get('schedule', false) is bool
+        && request.resource.data.prefs.get('bookings', false) is bool
+        && request.resource.data.prefs.get('group', false) is bool
+        && request.resource.data.prefs.get('quiet', false) is bool
         && request.resource.data.updatedAt is number;
     }
 
@@ -338,6 +342,132 @@ service cloud.firestore {
 
       allow delete: if isParticipant()
         && (resource.data.createdBy == request.auth.uid || resource.data.paidBy == mySlot());
+    }
+
+    // ------------------------------------------------------------------
+    // Gruppo in tempo reale: "Sono a casa", posizione condivisa a tempo, ritrovi
+    // ------------------------------------------------------------------
+
+    function nullOrNumber(v) {
+      return v == null || v is number;
+    }
+
+    // Posizione condivisa: solo coordinate, precisione e orari; dura al massimo 13 ore
+    function validShare(sh) {
+      return sh == null || (
+        sh is map
+        && sh.keys().hasOnly(['lat', 'lng', 'acc', 'at', 'until'])
+        && sh.keys().hasAll(['lat', 'lng', 'acc', 'at', 'until'])
+        && sh.lat is number && sh.lat >= -90 && sh.lat <= 90
+        && sh.lng is number && sh.lng >= -180 && sh.lng <= 180
+        && sh.acc is number && sh.acc >= 0
+        && sh.at is number
+        && sh.until is number
+        && sh.until <= request.time.toMillis() + 13 * 60 * 60 * 1000
+      );
+    }
+
+    // Un documento per persona: lo legge il gruppo, lo scrive solo il titolare
+    match /live/{uid} {
+      allow read: if isParticipant();
+      allow delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'slot', 'status', 'statusAt', 'place', 'share', 'lost', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['uid', 'slot', 'status', 'statusAt', 'place', 'share', 'lost', 'updatedAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.slot == mySlot()
+        && (request.resource.data.status == null || request.resource.data.status in ['home', 'out'])
+        && nullOrNumber(request.resource.data.statusAt)
+        && nullOrNumber(request.resource.data.lost)
+        && shortString(request.resource.data.place, 80)
+        && validShare(request.resource.data.share)
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function validMeetup(d) {
+      return d.keys().hasOnly(['label', 'placeId', 'lat', 'lng', 'at', 'note', 'createdBy', 'createdAt', 'answers', 'fixed'])
+        && d.keys().hasAll(['label', 'placeId', 'lat', 'lng', 'at', 'note', 'createdBy', 'createdAt', 'answers'])
+        && shortString(d.label, 80) && d.label.size() > 0
+        && (d.placeId == null || shortString(d.placeId, 60))
+        && d.lat is number && d.lat >= -90 && d.lat <= 90
+        && d.lng is number && d.lng >= -180 && d.lng <= 180
+        && d.at is number
+        && shortString(d.note, 200)
+        && (!('fixed' in d) || d.fixed is bool)
+        && d.answers is map
+        && d.answers.keys().hasOnly(slots())
+        && d.answers.values().hasOnly(['ok', 'late', 'no']);
+    }
+
+    // Ritrovi: li crea chiunque nel gruppo; ognuno risponde solo per sé.
+    // Modifica ed eliminazione: chi l'ha creato. Quelli passati da oltre 6 ore li può togliere chiunque.
+    match /meetups/{meetupId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && validMeetup(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.answers.keys().hasOnly([mySlot()]);
+      allow update: if isParticipant()
+        && validMeetup(request.resource.data)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          resource.data.createdBy == request.auth.uid
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answers'])
+            && request.resource.data.answers.diff(resource.data.answers).affectedKeys().hasOnly([mySlot()])
+          )
+        );
+      allow delete: if isParticipant()
+        && (resource.data.createdBy == request.auth.uid || resource.data.at < request.time.toMillis() - 6 * 60 * 60 * 1000);
+    }
+
+    // ------------------------------------------------------------------
+    // Luoghi condivisi: posti scoperti durante il viaggio
+    // ------------------------------------------------------------------
+
+    function validPlace(d) {
+      return d.keys().hasOnly(['name', 'category', 'priority', 'lat', 'lng', 'link', 'note', 'addedBy', 'addedBySlot', 'createdAt', 'votes', 'visited'])
+        && d.keys().hasAll(['name', 'category', 'priority', 'lat', 'lng', 'link', 'note', 'addedBy', 'addedBySlot', 'createdAt', 'votes', 'visited'])
+        && shortString(d.name, 80) && d.name.size() > 0
+        && d.category in ['food', 'shop', 'sight', 'night', 'other']
+        && d.priority in ['must', 'nice', 'low']
+        && d.lat is number && d.lat >= -90 && d.lat <= 90
+        && d.lng is number && d.lng >= -180 && d.lng <= 180
+        && shortString(d.link, 500) && (d.link == '' || d.link.matches('https?://.*'))
+        && shortString(d.note, 300)
+        && d.addedBySlot in slots()
+        && d.votes is map
+        && d.votes.keys().hasOnly(slots())
+        && d.votes.values().hasOnly(['up', 'down'])
+        && d.visited is bool;
+    }
+
+    // Li aggiunge chiunque nel gruppo. Chi li ha aggiunti li modifica e li elimina; gli altri possono solo
+    // votare per sé e segnare "visitato".
+    match /places/{placeId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && validPlace(request.resource.data)
+        && request.resource.data.addedBy == request.auth.uid
+        && request.resource.data.addedBySlot == mySlot()
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.votes.keys().hasOnly([mySlot()])
+        && request.resource.data.visited == false;
+      allow update: if isParticipant()
+        && validPlace(request.resource.data)
+        && request.resource.data.addedBy == resource.data.addedBy
+        && request.resource.data.addedBySlot == resource.data.addedBySlot
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          resource.data.addedBy == request.auth.uid
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes', 'visited'])
+            && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([mySlot()])
+          )
+        );
+      allow delete: if isParticipant() && resource.data.addedBy == request.auth.uid;
     }
   }
 }

@@ -73,6 +73,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthError(null);
         setAccount(loaded);
       } catch (err) {
+        // Senza rete non è un errore dell'account: non si esce, si aspetta che torni la connessione
+        const code = (err as { code?: string })?.code ?? '';
+        const offline = !(err instanceof NotAllowedError) && (!navigator.onLine || code === 'unavailable');
+        if (offline) {
+          setAuthError('Sei offline e il tuo profilo non è ancora salvato su questo telefono. Collegati a internet almeno una volta.');
+          setAccount(null);
+          setStatus('signedOut');
+          window.addEventListener('online', () => window.location.reload(), { once: true });
+          return;
+        }
         setAuthError(
           err instanceof NotAllowedError
             ? err.message

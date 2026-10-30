@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  ArrowRight, Check, CircleAlert, CloudOff, HandCoins, Loader2, Pencil, Plus, Receipt, Search, Trash2, Undo2, Wallet, X
+  ArrowRight, Check, CircleAlert, CloudOff, HandCoins, Loader2, Pencil, PlaneTakeoff, Plus, Receipt, Search, Trash2, Undo2, Wallet, X
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useMediaQuery } from '../pwa';
@@ -10,6 +10,8 @@ import {
   addExpense, deleteExpense, friendlyExpenseError, setRepaid, settlePair, updateExpense, watchExpenses
 } from '../services/expenseService';
 import type { TravelerSlotId } from '../shared/travelerProfile';
+import { LEAVER_DEPARTURE_DAY, LEAVER_SLOT, nowOrSim, presentSlots, seoulDateIso } from '../shared/tripPresence';
+import { CurrencyConverter, QuickExpenseBody, recentTitles, type QuickDraft } from './expenses/QuickExpense';
 import type { Traveler } from '../data/tripData';
 import {
   CURRENCY_DECIMALS, CURRENCY_SYMBOL, EXPENSE_CATEGORIES, SLOTS, canEdit, canMarkRepaid, debtsOf, formatDay, formatEur,
@@ -139,6 +141,8 @@ function amountToText(v: number, currency: ExpenseCurrency): string {
 
 const ExpenseForm: React.FC<{
   initial: Expense | null;
+  /** Dati già scelti nella spesa veloce ("Più opzioni") */
+  prefill?: QuickDraft | null;
   me: TravelerSlotId | null;
   travelers: Traveler[];
   names: Names;
@@ -146,22 +150,30 @@ const ExpenseForm: React.FC<{
   isDesktop: boolean;
   onCancel: () => void;
   onSubmit: (input: ExpenseInput) => void;
-}> = ({ initial, me, travelers, names, rates, isDesktop, onCancel, onSubmit }) => {
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [category, setCategory] = useState<ExpenseCategory>(initial?.category ?? 'food');
+}> = ({ initial, prefill, me, travelers, names, rates, isDesktop, onCancel, onSubmit }) => {
+  const [title, setTitle] = useState(initial?.title ?? prefill?.title ?? '');
+  const [category, setCategory] = useState<ExpenseCategory>(initial?.category ?? prefill?.category ?? 'food');
   const [date, setDate] = useState(initial?.date ?? todayIso());
-  const [currency, setCurrency] = useState<ExpenseCurrency>(initial?.currency ?? 'KRW');
-  const [amountText, setAmountText] = useState(initial ? amountToText(initial.originalAmount, initial.currency) : '');
+  const [currency, setCurrency] = useState<ExpenseCurrency>(initial?.currency ?? prefill?.currency ?? 'KRW');
+  const [amountText, setAmountText] = useState(
+    initial ? amountToText(initial.originalAmount, initial.currency) : prefill?.amount ? amountToText(prefill.amount, prefill.currency) : ''
+  );
   const [rateText, setRateText] = useState(() => {
-    const cur = initial?.currency ?? 'KRW';
+    const cur = initial?.currency ?? prefill?.currency ?? 'KRW';
     const r = initial && initial.currency !== 'EUR' ? initial.rate : cur === 'EUR' ? 1 : rates[cur];
     return String(r).replace('.', ',');
   });
   const [paidBy, setPaidBy] = useState<TravelerSlotId>(initial?.paidBy ?? me ?? 't1');
   const [splitMode, setSplitMode] = useState(initial?.splitMode ?? 'equal');
   const [participants, setParticipants] = useState<TravelerSlotId[]>(
-    initial ? SLOTS.filter((s) => (initial.shares[s] ?? 0) > 0) : [...SLOTS]
+    initial ? SLOTS.filter((s) => (initial.shares[s] ?? 0) > 0) : prefill?.participants ?? presentSlots(todayIso())
   );
+  // Nuova spesa: finché non si tocca la lista, si divide tra chi è in viaggio nella data scelta
+  const [touchedPeople, setTouchedPeople] = useState(!!initial || !!prefill?.peopleTouched);
+  useEffect(() => {
+    if (!touchedPeople) setParticipants(presentSlots(date));
+  }, [date, touchedPeople]);
+  const leaverAbsent = !initial && !presentSlots(date).includes(LEAVER_SLOT);
   const [exactText, setExactText] = useState<Partial<Record<TravelerSlotId, string>>>(() => {
     if (!initial || initial.splitMode !== 'exact') return {};
     const out: Partial<Record<TravelerSlotId, string>> = {};
@@ -202,8 +214,10 @@ const ExpenseForm: React.FC<{
     onSubmit(input);
   };
 
-  const toggle = (s: TravelerSlotId) =>
+  const toggle = (s: TravelerSlotId) => {
+    setTouchedPeople(true);
     setParticipants((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  };
 
   const chip = (active: boolean) =>
     `h-9 px-3 rounded-full text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
@@ -399,6 +413,11 @@ const ExpenseForm: React.FC<{
             );
           })}
         </div>
+        {splitMode === 'equal' && leaverAbsent && (
+          <p className="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1.5">
+            <PlaneTakeoff className="w-3.5 h-3.5" /> In questa data {names.fullName(LEAVER_SLOT)} è già ripartito: escluso, ma puoi aggiungerlo.
+          </p>
+        )}
         {splitMode === 'exact' && amount > 0 && (
           <p className={`mt-1.5 text-[11px] font-mono ${Math.abs(remaining) < 1e-9 ? 'text-emerald-300' : 'text-amber-300'}`}>
             {Math.abs(remaining) < 1e-9
@@ -564,12 +583,16 @@ const ExpenseDetail: React.FC<{
 // Sezioni
 // ---------------------------------------------------------------------------
 
-const MyBalanceCard: React.FC<{ me: TravelerSlotId | null; summary: Record<TravelerSlotId, PersonSummary>; total: number; count: number }> = ({
-  me,
-  summary,
-  total,
-  count
-}) => {
+const MyBalanceCard: React.FC<{
+  me: TravelerSlotId | null;
+  summary: Record<TravelerSlotId, PersonSummary>;
+  total: number;
+  count: number;
+  /** Mia quota delle spese di oggi, in centesimi */
+  todayShare: number;
+  /** Budget giornaliero dal profilo, in euro */
+  budgetEur: number;
+}> = ({ me, summary, total, count, todayShare, budgetEur }) => {
   const mine = me ? summary[me] : null;
   const net = mine?.net ?? 0;
   return (
@@ -595,6 +618,23 @@ const MyBalanceCard: React.FC<{ me: TravelerSlotId | null; summary: Record<Trave
           <p className="text-[11px] text-slate-500">{count} {count === 1 ? 'spesa' : 'spese'}</p>
         </div>
       </div>
+      {budgetEur > 0 && (
+        <div className="mt-3" data-testid="today-budget">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-400">Oggi (la tua quota)</span>
+            <span className="font-mono">
+              <span className={todayShare > budgetEur * 100 ? 'text-amber-300 font-bold' : 'text-slate-200 font-bold'}>{formatEur(todayShare)}</span>
+              <span className="text-slate-500"> su {formatEur(budgetEur * 100)}</span>
+            </span>
+          </div>
+          <div className="h-1.5 mt-1 rounded-full bg-slate-800 overflow-hidden">
+            <div
+              className={`h-full rounded-full ${todayShare > budgetEur * 100 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+              style={{ width: `${Math.min(100, (todayShare / (budgetEur * 100)) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
       {mine && (mine.owes > 0 || mine.toReceive > 0) && (
         <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-mono">
           <div className="rounded-lg bg-slate-950/70 border border-slate-800 px-2.5 py-1.5">
@@ -780,6 +820,52 @@ const SummarySection: React.FC<{
   );
 };
 
+/** Prima che Pietro riparta (7-10 marzo) e dopo, se restano conti aperti con lui */
+const LeaverBanner: React.FC<{ balances: PairBalance[]; me: TravelerSlotId | null; names: Names; onOpen?: () => void }> = ({
+  balances,
+  me,
+  names,
+  onOpen
+}) => {
+  const today = seoulDateIso(nowOrSim());
+  if (today < '2027-03-07' || today > '2027-03-21') return null;
+  const his = balances.filter((b) => (b.from === LEAVER_SLOT || b.to === LEAVER_SLOT) && b.cents > 0);
+  if (his.length === 0) return null;
+  const gone = today >= LEAVER_DEPARTURE_DAY;
+  const iAmLeaver = me === LEAVER_SLOT;
+  const who = names.fullName(LEAVER_SLOT);
+  return (
+    <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3.5" data-testid="leaver-banner">
+      <p className="text-sm font-bold text-amber-100 flex items-center gap-2">
+        <PlaneTakeoff className="w-4 h-4 text-amber-300" />
+        {iAmLeaver
+          ? gone ? 'Sei ripartito con conti ancora aperti' : 'Riparti il 10 marzo: chiudi i conti prima'
+          : gone ? `${who} è ripartito con conti ancora aperti` : `${who} riparte il 10 marzo: chiudete i conti con lui`}
+      </p>
+      <ul className="mt-2 space-y-1">
+        {his.map((b) => (
+          <li key={`${b.from}-${b.to}`} className="flex items-center gap-2 text-xs text-amber-50">
+            <Dot color={names.color(b.from)} className="w-2 h-2" />
+            <span>{names.name(b.from)}</span>
+            <ArrowRight className="w-3 h-3 text-amber-300/70" />
+            <Dot color={names.color(b.to)} className="w-2 h-2" />
+            <span>{names.name(b.to)}</span>
+            <span className="ml-auto font-mono font-bold">{formatEur(b.cents)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[11px] text-amber-200/80">
+        {gone ? 'Da lontano: bonifico, Revolut o PayPal, poi segnate “Salda”.' : 'Dopo il pagamento tocca “Salda” nei saldi: le quote risulteranno restituite.'}
+      </p>
+      {onOpen && (
+        <button type="button" onClick={onOpen} className="mt-2 h-8 px-3 rounded-lg bg-amber-400 text-slate-950 text-xs font-bold">
+          Vai ai saldi
+        </button>
+      )}
+    </div>
+  );
+};
+
 function filterExpenses(list: Expense[], filter: ListFilter, me: TravelerSlotId | null, query: string): Expense[] {
   const q = query.trim().toLowerCase();
   return list.filter((e) => {
@@ -850,7 +936,26 @@ export const ExpensesView: React.FC = () => {
   const [tab, setTab] = useState<MobileTab>('balances');
   const [filter, setFilter] = useState<ListFilter>('all');
   const [query, setQuery] = useState('');
-  const [form, setForm] = useState<{ editing: Expense | null } | null>(null);
+  const [form, setForm] = useState<{ editing: Expense | null; prefill?: QuickDraft | null } | null>(null);
+  // Spesa veloce: dal "+" o dalla scorciatoia dell'icona (?add=1)
+  const [quick, setQuick] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('add') === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('add')) {
+        url.searchParams.delete('add');
+        window.history.replaceState(window.history.state, '', url.toString());
+      }
+    } catch {
+      /* niente */
+    }
+  }, []);
   const [detailId, setDetailId] = useState<string | null>(null);
 
   useEffect(
@@ -892,6 +997,13 @@ export const ExpensesView: React.FC = () => {
   const visible = useMemo(() => filterExpenses(expenses, filter, me, query), [expenses, filter, me, query]);
   const detail = detailId ? expenses.find((e) => e.id === detailId) ?? null : null;
   const openCount = balances.filter((b) => b.from === me || b.to === me).length;
+  const recents = useMemo(() => recentTitles(expenses, uid, me), [expenses, uid, me]);
+  const todayShare = useMemo(() => {
+    if (!me) return 0;
+    const d = todayIso();
+    return expenses.filter((e) => e.date === d).reduce((acc, e) => acc + (e.shares[me] ?? 0), 0);
+  }, [expenses, me]);
+  const budgetEur = Number((user as { dailyBudgetGoal?: number } | null)?.dailyBudgetGoal) || 0;
 
   // Le scritture compaiono subito (copia locale); un rifiuto del cloud arriva dopo e si segnala
   const report = (p: Promise<void>, okText: string) => {
@@ -910,7 +1022,8 @@ export const ExpensesView: React.FC = () => {
     }
   };
 
-  const openAdd = () => setForm({ editing: null });
+  const openAdd = () => setQuick(true);
+  const openFullForm = () => setForm({ editing: null });
 
   // Lista raggruppata per giorno (telefono)
   const groups = useMemo(() => {
@@ -942,9 +1055,29 @@ export const ExpensesView: React.FC = () => {
 
   const sheets = (
     <>
+      {quick && !form && (
+        <Sheet title="Spesa veloce" onClose={() => setQuick(false)} isDesktop={isDesktop}>
+          <QuickExpenseBody
+            me={me}
+            travelers={travelers}
+            rates={rates}
+            recents={recents}
+            nameOf={names.name}
+            onSubmit={(input) => {
+              setQuick(false);
+              submitForm(input);
+            }}
+            onMore={(draft) => {
+              setQuick(false);
+              setForm({ editing: null, prefill: draft });
+            }}
+          />
+        </Sheet>
+      )}
       {form && (
         <ExpenseForm
           initial={form.editing}
+          prefill={form.prefill}
           me={me}
           travelers={travelers}
           names={names}
@@ -1002,7 +1135,9 @@ export const ExpensesView: React.FC = () => {
     return (
       <div className="space-y-3 pb-20">
         {statusBanner}
-        <MyBalanceCard me={me} summary={summary} total={total} count={expenses.length} />
+        <MyBalanceCard me={me} summary={summary} total={total} count={expenses.length} todayShare={todayShare} budgetEur={budgetEur} />
+        <LeaverBanner balances={balances} me={me} names={names} onOpen={() => setTab('balances')} />
+        <CurrencyConverter rates={rates} />
 
         <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800" role="tablist">
           {(
@@ -1099,6 +1234,7 @@ export const ExpensesView: React.FC = () => {
           type="button"
           onClick={openAdd}
           aria-label="Aggiungi spesa"
+          data-testid="expense-fab"
           className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-[55] h-14 pl-4 pr-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-sm shadow-xl shadow-emerald-950/50 flex items-center gap-1.5 active:scale-95 transition-transform"
         >
           <Plus className="w-5 h-5" strokeWidth={2.5} /> Spesa
@@ -1122,19 +1258,31 @@ export const ExpensesView: React.FC = () => {
             Tutti i partecipanti vedono gli stessi dati in tempo reale.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="h-10 px-4 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm flex items-center gap-1.5 shrink-0 hover:bg-emerald-400"
-        >
-          <Plus className="w-4 h-4" strokeWidth={2.5} /> Nuova spesa
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={openFullForm}
+            className="h-10 px-4 rounded-xl bg-slate-800 text-slate-200 font-semibold text-sm flex items-center gap-1.5 hover:bg-slate-700"
+          >
+            <Pencil className="w-4 h-4" /> Spesa dettagliata
+          </button>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="h-10 px-4 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm flex items-center gap-1.5 hover:bg-emerald-400"
+            data-testid="expense-quick-open"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2.5} /> Spesa veloce
+          </button>
+        </div>
       </div>
       {statusBanner}
 
       <div className="grid grid-cols-[minmax(320px,380px)_1fr] gap-6 items-start">
         <div className="space-y-5">
-          <MyBalanceCard me={me} summary={summary} total={total} count={expenses.length} />
+          <MyBalanceCard me={me} summary={summary} total={total} count={expenses.length} todayShare={todayShare} budgetEur={budgetEur} />
+          <LeaverBanner balances={balances} me={me} names={names} />
+          <CurrencyConverter rates={rates} />
           <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
             <h3 className="text-sm font-bold text-white">Saldi</h3>
             <BalancesSection balances={balances} me={me} names={names} onSettle={settle} />

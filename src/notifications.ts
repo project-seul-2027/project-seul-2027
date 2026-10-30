@@ -4,6 +4,7 @@ import { deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { firebase, isFirebaseConfigured } from './firebase/client';
 import { VAPID_KEY } from './firebase/push.config';
 import { isIos, isStandalone } from './pwa';
+import { readPrefs } from './notify/prefs';
 
 /**
  * Notifiche push (Firebase Cloud Messaging).
@@ -86,12 +87,23 @@ async function saveToken(uid: string, token: string): Promise<void> {
   await setDoc(doc(db, 'pushTokens', id), {
     uid,
     token,
-    prefs: { updates: true },
+    prefs: { ...readPrefs() },
     platform: platformName(),
     updatedAt: Date.now()
   });
   writeStorage(flagKey(uid), '1');
   writeStorage(tokenKey(uid), token);
+}
+
+/** Copia sul documento del telefono ciò che l'utente vuole ricevere (lo legge il server). */
+export async function syncPushPrefs(uid: string): Promise<void> {
+  const token = readStorage(tokenKey(uid));
+  if (!token || readStorage(flagKey(uid)) !== '1') return;
+  try {
+    await saveToken(uid, token);
+  } catch {
+    // offline: si aggiorna alla prossima apertura
+  }
 }
 
 /** Da chiamare direttamente dal tocco dell'utente (iPhone richiede il gesto per il permesso). */

@@ -1,0 +1,58 @@
+# Avvisi del viaggio (anche ad app chiusa): programma, voli e prenotazioni, nuovi ritrovi, "ho perso il gruppo".
+# Parte da sola ogni ~10 minuti dal 26 febbraio al 21 marzo 2027; fuori da queste date si ferma subito.
+# Prova a mano: GitHub → Actions → "Avvisi del viaggio" → Run workflow (con "solo elenco" non manda nulla).
+# Nota: GitHub può ritardare i controlli programmati di qualche minuto; l'avviso resta valido 25 minuti.
+name: Avvisi del viaggio
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Solo elenco, non manda niente
+        type: boolean
+        default: true
+      now_iso:
+        description: Data e ora da simulare (facoltativo, es. 2027-03-03T18:30:00+09:00)
+        required: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Siamo nel periodo del viaggio?
+        id: window
+        run: |
+          now=$(date -u +%s)
+          from=$(date -u -d '2027-02-26' +%s)
+          to=$(date -u -d '2027-03-21' +%s)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || { [ "$now" -ge "$from" ] && [ "$now" -le "$to" ]; }; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "Fuori dal periodo del viaggio: niente da fare."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.window.outputs.active == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.window.outputs.active == 'true'
+        with:
+          node-version: 22
+      - name: Prepara
+        if: steps.window.outputs.active == 'true'
+        run: |
+          npm install --no-save --no-package-lock firebase-admin@13 esbuild@0.25
+          npx esbuild scripts/trip-push.mts --bundle --platform=node --format=esm --target=node22 \
+            --define:import.meta.env.BASE_URL='"/"' \
+            --external:firebase-admin --outfile=trip-push.bundle.mjs
+      - name: Invia
+        if: steps.window.outputs.active == 'true'
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          export SITE_URL="https://${owner}.github.io/${GITHUB_REPOSITORY#*/}/"
+          node trip-push.bundle.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
+          NOW_ISO: ${{ inputs.now_iso }}

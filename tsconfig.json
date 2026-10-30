@@ -30,6 +30,7 @@
     "dist",
     "server",
     "server.ts",
+    "scripts/trip-push.mts",
     "node_modules"
   ]
 }

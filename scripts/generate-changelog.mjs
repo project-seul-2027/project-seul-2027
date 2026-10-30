@@ -8,8 +8,9 @@
  *   - Si seguono i commit del ramo principale (git log --first-parent) dal più vecchio al più recente.
  *   - Dentro ogni "aggiornamento maggiore" (elenco RELEASES qui sotto) il numero finale sale di 1 a ogni
  *     commit, senza limite: 1.1.0, 1.1.1, ... 1.1.10, 1.1.20, 1.1.123 ...
- *   - Per aprire il prossimo aggiornamento maggiore (es. 1.2.0) basta aggiungere una riga a RELEASES con
- *     l'hash del commit che deve diventare x.y.0. Da quel commit in poi si riparte da 1.2.0, 1.2.1, ...
+ *   - Per aprire il prossimo aggiornamento maggiore (es. 2.0.0) basta scrivere in fondo al messaggio del commit
+ *     una riga "Release: 2.0": quel commit diventa 2.0.0 e si riparte da 2.0.1, 2.0.2, ...
+ *     (in alternativa si può aggiungere una riga a RELEASES con l'hash del commit che deve diventare x.y.0).
  *
  * Con un clone "shallow" (come quello di GitHub Actions) scarica da solo il resto della cronologia. Se non è
  * disponibile (copia scaricata come zip) lo script non fa fallire la build: lascia il file com'è e la pagina
@@ -52,7 +53,7 @@ function repoUrl() {
   }
 }
 
-const TRAILER = /^(co-authored-by|claude-session|signed-off-by|generated with)\b/i;
+const TRAILER = /^((co-authored-by|claude-session|signed-off-by|generated with)\b|release:)/i;
 const clean = (s) => s.replace(/^﻿/, '').replace(/\s+/g, ' ').trim();
 
 /** Titolo e punti elenco: i messaggi con "titolo - voce - voce" (commit unificati) vengono separati */
@@ -90,20 +91,26 @@ try {
 }
 if (hashes.length === 0) skip('Nessun commit trovato');
 
+const SEP_FIELD = '\x1f';
+const SEP_RECORD = '\x1e';
+const raw = git('log', '--first-parent', '--reverse', `--format=%H${SEP_FIELD}%aI${SEP_FIELD}%an${SEP_FIELD}%s${SEP_FIELD}%b${SEP_RECORD}`, 'HEAD');
+const commits = raw.split(SEP_RECORD).map((r) => r.replace(/^\n+/, '')).filter(Boolean);
+
 // Posizione di partenza di ogni serie (se un hash non esiste più, per esempio dopo una riscrittura della storia, la serie salta)
 const starts = RELEASES.map((r) => {
   if (r.from === null) return { series: r.series, index: 0 };
   const index = hashes.findIndex((h) => h.startsWith(r.from));
   if (index === -1) console.warn(`[changelog] Commit ${r.from} (serie ${r.series}) non trovato nella cronologia: serie ignorata.`);
   return { series: r.series, index };
-})
-  .filter((s) => s.index !== -1)
-  .sort((a, b) => a.index - b.index);
+}).filter((s) => s.index !== -1);
 
-const SEP_FIELD = '\x1f';
-const SEP_RECORD = '\x1e';
-const raw = git('log', '--first-parent', '--reverse', `--format=%H${SEP_FIELD}%aI${SEP_FIELD}%an${SEP_FIELD}%s${SEP_FIELD}%b${SEP_RECORD}`, 'HEAD');
-const commits = raw.split(SEP_RECORD).map((r) => r.replace(/^\n+/, '')).filter(Boolean);
+// Si può aprire una nuova serie anche scrivendo nel messaggio del commit una riga "Release: 2.0": quel commit diventa 2.0.0
+commits.forEach((rec, i) => {
+  const [, , , subject = '', body = ''] = rec.split(SEP_FIELD);
+  const m = `${subject}\n${body}`.match(/^release:\s*v?(\d+\.\d+)(?:\.0)?\s*$/im);
+  if (m && !starts.some((s) => s.index === i)) starts.push({ series: m[1], index: i });
+});
+starts.sort((a, b) => a.index - b.index);
 
 const repo = repoUrl();
 const entries = commits.map((rec, i) => {

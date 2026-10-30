@@ -19,6 +19,15 @@ import { PdfViewerModal } from './components/PdfViewerModal';
 import { hasResumeFlag } from './services/pendingCamera';
 import { GroupView } from './components/GroupView';
 import { WeatherView } from './components/WeatherView';
+import { TodayView } from './components/TodayView';
+import { WalletView } from './components/WalletView';
+import { GroupLiveEngine } from './components/group/GroupLive';
+import { ShowKoreanView } from './components/ShowKoreanView';
+import { PlacesView } from './components/PlacesView';
+import { SosView } from './components/SosView';
+import { NavEditor } from './components/NavEditor';
+import { NotificationBell, TripNotifierEngine } from './components/NotificationCenter';
+import { useNavPrefs } from './utils/navPrefs';
 import { ChangelogView } from './components/ChangelogView';
 import { APP_VERSION } from './data/changelog';
 import { WorldClockBar } from './components/WorldClockBar';
@@ -33,7 +42,7 @@ import { useSyncPushRegistration } from './notifications';
 import { PushToggle } from './components/PushToggle';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
-  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus, Wallet, History
+  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus, Wallet, History, Compass, Languages, WalletCards, Bookmark, ShieldAlert, SlidersHorizontal
 } from 'lucide-react';
 
 /**
@@ -55,15 +64,20 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
+type Tab = 'today' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
 
-const ALL_TABS: Tab[] = ['itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
+const ALL_TABS: Tab[] = ['today', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
 
 /** Schede per la navigazione da telefono: le prime 4 nella barra in basso, le altre in "Altro". */
 const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: string; tint: string }[] = [
+  { id: 'today', label: 'Oggi', icon: Compass, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
   { id: 'itinerary', label: 'Itinerario', icon: CalendarDays, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
   { id: 'map', label: 'Mappa', icon: Map, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
   { id: 'gallery', label: 'Galleria', icon: Camera, active: 'text-pink-400', tint: 'bg-pink-500/15 border-pink-500/40 text-pink-300' },
+  { id: 'wallet', label: 'Wallet', icon: WalletCards, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
+  { id: 'show', label: 'In coreano', icon: Languages, active: 'text-rose-400', tint: 'bg-rose-500/15 border-rose-500/40 text-rose-300' },
+  { id: 'places', label: 'Luoghi', icon: Bookmark, active: 'text-violet-400', tint: 'bg-violet-500/15 border-violet-500/40 text-violet-300' },
+  { id: 'sos', label: 'SOS', icon: ShieldAlert, active: 'text-rose-400', tint: 'bg-rose-500/15 border-rose-500/40 text-rose-300' },
   { id: 'packing', label: 'Valigia', icon: Luggage, active: 'text-teal-400', tint: 'bg-teal-500/15 border-teal-500/40 text-teal-300' },
   { id: 'expenses', label: 'Spese', icon: Wallet, active: 'text-emerald-400', tint: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
   { id: 'accommodations', label: '4 Alloggi', icon: Home, active: 'text-blue-400', tint: 'bg-blue-500/15 border-blue-500/40 text-blue-300' },
@@ -75,17 +89,22 @@ const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: st
   { id: 'group', label: 'Partecipanti', icon: Users, active: 'text-purple-400', tint: 'bg-purple-500/15 border-purple-500/40 text-purple-300' },
   { id: 'changelog', label: 'Changelog', icon: History, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' }
 ];
-const PRIMARY_MOBILE_TABS = MOBILE_TABS.slice(0, 4);
-const MORE_MOBILE_TABS = MOBILE_TABS.slice(4);
 
 /** Scheda iniziale dall'indirizzo (?tab=map), usata anche dalle scorciatoie dell'app installata. */
 function initialTab(): Tab {
   if (typeof window === 'undefined') return 'itinerary';
   const fromUrl = new URLSearchParams(window.location.search).get('tab');
   if (fromUrl && (ALL_TABS as string[]).includes(fromUrl)) return fromUrl as Tab;
+  // Condivisione dal telefono (Android): un link o un testo diventa un nuovo luogo
+  const sp = new URLSearchParams(window.location.search);
+  if (!fromUrl && (sp.has('url') || sp.has('text') || sp.has('title'))) return 'places';
   // Ritorno dall'app Fotocamera: riapri la galleria con la foto da confermare
   if (hasResumeFlag()) return 'gallery';
-  return 'itinerary';
+  // Durante il viaggio (o con ?sim=) si apre direttamente "Oggi"
+  const params = new URLSearchParams(window.location.search);
+  const t = Date.now();
+  const inTripWindow = t >= Date.parse('2027-02-28T00:00:00+01:00') && t <= Date.parse('2027-03-21T00:00:00+01:00');
+  return params.has('sim') || inTripWindow ? 'today' : 'itinerary';
 }
 
 function TripPortal() {
@@ -97,6 +116,10 @@ function TripPortal() {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isNavEditorOpen, setIsNavEditorOpen] = useState(false);
+  const nav = useNavPrefs(MOBILE_TABS.map((t) => t.id));
+  const PRIMARY_MOBILE_TABS = nav.primaryIds.map((id) => MOBILE_TABS.find((t) => t.id === id)!).filter(Boolean);
+  const MORE_MOBILE_TABS = MOBILE_TABS.filter((t) => !nav.primaryIds.includes(t.id));
   const [isInstallHelpOpen, setIsInstallHelpOpen] = useState(false);
   const install = useInstallPrompt();
   const { updateAvailable, newVersion, applyUpdate } = useUpdateAvailable();
@@ -155,6 +178,8 @@ function TripPortal() {
   }, [isMoreOpen, isInstallHelpOpen]);
   const [targetLocationId, setTargetLocationId] = useState<string | null>(null);
   const [targetDayFilter, setTargetDayFilter] = useState<number | null>(null);
+  // Richiesta di percorso dalla scheda "Oggi": la mappa si apre già in modalità percorso
+  const [routeRequest, setRouteRequest] = useState<{ destinationId: string; nonce: number } | null>(null);
   // Giorno dell'itinerario da aprire (es. dal pulsante "Itinerario" della galleria)
   const [focusItineraryDay, setFocusItineraryDay] = useState<{ id: number; nonce: number } | null>(null);
 
@@ -187,6 +212,15 @@ function TripPortal() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleRouteFromToday = (destinationId: string) => {
+    setRouteRequest({ destinationId, nonce: Date.now() });
+    setTargetLocationId(destinationId);
+    setTargetDayFilter(null);
+    setIsMoreOpen(false);
+    setActiveTab('map');
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
 
   // Handler to jump from itinerary/accommodations to map
   const handleViewOnMap = (locationId: string, dayNumber?: number) => {
@@ -221,14 +255,20 @@ function TripPortal() {
             <span className="font-display font-extrabold text-base tracking-tight text-white group-hover:text-cyan-400 transition-colors">
               SEUL 2027
             </span>
-            <span className="hidden sm:max-[1839px]:inline-block text-[11px] text-slate-400 ml-2 font-mono">
-              4 Amici · Pietro (8 notti) + 3 (17 notti)
-            </span>
           </div>
         </button>
 
         {/* Zone 2: Navigation Links */}
-        <nav className="hidden min-[1840px]:flex items-center gap-3.5 text-xs font-semibold text-slate-300">
+        <nav className="hidden min-[1536px]:flex items-center gap-3 min-[1700px]:gap-3.5 text-xs font-semibold text-slate-300">
+          <button
+            onClick={() => setActiveTab('today')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'today' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Oggi</span>
+          </button>
           <button
             onClick={() => setActiveTab('itinerary')}
             className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
@@ -320,6 +360,42 @@ function TripPortal() {
             <span>Guida</span>
           </button>
           <button
+            onClick={() => setActiveTab('wallet')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'wallet' ? 'text-cyan-400 border-b-2 border-cyan-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <WalletCards className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Wallet</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('places')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'places' ? 'text-violet-400 border-b-2 border-violet-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <Bookmark className="w-3.5 h-3.5 text-violet-400" />
+            <span>Luoghi</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('sos')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'sos' ? 'text-rose-400 border-b-2 border-rose-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+            <span>SOS</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('show')}
+            className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
+              activeTab === 'show' ? 'text-rose-400 border-b-2 border-rose-400 pb-0.5 font-bold' : ''
+            }`}
+          >
+            <Languages className="w-3.5 h-3.5 text-rose-400" />
+            <span>In coreano</span>
+          </button>
+          <button
             onClick={() => setActiveTab('pdf')}
             className={`whitespace-nowrap transition-colors hover:text-white flex items-center gap-1.5 ${
               activeTab === 'pdf' ? 'text-rose-400 border-b-2 border-rose-400 pb-0.5 font-bold' : ''
@@ -350,6 +426,7 @@ function TripPortal() {
 
         {/* Zone 3: Group Status & Actions (No login/accounts) */}
         <div className="flex items-center gap-3 shrink-0">
+          <NotificationBell />
           <div className="relative">
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -457,7 +534,16 @@ function TripPortal() {
     {!isDesktop && <WorldClockBar />}
 
     {/* Mobile Tab Navigation Bar */}
-      <div className="hidden lg:max-[1839.9px]:flex bg-slate-900 border-b border-slate-800 px-3 py-2 items-center overflow-x-auto gap-2 text-xs scrollbar-none">
+      <div className="hidden lg:max-[1535.9px]:flex bg-slate-900 border-b border-slate-800 px-3 py-2 items-center overflow-x-auto gap-2 text-xs scrollbar-none">
+        <button
+          onClick={() => setActiveTab('today')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'today' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Compass className="w-3.5 h-3.5" />
+          <span>Oggi</span>
+        </button>
         <button
           onClick={() => setActiveTab('itinerary')}
           className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
@@ -549,6 +635,42 @@ function TripPortal() {
           <span>Guida</span>
         </button>
         <button
+          onClick={() => setActiveTab('wallet')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'wallet' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <WalletCards className="w-3.5 h-3.5" />
+          <span>Wallet</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('places')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'places' ? 'bg-violet-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Bookmark className="w-3.5 h-3.5" />
+          <span>Luoghi</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('sos')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'sos' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <ShieldAlert className="w-3.5 h-3.5" />
+          <span>SOS</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('show')}
+          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
+            activeTab === 'show' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Languages className="w-3.5 h-3.5" />
+          <span>In coreano</span>
+        </button>
+        <button
           onClick={() => setActiveTab('pdf')}
           className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
             activeTab === 'pdf' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
@@ -580,7 +702,7 @@ function TripPortal() {
       {/* Hero Atmosphere Section */}
       <div
         className={`relative isolate overflow-hidden border-b border-slate-800/80 bg-slate-950 py-6 sm:py-12 px-4 sm:px-8 ${
-          activeTab === 'itinerary' ? '' : 'hidden lg:block'
+          activeTab === 'itinerary' ? '' : activeTab === 'today' || activeTab === 'show' || activeTab === 'wallet' || activeTab === 'places' || activeTab === 'sos' ? 'hidden' : 'hidden lg:block'
         }`}
       >
         <HeroVideo enabled={heroAnim.enabled} className="-z-10" />
@@ -726,6 +848,17 @@ function TripPortal() {
           </div>
         )}
 
+        {activeTab === 'today' && (
+          <TodayView onRoute={handleRouteFromToday} onGoTo={(tab) => goToTab(tab)} />
+        )}
+
+        <GroupLiveEngine />
+        <TripNotifierEngine />
+        {activeTab === 'wallet' && <WalletView />}
+        {activeTab === 'show' && <ShowKoreanView />}
+        {activeTab === 'places' && <PlacesView onShowMap={() => goToTab('map')} />}
+        {activeTab === 'sos' && <SosView />}
+
         {activeTab === 'itinerary' && (
           <ItineraryView
             onViewOnMap={handleViewOnMap}
@@ -755,6 +888,7 @@ function TripPortal() {
             <InteractiveMap
               selectedLocationId={targetLocationId}
               selectedDayFilter={targetDayFilter}
+              routeRequest={routeRequest}
               onSelectLocation={(loc) => {
                 if (loc) setTargetLocationId(loc.id);
               }}
@@ -803,12 +937,13 @@ function TripPortal() {
           <PdfViewerModal />
         )}
 
-        {activeTab === 'group' && <GroupView />}
+        {activeTab === 'group' && <GroupView onRoute={handleRouteFromToday} onShowMap={() => goToTab('map')} />}
 
         {activeTab === 'changelog' && <ChangelogView />}
       </main>
 
       <GoogleAuthModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+      {isNavEditorOpen && <NavEditor tabs={MOBILE_TABS} current={nav.primaryIds} onSave={nav.save} onClose={() => setIsNavEditorOpen(false)} />}
 
       {/* Editorial Footer + Fonti Ufficiali Rete Metropolitana */}
       <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-8 px-4 sm:px-8 text-xs text-slate-500">
@@ -991,6 +1126,20 @@ function TripPortal() {
                   </button>
                 );
               })}
+            </div>
+            <div className="px-4 mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMoreOpen(false);
+                  setIsNavEditorOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs font-semibold text-slate-300"
+                data-testid="nav-edit-open"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
+                Modifica la barra in basso
+              </button>
             </div>
             <div className="grid grid-cols-2 gap-2.5 px-4 mt-3">
               <button

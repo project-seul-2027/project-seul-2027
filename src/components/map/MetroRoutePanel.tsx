@@ -35,6 +35,9 @@ import {
 import { LineBadge } from './MetroPanel';
 import { originLabel } from './categoryStyle';
 
+import { RouteCostCard } from './RouteCostCard';
+import { RouteAlternatives } from './RouteAlternatives';
+
 export interface LiveGeoState {
   enabled: boolean;
   status: 'idle' | 'requesting' | 'active' | 'denied' | 'error';
@@ -673,6 +676,10 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
                   </div>
                 </div>
               </div>
+
+              <RouteAlternatives network={network} origin={activeOriginLocation} destination={selectedDestination} excludeLineIds={routeOptions.excludeLineIds} />
+
+              <RouteCostCard route={currentRoute} />
 
               {/* Pulsanti rapidi Inquadra Tratta, Rivedi Animazione & Naver Map */}
               <div className="flex items-center justify-between gap-2">

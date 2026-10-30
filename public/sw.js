@@ -6,12 +6,19 @@
  * - File della build (/assets/nome-HASH.js|css): in cache per sempre (il nome cambia a ogni versione).
  * - Altri file del sito (icone, PDF, immagini): subito dalla cache, aggiornati in background.
  * - Font Google e CSS di Leaflet: come sopra.
+ * - Pacchetto offline (pulsante "Scarica per l'offline"): letto se il file non è già nella cache normale.
+ * - Sfondo della mappa (pulsante "Scarica lo sfondo della mappa"): riquadri OpenFreeMap letti dalla cache se scaricati.
  * - Firebase, Google Maps, meteo e ogni altra API: mai toccati dal service worker.
  */
 const SHELL_CACHE = 'seul2027-shell-v2';
 const ASSET_CACHE = 'seul2027-assets-v2';
 const EXT_CACHE = 'seul2027-ext-v2';
-const KEEP = [SHELL_CACHE, ASSET_CACHE, EXT_CACHE];
+// Pacchetto scaricato con il pulsante "Scarica per l'offline": lo gestisce la pagina, il service worker lo legge soltanto
+const OFFLINE_CACHE = 'seul2027-offline-v1';
+// Sfondo della mappa per l'offline (riquadri OpenFreeMap), scaricato con il suo pulsante
+const MAP_CACHE = 'seul2027-maptiles-v1';
+const MAP_HOST = 'tiles.openfreemap.org';
+const KEEP = [SHELL_CACHE, ASSET_CACHE, EXT_CACHE, OFFLINE_CACHE, MAP_CACHE];
 const MAX_ASSETS = 120;
 
 const SHELL_FILES = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png'];
@@ -38,6 +45,31 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+async function offlineMatch(request) {
+  try {
+    const cache = await caches.open(OFFLINE_CACHE);
+    return await cache.match(request);
+  } catch {
+    return undefined;
+  }
+}
+
+// Riquadri, caratteri e icone della mappa: dalla cache se scaricati, altrimenti dalla rete (senza salvarli: lo fa solo il pulsante)
+async function mapAsset(request) {
+  try {
+    const cache = await caches.open(MAP_CACHE);
+    const hit = await cache.match(request.url, { ignoreVary: true });
+    if (hit) return hit;
+  } catch {
+    /* cache non disponibile */
+  }
+  try {
+    return await fetch(request);
+  } catch {
+    return Response.error();
+  }
+}
+
 async function trimCache(name, max) {
   const cache = await caches.open(name);
   const keys = await cache.keys();
@@ -55,25 +87,35 @@ async function networkFirstPage(request) {
     if (response.ok) cache.put('./', response.clone());
     return response;
   } catch {
-    return (await cache.match('./')) || (await cache.match(request)) || Response.error();
+    // Le pagine con ?tab=... non sono in cache: l'app è una sola pagina, basta quella iniziale
+    return (
+      (await cache.match('./')) ||
+      (await cache.match(request)) ||
+      (await offlineMatch(self.registration.scope)) ||
+      Response.error()
+    );
   }
 }
 
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
-  const hit = await cache.match(request);
+  const hit = (await cache.match(request)) || (await offlineMatch(request));
   if (hit) return hit;
-  const response = await fetch(request);
-  if (response.ok) {
-    cache.put(request, response.clone());
-    trimCache(cacheName, MAX_ASSETS);
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      cache.put(request, response.clone());
+      trimCache(cacheName, MAX_ASSETS);
+    }
+    return response;
+  } catch {
+    return Response.error();
   }
-  return response;
 }
 
 async function staleWhileRevalidate(request, cacheName, event) {
   const cache = await caches.open(cacheName);
-  const hit = await cache.match(request);
+  const hit = (await cache.match(request)) || (await offlineMatch(request));
   const update = fetch(request)
     .then((response) => {
       if (response.ok || response.type === 'opaque') cache.put(request, response.clone());
@@ -139,6 +181,10 @@ self.addEventListener('fetch', (event) => {
     if (/\.(mp4|webm)$/i.test(url.pathname)) return;
     if (HASHED_ASSET.test(url.pathname)) event.respondWith(cacheFirst(request, ASSET_CACHE));
     else event.respondWith(staleWhileRevalidate(request, ASSET_CACHE, event));
+    return;
+  }
+  if (url.hostname === MAP_HOST) {
+    event.respondWith(mapAsset(request));
     return;
   }
   if (EXTERNAL_HOSTS.includes(url.hostname)) {
