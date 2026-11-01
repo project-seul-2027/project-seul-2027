@@ -14,6 +14,7 @@ import { lastMetroStatus } from '../utils/lastMetro';
 import { useAuth } from '../auth/AuthContext';
 import { useMediaQuery } from '../pwa';
 import { WorldClockBar } from './WorldClockBar';
+import { PhoneCountdown } from './mobile/PhoneCountdown';
 import {
   TIMED_DAYS, locateNow, formatCountdown, formatInZone, msFromDayAndClock, zoneLabel, zoneOfDay
 } from '../utils/tripClock';
@@ -142,6 +143,10 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
   const seoulTime = formatInZone(now, 'Asia/Seoul', { hour: '2-digit', minute: '2-digit' });
   const seoulDate = formatInZone(now, 'Asia/Seoul', { weekday: 'long', day: 'numeric', month: 'long' });
   const romeTime = formatInZone(now, 'IT', { hour: '2-digit', minute: '2-digit' });
+  // Telefono: data e ora del telefono (fuso dove vi trovate ora), non quelle fisse di Seul o Roma
+  const phoneDate = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(now));
+  const phoneTime = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(new Date(now));
+  const phoneZone = new Intl.DateTimeFormat('it-IT', { timeZoneName: 'short' }).formatToParts(new Date(now)).find((x) => x.type === 'timeZoneName')?.value ?? '';
   const firstName = user?.firstName || user?.displayName || '';
   const daysToGo = Math.max(0, Math.ceil((TIMED_DAYS[0].startTs + 2 * 3_600_000 - now) / 86_400_000));
 
@@ -185,11 +190,8 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
       </div>
       {before ? (
         <>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-5xl font-black font-display text-app-text tabular-nums">{daysToGo}</span>
-            <span className="text-lg text-slate-300">giorni alla partenza</span>
-          </div>
-          <p className="mt-3 text-sm text-slate-300 leading-relaxed">Ritrovo a Malpensa T1 il 1 marzo entro le 10:00. Durante il viaggio qui trovi cosa fare adesso e la strada per la prossima tappa.</p>
+          <PhoneCountdown />
+          <p className="mt-4 text-sm text-slate-300 leading-relaxed">Ritrovo a Malpensa T1 il 1 marzo entro le 10:00. Durante il viaggio qui trovi cosa fare adesso e la strada per la prossima tappa.</p>
           <div className="mt-4 grid grid-cols-2 gap-2.5">
             <button type="button" onClick={() => setSim(msFromDayAndClock(3, '14:30', 'KR'))} className="min-h-[48px] px-3 rounded-2xl bg-app-accent text-app-on-accent text-sm font-bold flex items-center justify-center gap-2" data-testid="try-trip-mode">
               <Eye className="w-4 h-4 shrink-0" /> Prova il viaggio
@@ -546,7 +548,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
               <p className="text-[11px] font-mono font-bold uppercase tracking-[0.14em] text-app-muted" data-testid="today-daycount">
                 {before ? (firstName ? `Ciao ${firstName}` : 'Prima della partenza') : after ? 'Dopo il viaggio' : day.id === 0 ? 'Giorno della partenza' : `Giorno ${day.id} di ${TIMED_DAYS[TIMED_DAYS.length - 1].day.id}`}
               </p>
-              <h2 className="text-[22px] font-extrabold font-display text-app-text capitalize leading-tight">{seoulDate}</h2>
+              <h2 className="text-[22px] font-extrabold font-display text-app-text capitalize leading-tight">{phoneDate}</h2>
             </div>
             <button
               type="button"
@@ -565,8 +567,8 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
             data-testid="today-clocks"
             className="w-full min-h-[40px] flex items-center gap-4 rounded-xl px-3 bg-app-surface border border-app-line text-xs text-app-muted"
           >
-            <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-app-accent" /> Seul <b className="text-app-text font-mono">{seoulTime}</b></span>
-            <span>Italia <b className="text-slate-200 font-mono">{romeTime}</b></span>
+            <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-app-accent" /> Ora qui <b className="text-app-text font-mono">{phoneTime}</b></span>
+            <span className="font-mono text-app-muted">{phoneZone}</span>
             <span className="ml-auto flex items-center gap-1 font-semibold text-app-accent">Fusi <ChevronDown className={`w-3.5 h-3.5 transition-transform ${clocksOpen ? 'rotate-180' : ''}`} /></span>
           </button>
           {clocksOpen && <div className="-mx-4"><WorldClockBar /></div>}
