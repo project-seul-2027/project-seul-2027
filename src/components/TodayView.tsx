@@ -12,6 +12,8 @@ import { OfflineCard } from './OfflineCard';
 import { fetchAirQuality, type AirQuality } from '../data/airQuality';
 import { lastMetroStatus } from '../utils/lastMetro';
 import { useAuth } from '../auth/AuthContext';
+import { useMediaQuery } from '../pwa';
+import { WorldClockBar } from './WorldClockBar';
 import {
   TIMED_DAYS, locateNow, formatCountdown, formatInZone, msFromDayAndClock, zoneLabel, zoneOfDay
 } from '../utils/tripClock';
@@ -151,6 +153,106 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
   );
 
   /* ------------------------------------------------------------------ */
+
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [clocksOpen, setClocksOpen] = useState(false);
+  const done = items.length > 0 && !current && !next;
+  const free = items.length === 0;
+
+  // Telefono: la scheda principale cambia titolo, contenuto e azione in base allo stato della giornata
+  const phoneState: { label: string; tone: string; title: string; hint?: string; time?: string } = before
+    ? { label: 'Mancano', tone: 'text-app-accent', title: '' }
+    : after
+      ? { label: 'Viaggio concluso', tone: 'text-app-muted', title: 'Bentornati! Spero sia stato bellissimo.' }
+      : current
+        ? { label: 'In corso', tone: 'text-app-accent', title: current.item.activity, time: `${current.clock || current.item.time} · ${zoneLabel(current.zone)}` }
+        : next
+          ? { label: 'Prossima', tone: 'text-fam-weather', title: next.item.activity, time: `alle ${next.clock || next.item.time} · tra ${nextIn}` }
+          : done
+            ? { label: 'Giornata conclusa', tone: 'text-app-muted', title: 'Le attività di oggi sono finite.', hint: 'Se siete ancora fuori, controllate l’ultima metro e la strada per l’alloggio.' }
+            : { label: 'Nessuna attività programmata', tone: 'text-app-muted', title: day.title, hint: 'Giornata libera: scegliete tra i luoghi salvati dal gruppo.' };
+
+  const phoneHero = (
+    <section className="rounded-3xl border border-app-accent/30 bg-app-surface p-5 shadow-xl" data-testid="today-hero" data-state={before ? 'before' : after ? 'after' : current ? 'now' : next ? 'next' : done ? 'done' : 'free'}>
+      <div className="flex items-center justify-between gap-3">
+        <div className={`text-[11px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${phoneState.tone}`}>
+          {current && !before && !after && (
+            <span className="relative flex h-2 w-2" aria-hidden><span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-app-accent opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-app-accent" /></span>
+          )}
+          {phoneState.label}
+        </div>
+        {phoneState.time && <span className="text-[11px] text-app-muted font-mono text-right">{phoneState.time}</span>}
+      </div>
+      {before ? (
+        <>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-5xl font-black font-display text-app-text tabular-nums">{daysToGo}</span>
+            <span className="text-lg text-slate-300">giorni alla partenza</span>
+          </div>
+          <p className="mt-3 text-sm text-slate-300 leading-relaxed">Ritrovo a Malpensa T1 il 1 marzo entro le 10:00. Durante il viaggio qui trovi cosa fare adesso e la strada per la prossima tappa.</p>
+          <div className="mt-4 grid grid-cols-2 gap-2.5">
+            <button type="button" onClick={() => setSim(msFromDayAndClock(3, '14:30', 'KR'))} className="min-h-[48px] px-3 rounded-2xl bg-app-accent text-app-on-accent text-sm font-bold flex items-center justify-center gap-2" data-testid="try-trip-mode">
+              <Eye className="w-4 h-4 shrink-0" /> Prova il viaggio
+            </button>
+            <button type="button" onClick={() => onGoTo('itinerary')} className="min-h-[48px] px-3 rounded-2xl bg-app-raised border border-app-control text-app-text text-sm font-semibold">
+              Vedi il programma
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <h2 className="mt-2 text-xl font-bold text-app-text leading-snug" data-testid="today-now">{phoneState.title}</h2>
+          {phoneState.hint && <p className="mt-1.5 text-sm text-app-muted leading-snug">{phoneState.hint}</p>}
+          {current && next && (
+            <div className="mt-4 flex items-start gap-3 rounded-2xl bg-app-bg/70 border border-app-line p-3.5">
+              <div className="shrink-0 w-14 text-center">
+                <div className="text-[10px] uppercase tracking-wider text-app-muted">Dopo</div>
+                <div className="text-base font-bold font-mono text-fam-weather">{next.clock || next.item.time}</div>
+                <div className="text-[10px] text-app-muted">tra {nextIn}</div>
+              </div>
+              <p className="text-sm text-slate-200 leading-snug min-w-0">{next.item.activity}</p>
+            </div>
+          )}
+          {metro.level !== 'none' && (
+            <div className={`mt-4 rounded-2xl border p-3.5 flex gap-3 ${metro.level === 'closed' ? 'border-fam-sos/50 bg-fam-sos/10' : 'border-fam-weather/50 bg-fam-weather/10'}`} role="status" data-testid="last-metro">
+              {metro.level === 'closed' ? <MoonIcon className="w-5 h-5 text-red-300 shrink-0 mt-0.5" /> : <TrainFront className="w-5 h-5 text-amber-300 shrink-0 mt-0.5" />}
+              <div className="min-w-0">
+                <div className={`text-sm font-bold ${metro.level === 'closed' ? 'text-red-200' : 'text-amber-200'}`}>{metro.title}</div>
+                <p className="text-xs text-slate-300 leading-snug mt-0.5">{metro.text}</p>
+              </div>
+            </div>
+          )}
+          {!after && (
+            <div className="mt-4 grid grid-cols-1 gap-2.5">
+              {stop && !done && (
+                <button type="button" onClick={() => onRoute(stop.id)} className="min-h-[52px] px-4 rounded-2xl bg-app-accent active:scale-[0.99] text-app-on-accent font-bold text-[15px] flex items-center justify-center gap-2" data-testid="route-to-stop">
+                  <Navigation className="w-5 h-5 shrink-0" />
+                  <span className="truncate">Portami a {stop.italianName}</span>
+                </button>
+              )}
+              {free && (
+                <button type="button" onClick={() => onGoTo('places')} className="min-h-[52px] px-4 rounded-2xl bg-app-accent text-app-on-accent font-bold text-[15px] flex items-center justify-center gap-2" data-testid="free-day-places">
+                  <Bookmark className="w-5 h-5 shrink-0" /> Apri i luoghi salvati
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onRoute(home.id)}
+                className={`min-h-[48px] px-4 rounded-2xl text-sm flex items-center justify-center gap-2 ${
+                  done || metro.level !== 'none' ? 'bg-app-accent text-app-on-accent font-bold' : 'bg-app-raised border border-app-control text-app-text font-semibold'
+                }`}
+                data-testid="route-home"
+              >
+                <Home className="w-5 h-5 shrink-0" />
+                <span className="truncate">Torna all’alloggio</span>
+              </button>
+            </div>
+          )}
+          {after && <p className="mt-1 text-sm text-app-muted">La galleria e le spese restano qui per ripensarci con calma.</p>}
+        </>
+      )}
+    </section>
+  );
 
   const heroCard = (
     <section className="rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/50 p-5 sm:p-6 shadow-xl" data-testid="today-hero">
@@ -434,6 +536,77 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
       ))}
     </section>
   );
+
+  if (!isDesktop) {
+    return (
+      <div className="space-y-4 -mt-1" data-testid="today-view">
+        <header className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-mono font-bold uppercase tracking-[0.14em] text-app-muted" data-testid="today-daycount">
+                {before ? (firstName ? `Ciao ${firstName}` : 'Prima della partenza') : after ? 'Dopo il viaggio' : day.id === 0 ? 'Giorno della partenza' : `Giorno ${day.id} di ${TIMED_DAYS[TIMED_DAYS.length - 1].day.id}`}
+              </p>
+              <h2 className="text-[22px] font-extrabold font-display text-app-text capitalize leading-tight">{seoulDate}</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen((v) => !v)}
+              className="min-h-[40px] px-3 rounded-xl bg-app-surface border border-app-control text-xs font-semibold text-slate-200 flex items-center gap-1.5 shrink-0"
+              aria-expanded={previewOpen}
+              data-testid="preview-toggle"
+            >
+              <Eye className="w-3.5 h-3.5" /> Anteprima
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setClocksOpen((v) => !v)}
+            aria-expanded={clocksOpen}
+            data-testid="today-clocks"
+            className="w-full min-h-[40px] flex items-center gap-4 rounded-xl px-3 bg-app-surface border border-app-line text-xs text-app-muted"
+          >
+            <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-app-accent" /> Seul <b className="text-app-text font-mono">{seoulTime}</b></span>
+            <span>Italia <b className="text-slate-200 font-mono">{romeTime}</b></span>
+            <span className="ml-auto flex items-center gap-1 font-semibold text-app-accent">Fusi <ChevronDown className={`w-3.5 h-3.5 transition-transform ${clocksOpen ? 'rotate-180' : ''}`} /></span>
+          </button>
+          {clocksOpen && <div className="-mx-4"><WorldClockBar /></div>}
+        </header>
+
+        {previewOpen && (
+          <div className="rounded-2xl border border-app-control bg-app-surface p-4 grid grid-cols-[1fr_auto] items-end gap-3" data-testid="preview-panel">
+            <label className="col-span-2 flex flex-col gap-1 text-[11px] text-app-muted">
+              Giorno
+              <select value={pvDay} onChange={(e) => setPvDay(Number(e.target.value))} className="bg-app-bg border border-app-control rounded-lg px-3 py-2.5 text-sm text-app-text">
+                {ITINERARY_DAYS.map((d) => <option key={d.id} value={d.id}>{d.dateStr.split(' ')[0]} marzo · {d.title}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] text-app-muted">
+              Ora (del posto)
+              <input type="time" value={pvTime} onChange={(e) => setPvTime(e.target.value)} className="bg-app-bg border border-app-control rounded-lg px-3 py-2.5 text-sm text-app-text" />
+            </label>
+            <button type="button" onClick={applyPreview} className="min-h-[44px] px-4 rounded-xl bg-app-accent text-app-on-accent text-sm font-bold">Mostra</button>
+          </div>
+        )}
+
+        {sim !== null && (
+          <div className="rounded-2xl border border-fam-weather/40 bg-fam-weather/10 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-amber-200" data-testid="sim-banner">
+            <span>Anteprima: {formatInZone(sim, 'Asia/Seoul', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} (ora di Seul), non l’ora reale.</span>
+            <button type="button" onClick={() => setSim(null)} className="min-h-[40px] shrink-0 flex items-center gap-1 font-bold"><X className="w-3.5 h-3.5" /> Esci</button>
+          </div>
+        )}
+
+        {phoneHero}
+        <WalletShortcut onOpen={() => onGoTo('wallet')} nowMs={now} />
+        <GroupLiveCard onRoute={onRoute} onShowMap={() => onGoTo('map')} />
+        {weatherCard}
+        {timelineCard}
+        {stopsCard}
+        {showKoreanCard}
+        {remindersCard}
+        <OfflineCard />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200" data-testid="today-view">

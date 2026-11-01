@@ -4,6 +4,7 @@ import {
   Plane, Clock, MapPin, AlertTriangle, ShieldCheck, 
   CreditCard, Wifi, Thermometer, Luggage, CheckCircle2, ChevronRight, FileText, ExternalLink, Users, ShoppingBag
 } from 'lucide-react';
+import { FoldText } from './mobile/FoldText';
 
 export const FlightsAndLayoverView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'flights' | 'beijing_guide' | 'malpensa'>('flights');
@@ -87,9 +88,9 @@ export const FlightsAndLayoverView: React.FC = () => {
                 Prenotazione Ufficiale Voli di Gruppo (1 - 19/20 Marzo 2027)
               </h3>
 
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <FoldText className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 Abbiamo impostato la combinazione esatta dei voli concordata: <strong>Andata 1 Mar</strong> ore 12:30 da Malpensa con scalo a Pechino e arrivo a Seul il 2 Mar, e <strong>Ritorno 19 Mar</strong> ore 13:10 con scalo epico di 12 ore a Pechino per l'anatra laccata a Qianmen e rientro a Malpensa la mattina del 20 Mar.
-              </p>
+              </FoldText>
 
               <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-300 font-medium">
                 <span className="flex items-center gap-1 bg-slate-950/50 px-2.5 py-1 rounded-lg border border-slate-800">

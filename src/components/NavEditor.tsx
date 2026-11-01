@@ -10,7 +10,7 @@ export interface NavTabInfo {
   active: string;
 }
 
-/** "Modifica la barra": sceglie e ordina le 4 schede in basso (telefono). */
+/** "Modifica la barra": sceglie e ordina le 3 schede in basso (telefono); + e Altro restano fissi. */
 export const NavEditor: React.FC<{ tabs: NavTabInfo[]; current: string[]; onSave: (ids: string[] | null) => void; onClose: () => void }> = ({
   tabs, current, onSave, onClose
 }) => {
@@ -61,7 +61,7 @@ export const NavEditor: React.FC<{ tabs: NavTabInfo[]; current: string[]; onSave
 
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Nella barra ({draft.length}/{NAV_SLOTS})</p>
-            <div className="grid grid-cols-4 gap-2" data-testid="nav-draft">
+            <div className="grid grid-cols-3 gap-2" data-testid="nav-draft">
               {Array.from({ length: NAV_SLOTS }).map((_, i) => {
                 const id = draft[i];
                 const t = id ? byId(id) : null;
@@ -84,6 +84,7 @@ export const NavEditor: React.FC<{ tabs: NavTabInfo[]; current: string[]; onSave
                 );
               })}
             </div>
+            <p className="mt-2 text-[11px] text-slate-400">Il pulsante + al centro e «Altro» restano sempre nella barra.</p>
             {warn && <p className="mt-2 text-xs text-amber-300" role="alert">{warn}</p>}
           </div>
 

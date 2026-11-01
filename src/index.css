@@ -1,5 +1,41 @@
 @import "tailwindcss";
 
+/*
+ * Design system mobile (Seul 2027 · nuova UI telefono).
+ * Ciano = unico colore d'interazione; i colori "fam" identificano le famiglie di sezioni
+ * (icona, badge, indicatore), mai pulsanti principali o titoli.
+ * Il desktop non usa questi token: resta com'era.
+ */
+/* Telefono in orizzontale (o schermo basso): fogli più compatti */
+@custom-variant short (@media (max-height: 520px));
+
+@theme {
+  --color-app-bg: #080D18;
+  --color-app-surface: #101A2D;
+  --color-app-raised: #16233A;
+  --color-app-nav: #0B1322;
+  --color-app-line: #1E2B40;
+  --color-app-control: #60718C;
+  --color-app-text: #F7F9FC;
+  --color-app-muted: #94A3B8;
+  --color-app-placeholder: #8090A6;
+  --color-app-accent: #00C5E8;
+  --color-app-on-accent: #04202A;
+  --color-app-danger: #DC2626;
+
+  --color-fam-today: #00C5E8;
+  --color-fam-itinerary: #60A5FA;
+  --color-fam-flights: #818CF8;
+  --color-fam-tools: #FB923C;
+  --color-fam-money: #34D399;
+  --color-fam-group: #2DD4BF;
+  --color-fam-gallery: #F472B6;
+  --color-fam-places: #A78BFA;
+  --color-fam-weather: #FBBF24;
+  --color-fam-prep: #94A3B8;
+  --color-fam-sos: #F87171;
+}
+
 @layer base {
   :root {
     --font-display: 'Outfit', sans-serif;
@@ -369,4 +405,39 @@ body {
 }
 .map-shell-mobile ::selection {
   background: transparent;
+}
+
+/*
+ * Telefono: regola del ciano. I pulsanti pieni e le schede selezionate nelle sezioni usano
+ * sempre il ciano d'azione; il colore di famiglia resta su icone, etichette e indicatori.
+ * (SOS e rosso restano com'erano: sono stati di pericolo, non azioni.)
+ * Il desktop non è toccato: la regola vale solo sotto i 1024 px.
+ */
+@media (max-width: 1023.98px) {
+  main button:is(.bg-violet-400, .bg-violet-500, .bg-violet-600, .bg-purple-500, .bg-purple-600, .bg-teal-400, .bg-teal-500, .bg-emerald-400, .bg-emerald-500, .bg-emerald-600, .bg-indigo-500, .bg-indigo-600, .bg-sky-500, .bg-blue-500, .bg-blue-600, .bg-pink-500, .bg-amber-400, .bg-amber-500, .bg-cyan-600):not([data-keep-color]) {
+    background-color: var(--color-app-accent);
+    border-color: var(--color-app-accent);
+    color: var(--color-app-on-accent);
+  }
+  main button:is(.bg-violet-400, .bg-violet-500, .bg-violet-600, .bg-purple-500, .bg-purple-600, .bg-teal-400, .bg-teal-500, .bg-emerald-400, .bg-emerald-500, .bg-emerald-600, .bg-indigo-500, .bg-indigo-600, .bg-sky-500, .bg-blue-500, .bg-blue-600, .bg-pink-500, .bg-amber-400, .bg-amber-500, .bg-cyan-600):not([data-keep-color]) svg {
+    color: inherit;
+  }
+}
+
+/* Doppio tocco su una foto: cuore che appare e svanisce (Galleria, telefono) */
+@keyframes like-burst {
+  0% { transform: scale(0.3); opacity: 0; }
+  15% { transform: scale(1.15); opacity: 1; }
+  30% { transform: scale(1); opacity: 1; }
+  75% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0; }
+}
+.animate-like-burst {
+  animation: like-burst 900ms ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-like-burst {
+    animation: none;
+    opacity: 0;
+  }
 }

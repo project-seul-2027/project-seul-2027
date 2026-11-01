@@ -40,9 +40,12 @@ import { useAuth } from './auth/AuthContext';
 import { useInstallPrompt, useMediaQuery, useUpdateAvailable, BUILD_ID } from './pwa';
 import { useSyncPushRegistration } from './notifications';
 import { PushToggle } from './components/PushToggle';
+import { MobileBottomNav, MoreSheet, QuickActionsSheet, useBackToClose, type QuickAction } from './components/mobile/MobileShell';
+import { SECTIONS, sectionById } from './components/mobile/sections';
+import { requestIntent } from './utils/quickIntent';
 import { 
   Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
-  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, LayoutGrid, X, Smartphone, Share, SquarePlus, Wallet, History, Compass, Languages, WalletCards, Bookmark, ShieldAlert, SlidersHorizontal
+  CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, X, Smartphone, Share, SquarePlus, Wallet, History, Compass, Languages, WalletCards, Bookmark, ShieldAlert
 } from 'lucide-react';
 
 /**
@@ -68,28 +71,6 @@ type Tab = 'today' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accom
 
 const ALL_TABS: Tab[] = ['today', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
 
-/** Schede per la navigazione da telefono: le prime 4 nella barra in basso, le altre in "Altro". */
-const MOBILE_TABS: { id: Tab; label: string; icon: React.ElementType; active: string; tint: string }[] = [
-  { id: 'today', label: 'Oggi', icon: Compass, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
-  { id: 'itinerary', label: 'Itinerario', icon: CalendarDays, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
-  { id: 'map', label: 'Mappa', icon: Map, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
-  { id: 'gallery', label: 'Galleria', icon: Camera, active: 'text-pink-400', tint: 'bg-pink-500/15 border-pink-500/40 text-pink-300' },
-  { id: 'wallet', label: 'Wallet', icon: WalletCards, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' },
-  { id: 'show', label: 'In coreano', icon: Languages, active: 'text-rose-400', tint: 'bg-rose-500/15 border-rose-500/40 text-rose-300' },
-  { id: 'places', label: 'Luoghi', icon: Bookmark, active: 'text-violet-400', tint: 'bg-violet-500/15 border-violet-500/40 text-violet-300' },
-  { id: 'sos', label: 'SOS', icon: ShieldAlert, active: 'text-rose-400', tint: 'bg-rose-500/15 border-rose-500/40 text-rose-300' },
-  { id: 'packing', label: 'Valigia', icon: Luggage, active: 'text-teal-400', tint: 'bg-teal-500/15 border-teal-500/40 text-teal-300' },
-  { id: 'expenses', label: 'Spese', icon: Wallet, active: 'text-emerald-400', tint: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
-  { id: 'accommodations', label: '4 Alloggi', icon: Home, active: 'text-blue-400', tint: 'bg-blue-500/15 border-blue-500/40 text-blue-300' },
-  { id: 'weather', label: 'Meteo', icon: CloudSun, active: 'text-amber-400', tint: 'bg-amber-500/15 border-amber-500/40 text-amber-300' },
-  { id: 'flights', label: 'Voli & Scalo', icon: Plane, active: 'text-sky-400', tint: 'bg-sky-500/15 border-sky-500/40 text-sky-300' },
-  { id: 'budget', label: 'Preventivo', icon: Coins, active: 'text-emerald-400', tint: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
-  { id: 'guide', label: 'Guida', icon: BookOpen, active: 'text-indigo-400', tint: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300' },
-  { id: 'pdf', label: 'PDF', icon: FileText, active: 'text-rose-400', tint: 'bg-rose-500/15 border-rose-500/40 text-rose-300' },
-  { id: 'group', label: 'Partecipanti', icon: Users, active: 'text-purple-400', tint: 'bg-purple-500/15 border-purple-500/40 text-purple-300' },
-  { id: 'changelog', label: 'Changelog', icon: History, active: 'text-cyan-400', tint: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' }
-];
-
 /** Scheda iniziale dall'indirizzo (?tab=map), usata anche dalle scorciatoie dell'app installata. */
 function initialTab(): Tab {
   if (typeof window === 'undefined') return 'itinerary';
@@ -104,7 +85,15 @@ function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search);
   const t = Date.now();
   const inTripWindow = t >= Date.parse('2027-02-28T00:00:00+01:00') && t <= Date.parse('2027-03-21T00:00:00+01:00');
-  return params.has('sim') || inTripWindow ? 'today' : 'itinerary';
+  // Telefono: "Oggi" è la schermata di partenza anche prima del viaggio (conto alla rovescia)
+  const isPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 1023.98px)').matches;
+  return params.has('sim') || inTripWindow || isPhone ? 'today' : 'itinerary';
+}
+
+/** Durante il viaggio l'invito a installare non compare: non è mai prioritario. */
+function inTripWindow(): boolean {
+  const t = Date.now();
+  return t >= Date.parse('2027-02-28T00:00:00+01:00') && t <= Date.parse('2027-03-21T00:00:00+01:00');
 }
 
 function TripPortal() {
@@ -117,9 +106,13 @@ function TripPortal() {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isNavEditorOpen, setIsNavEditorOpen] = useState(false);
-  const nav = useNavPrefs(MOBILE_TABS.map((t) => t.id));
-  const PRIMARY_MOBILE_TABS = nav.primaryIds.map((id) => MOBILE_TABS.find((t) => t.id === id)!).filter(Boolean);
-  const MORE_MOBILE_TABS = MOBILE_TABS.filter((t) => !nav.primaryIds.includes(t.id));
+  const nav = useNavPrefs(SECTIONS.map((t) => t.id));
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
+  // Un solo foglio alla volta; il tasto "indietro" lo chiude
+  useBackToClose(isMoreOpen || isActionsOpen, () => {
+    setIsMoreOpen(false);
+    setIsActionsOpen(false);
+  });
   const [isInstallHelpOpen, setIsInstallHelpOpen] = useState(false);
   const install = useInstallPrompt();
   const { updateAvailable, newVersion, applyUpdate } = useUpdateAvailable();
@@ -146,6 +139,7 @@ function TripPortal() {
   // Navigazione da telefono: cambia scheda e riparte dall'alto, come in un'app
   const goToTab = (tab: Tab) => {
     setIsMoreOpen(false);
+    setIsActionsOpen(false);
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
@@ -153,6 +147,15 @@ function TripPortal() {
   const handleInstall = async () => {
     if (install.canPrompt) await install.promptInstall();
     else setIsInstallHelpOpen(true);
+  };
+
+  // Pulsante + (telefono): ogni azione porta alla sezione giusta e apre subito il punto utile
+  const handleQuickAction = (a: QuickAction) => {
+    const target: Record<QuickAction, Tab> = {
+      expense: 'expenses', photo: 'gallery', place: 'places', meetup: 'group', translate: 'show', wallet: 'wallet', lost: 'group', sos: 'sos'
+    };
+    goToTab(target[a]);
+    if (a !== 'wallet' && a !== 'sos') requestIntent(a);
   };
 
   const hideInstallBanner = () => {
@@ -247,13 +250,19 @@ function TripPortal() {
         <header className="border-b border-slate-800/80 px-4 sm:px-8 py-2.5 lg:py-3 flex items-center justify-between gap-4 2xl:gap-6">
           {/* Zone 1: Brand Wordmark */}
           <button
-          onClick={() => { setActiveTab('itinerary'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onClick={() => { setActiveTab(isDesktop ? 'itinerary' : 'today'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex items-center gap-2.5 text-left group shrink-0"
+          aria-label={isDesktop ? undefined : `${sectionById(activeTab)?.title ?? 'Seul 2027'}: torna a Oggi`}
         >
-          <BrandIcon className="w-10 h-10" />
+          <BrandIcon className="w-8 h-8 lg:w-10 lg:h-10" />
           <div className="whitespace-nowrap">
-            <span className="font-display font-extrabold text-base tracking-tight text-white group-hover:text-cyan-400 transition-colors">
+            <span className="hidden lg:inline font-display font-extrabold text-base tracking-tight text-white group-hover:text-cyan-400 transition-colors">
               SEUL 2027
+            </span>
+            {/* Telefono: titolo della sezione aperta */}
+            <span className="lg:hidden block leading-tight" data-testid="mobile-title">
+              <span className="block font-display font-extrabold text-[19px] tracking-tight text-app-text">{sectionById(activeTab)?.title ?? 'Seul 2027'}</span>
+              <span className="block text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-app-muted">Seul 2027</span>
             </span>
           </div>
         </button>
@@ -518,7 +527,7 @@ function TripPortal() {
           <a
             href={TRIP_META.pdfPath}
             download="Itinerario_Seul_2027.pdf"
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+            className="hidden lg:inline-flex p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
             title="Scarica PDF Ufficiale Aggiornato"
           >
             <Download className="w-4 h-4" />
@@ -530,8 +539,7 @@ function TripPortal() {
       {isDesktop && <WorldClockBar />}
     </div>
 
-    {/* Su telefono gli orologi scorrono via con la pagina, così resta più spazio per i contenuti */}
-    {!isDesktop && <WorldClockBar />}
+    {/* Su telefono gli orologi sono una riga dentro "Oggi" (toccandola si aprono i tre fusi) */}
 
     {/* Mobile Tab Navigation Bar */}
       <div className="hidden lg:max-[1535.9px]:flex bg-slate-900 border-b border-slate-800 px-3 py-2 items-center overflow-x-auto gap-2 text-xs scrollbar-none">
@@ -702,7 +710,7 @@ function TripPortal() {
       {/* Hero Atmosphere Section */}
       <div
         className={`relative isolate overflow-hidden border-b border-slate-800/80 bg-slate-950 py-6 sm:py-12 px-4 sm:px-8 ${
-          activeTab === 'itinerary' ? '' : activeTab === 'today' || activeTab === 'show' || activeTab === 'wallet' || activeTab === 'places' || activeTab === 'sos' ? 'hidden' : 'hidden lg:block'
+          activeTab === 'itinerary' ? 'hidden lg:block' : activeTab === 'today' || activeTab === 'show' || activeTab === 'wallet' || activeTab === 'places' || activeTab === 'sos' ? 'hidden' : 'hidden lg:block'
         }`}
       >
         <HeroVideo enabled={heroAnim.enabled} className="-z-10" />
@@ -823,7 +831,7 @@ function TripPortal() {
       {/* Main Content Area */}
       <main ref={mainRef} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8">
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
-        {!isDesktop && !install.standalone && !installBannerHidden && (install.canPrompt || install.needsIosInstructions) && (
+        {!isDesktop && !install.standalone && !installBannerHidden && !updateAvailable && !inTripWindow() && (install.canPrompt || install.needsIosInstructions) && (
           <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30">
             <img src="./icons/icon-192.png" alt="" className="w-11 h-11 rounded-xl shrink-0" />
             <div className="flex-1 min-w-0">
@@ -943,7 +951,7 @@ function TripPortal() {
       </main>
 
       <GoogleAuthModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
-      {isNavEditorOpen && <NavEditor tabs={MOBILE_TABS} current={nav.primaryIds} onSave={nav.save} onClose={() => setIsNavEditorOpen(false)} />}
+      {isNavEditorOpen && <NavEditor tabs={SECTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon, active: t.fg }))} current={nav.primaryIds} onSave={nav.save} onClose={() => setIsNavEditorOpen(false)} />}
 
       {/* Editorial Footer + Fonti Ufficiali Rete Metropolitana */}
       <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-8 px-4 sm:px-8 text-xs text-slate-500">
@@ -1043,145 +1051,50 @@ function TripPortal() {
       </footer>
 
       {/* ============================================================ */}
-      {/* Barra di navigazione in basso (telefono e tablet piccoli)     */}
+      {/* Telefono e tablet piccoli: barra in basso con +, fogli Altro e Azioni */}
       {/* ============================================================ */}
-      <nav
-        aria-label="Navigazione principale"
-        data-app-bottomnav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-[60] bg-[#0b111d]/95 backdrop-blur-lg border-t border-slate-800/90 pb-[env(safe-area-inset-bottom)]"
-      >
-        <div className="grid grid-cols-5 max-w-xl mx-auto">
-          {PRIMARY_MOBILE_TABS.map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTab === t.id && !isMoreOpen;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => goToTab(t.id)}
-                aria-current={isActive ? 'page' : undefined}
-                className={`relative flex flex-col items-center justify-center gap-1 h-16 text-[10.5px] font-semibold transition-colors ${
-                  isActive ? t.active : 'text-slate-400 active:text-slate-200'
-                }`}
-              >
-                {isActive && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-current" />}
-                <Icon className={`w-[22px] h-[22px] ${isActive ? 'scale-110' : ''} transition-transform`} />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-          {(() => {
-            const inMore = MORE_MOBILE_TABS.some((t) => t.id === activeTab);
-            const current = MORE_MOBILE_TABS.find((t) => t.id === activeTab);
-            const isActive = isMoreOpen || inMore;
-            const Icon = !isMoreOpen && current ? current.icon : LayoutGrid;
-            return (
-              <button
-                type="button"
-                onClick={() => setIsMoreOpen((v) => !v)}
-                aria-expanded={isMoreOpen}
-                className={`relative flex flex-col items-center justify-center gap-1 h-16 text-[10.5px] font-semibold transition-colors ${
-                  isActive ? (current && !isMoreOpen ? current.active : 'text-white') : 'text-slate-400'
-                }`}
-              >
-                {isActive && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-current" />}
-                <Icon className="w-[22px] h-[22px]" />
-                <span className="max-w-[70px] truncate">{!isMoreOpen && current ? current.label : 'Altro'}</span>
-              </button>
-            );
-          })()}
-        </div>
-      </nav>
-
-      {/* Foglio "Altro": tutte le altre sezioni */}
-      {isMoreOpen && (
-        <div className="lg:hidden fixed inset-0 z-[55]" role="dialog" aria-modal="true" aria-label="Altre sezioni">
-          <button
-            type="button"
-            aria-label="Chiudi"
-            onClick={() => setIsMoreOpen(false)}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      {!isDesktop && (
+        <>
+          <MobileBottomNav
+            activeTab={activeTab}
+            primary={nav.primaryIds as Tab[]}
+            sheet={isActionsOpen ? 'actions' : isMoreOpen ? 'more' : 'none'}
+            onGo={(id) => goToTab(id)}
+            onToggleMore={() => {
+              setIsActionsOpen(false);
+              setIsMoreOpen((v) => !v);
+            }}
+            onToggleActions={() => {
+              setIsMoreOpen(false);
+              setIsActionsOpen((v) => !v);
+            }}
           />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-slate-900 border-t border-slate-700/80 shadow-2xl pb-[calc(4.75rem+env(safe-area-inset-bottom))] animate-sheet-up">
-            <div className="mx-auto mt-2.5 mb-3 h-1 w-10 rounded-full bg-slate-700" />
-            <div className="px-4 pb-2 flex items-center justify-between">
-              <span className="text-sm font-bold text-white font-display">Tutte le sezioni</span>
-              <span className="text-[11px] text-slate-500 font-mono">Seul 2027</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2.5 px-4">
-              {MORE_MOBILE_TABS.map((t) => {
-                const Icon = t.icon;
-                const isActive = activeTab === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => goToTab(t.id)}
-                    className={`flex flex-col items-center justify-center gap-1.5 py-3.5 rounded-2xl border text-xs font-semibold transition-colors ${
-                      isActive ? t.tint : 'bg-slate-950/60 border-slate-800 text-slate-300 active:bg-slate-800'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 ${isActive ? '' : t.active}`} />
-                    <span>{t.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="px-4 mt-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMoreOpen(false);
-                  setIsNavEditorOpen(true);
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs font-semibold text-slate-300"
-                data-testid="nav-edit-open"
-              >
-                <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
-                Modifica la barra in basso
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 px-4 mt-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMoreOpen(false);
-                  setIsProfileOpen(true);
-                }}
-                className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-950/60 border border-slate-800 text-xs font-semibold text-slate-300"
-              >
-                <UserCog className="w-4 h-4 text-cyan-400" />
-                Il mio profilo
-              </button>
-              {!install.standalone ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMoreOpen(false);
-                    handleInstall();
-                  }}
-                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 text-xs font-semibold text-cyan-300"
-                >
-                  <Smartphone className="w-4 h-4" />
-                  Installa l'app
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMoreOpen(false);
-                    signOut();
-                  }}
-                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs font-semibold text-red-300"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Esci
-                </button>
-              )}
-            </div>
-            <PushToggle variant="sheet" />
-          </div>
-        </div>
+          <QuickActionsSheet open={isActionsOpen} onClose={() => setIsActionsOpen(false)} onAction={handleQuickAction} />
+          <MoreSheet
+            open={isMoreOpen}
+            activeTab={activeTab}
+            onClose={() => setIsMoreOpen(false)}
+            onGo={(id) => goToTab(id)}
+            onEditBar={() => {
+              setIsMoreOpen(false);
+              setIsNavEditorOpen(true);
+            }}
+            onProfile={() => {
+              setIsMoreOpen(false);
+              setIsProfileOpen(true);
+            }}
+            canInstall={!install.standalone}
+            onInstall={() => {
+              setIsMoreOpen(false);
+              handleInstall();
+            }}
+            onSignOut={() => {
+              setIsMoreOpen(false);
+              signOut();
+            }}
+            extra={<PushToggle variant="sheet" />}
+          />
+        </>
       )}
 
       {/* Istruzioni di installazione (iPhone/iPad, o browser senza installazione automatica) */}

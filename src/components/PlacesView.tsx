@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuickIntent } from '../utils/quickIntent';
 import { createPortal } from 'react-dom';
 import {
   Bookmark, Check, CircleAlert, ExternalLink, Loader2, LocateFixed, Map as MapIcon, Navigation, Pencil, Plus, ThumbsDown, ThumbsUp, Trash2, X
@@ -203,6 +204,8 @@ export const PlacesView: React.FC<{ onShowMap: () => void }> = ({ onShowMap }) =
   const [mode, setMode] = useState<Mode>('all');
   const [cat, setCat] = useState<PlaceCategory | 'all'>('all');
   const [sheet, setSheet] = useState<{ place?: SharedPlace | null; shared?: Shared | null } | null>(null);
+  // Pulsante + → Luogo
+  useQuickIntent('place', () => setSheet({}));
   const [gps, setGps] = useState<[number, number] | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [now] = useState(() => Date.now());

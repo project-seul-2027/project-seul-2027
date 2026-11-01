@@ -7,6 +7,7 @@ import {
   XCircle, Train, Bus, ShieldCheck, ArrowRight, HelpCircle, 
   Calculator, User, Users, Info, Heart, Award
 } from 'lucide-react';
+import { FoldText } from './mobile/FoldText';
 
 interface AccommodationsViewProps {
   onViewOnMap: (locationId: string) => void;
@@ -105,9 +106,9 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
           </div>
         </div>
 
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+        <FoldText className="text-xs sm:text-sm text-slate-300 leading-relaxed">
           Gli annunci mostrano un prezzo mensile (non il totale del soggiorno). I totali in euro qui sotto sono quelli mostrati dal sito per le date scelte (commissione Enko inclusa), per le 17 notti (2-19 marzo). Nessun annuncio indica indirizzo preciso, numero di letti o metratura: le distanze a piedi sono quelle dichiarate dagli host, il resto sono stime da verificare su Naver Map.
-        </p>
+        </FoldText>
 
         {/* Votazione del gruppo */}
         <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">

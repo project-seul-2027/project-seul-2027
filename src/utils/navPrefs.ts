@@ -1,18 +1,19 @@
 import { useCallback, useState } from 'react';
 
 /**
- * Le 4 schede della barra in basso sul telefono si possono scegliere.
+ * Le 3 schede della barra in basso sul telefono si possono scegliere
+ * (intorno al pulsante + centrale; "Altro" è sempre l'ultima).
  * La scelta resta su questo telefono (localStorage).
  */
 const KEY = 'seul2027:nav';
-export const NAV_SLOTS = 4;
+export const NAV_SLOTS = 3;
 
-export const NAV_DEFAULT = ['today', 'itinerary', 'map', 'gallery'];
+export const NAV_DEFAULT = ['today', 'itinerary', 'map'];
 
 export const NAV_PRESETS: { id: string; label: string; hint: string; tabs: string[] }[] = [
-  { id: 'default', label: 'Standard', hint: 'Oggi, Itinerario, Mappa, Galleria', tabs: NAV_DEFAULT },
-  { id: 'prep', label: 'Preparazione', hint: 'Valigia, Alloggi, Voli, Preventivo', tabs: ['packing', 'accommodations', 'flights', 'budget'] },
-  { id: 'trip', label: 'In viaggio', hint: 'Oggi, Mappa, Spese, In coreano', tabs: ['today', 'map', 'expenses', 'show'] }
+  { id: 'default', label: 'Standard', hint: 'Oggi, Itinerario, Mappa', tabs: NAV_DEFAULT },
+  { id: 'group', label: 'Con il gruppo', hint: 'Oggi, Gruppo adesso, Mappa', tabs: ['today', 'group', 'map'] },
+  { id: 'prep', label: 'Preparazione', hint: 'Valigia, Voli, Preventivo', tabs: ['packing', 'flights', 'budget'] }
 ];
 
 function read(): string[] | null {

@@ -6,6 +6,7 @@ import { getLiveExchangeRates, LiveExchangeRates, FALLBACK_RATES } from '../serv
 import { 
   Calculator, ArrowRightLeft, RefreshCw, PiggyBank
 } from 'lucide-react';
+import { FoldText } from './mobile/FoldText';
 
 export const BudgetTrackerView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'estimates' | 'saver_tips' | 'converter'>('estimates');
@@ -120,9 +121,9 @@ export const BudgetTrackerView: React.FC = () => {
                 <Calculator className="w-4 h-4 text-purple-400" />
                 Preventivo Ufficiale dal PDF (Seul 2027)
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <FoldText className="text-xs text-slate-400 mt-1">
                 Stima calcolata sul documento per 17 notti (Pietro per 8 notti dal 2 al 9 marzo, gli altri 3 per tutte le 17 notti fino al 19 marzo). Voci suddivise per persona e totali di gruppo.
-              </p>
+              </FoldText>
             </div>
 
             {/* Ripartizione Affitto Alloggi Enko Stay */}

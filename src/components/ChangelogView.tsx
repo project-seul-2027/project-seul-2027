@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { History, GitCommit, ExternalLink, Search, ChevronDown, ChevronUp, Sparkles, Tag } from 'lucide-react';
 import { APP_VERSION, CHANGELOG, REPO_URL, seriesOf, type ChangelogEntry } from '../data/changelog';
+import { FoldText } from './mobile/FoldText';
 
 const PAGE_SIZE = 25;
 const COLLAPSED_ITEMS = 4;
@@ -136,7 +137,7 @@ export const ChangelogView: React.FC = () => {
                 </span>
               )}
             </h2>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <FoldText className="text-xs text-slate-400 leading-relaxed">
               {entries.length > 0 ? (
                 <>
                   Ogni aggiornamento pubblicato su GitHub ha il suo numero di versione: {entries.length}{' '}
@@ -146,7 +147,7 @@ export const ChangelogView: React.FC = () => {
               ) : (
                 'La cronologia degli aggiornamenti non è disponibile in questa copia del sito.'
               )}
-            </p>
+            </FoldText>
           </div>
         </div>
         <a

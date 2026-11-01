@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuickIntent } from '../../utils/quickIntent';
 import { createPortal } from 'react-dom';
 import {
   Home, MapPin, Navigation, Plus, Radio, Trash2, Users, X, CircleAlert, Clock, Check, Map as MapIcon, Loader2, LifeBuoy, Flag
@@ -339,6 +340,12 @@ export const GroupLiveCard: React.FC<{ onRoute?: (placeId: string) => void; onSh
   const [chooser, setChooser] = useState(false);
   const [sheet, setSheet] = useState<null | 'meetup' | 'fixed'>(null);
   const [lostConfirm, setLostConfirm] = useState(false);
+  // Pulsante + → Ritrovo / Ho perso il gruppo
+  useQuickIntent('meetup', () => setSheet('meetup'));
+  useQuickIntent('lost', () => {
+    setLostConfirm(true);
+    window.setTimeout(() => document.querySelector('[data-testid="lost-send"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
+  });
   const [helpBusy, setHelpBusy] = useState<string | null>(null);
   const [helpError, setHelpError] = useState<string | null>(null);
   const today = seoulDateIso(nowOrSim());

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuickIntent } from '../utils/quickIntent';
 import { Search, X, ExternalLink, Phone, Maximize2, Car, Utensils, MessageCircle, Languages, Siren, AlertTriangle, Home } from 'lucide-react';
 import { ACCOMMODATIONS, ITINERARY_DAYS, MAP_LOCATIONS, getNaverMapSearchUrl, type MapLocation } from '../data/tripData';
 import { useAuth } from '../auth/AuthContext';
@@ -96,6 +97,8 @@ const PhraseRow: React.FC<{ p: Phrase; onShow: () => void }> = ({ p, onShow }) =
 export const ShowKoreanView: React.FC = () => {
   const { user, group } = useAuth();
   const [section, setSection] = useState<Section>('dest');
+  // Pulsante + → Traduci
+  useQuickIntent('translate', () => setSection('free'));
   const [overlay, setOverlay] = useState<OverlayContent | null>(null);
   const [query, setQuery] = useState('');
 
