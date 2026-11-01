@@ -1173,6 +1173,16 @@ export const ExpensesView: React.FC = () => {
           ))}
         </div>
 
+        {/* Telefono: pulsante sempre visibile per aggiungere una spesa (il + in basso fa lo stesso) */}
+        <button
+          type="button"
+          onClick={openAdd}
+          data-testid="expense-add-phone"
+          className="lg:hidden w-full min-h-[48px] rounded-xl bg-app-accent text-[#04202A] font-bold text-[15px] flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+        >
+          <Plus className="w-5 h-5" strokeWidth={2.5} /> Aggiungi spesa
+        </button>
+
         {tab === 'balances' && <BalancesSection balances={balances} me={me} names={names} onSettle={settle} />}
 
         {tab === 'list' && (
