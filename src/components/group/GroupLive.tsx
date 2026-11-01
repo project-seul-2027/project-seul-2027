@@ -22,7 +22,7 @@ import {
 /** La condivisione "per il ritrovo" finisce mezz'ora dopo l'ora fissata */
 const MEETUP_SHARE_AFTER_MS = 30 * 60_000;
 
-function shareModeText(g: { trackMode: string; batterySaver: boolean; precise: boolean; paused: boolean }): string {
+export function shareModeText(g: { trackMode: string; batterySaver: boolean; precise: boolean; paused: boolean }): string {
   if (g.paused) return 'In pausa con lo schermo spento: riparte appena riapri l’app.';
   if (g.batterySaver) return 'Batteria bassa: controllo la posizione ogni 5 minuti.';
   if (g.trackMode === 'still') return 'Sei fermo: controllo la posizione solo ogni 3 minuti per risparmiare batteria.';
@@ -120,7 +120,7 @@ export const GroupLiveEngine: React.FC = () => {
 
 /* ---------- Ritrovo: nuovo ---------- */
 
-const MeetupSheet: React.FC<{ onClose: () => void; fixed?: boolean }> = ({ onClose, fixed = false }) => {
+export const MeetupSheet: React.FC<{ onClose: () => void; fixed?: boolean }> = ({ onClose, fixed = false }) => {
   const places = useMemo(() => {
     const seoul = MAP_LOCATIONS.filter((l) => l.city === 'Seul' || l.city === 'Dintorni / Gite');
     return [...seoul.filter((l) => l.category === 'alloggio'), ...seoul.filter((l) => l.category !== 'alloggio').sort((a, b) => a.italianName.localeCompare(b.italianName))];
@@ -222,7 +222,7 @@ const MeetupSheet: React.FC<{ onClose: () => void; fixed?: boolean }> = ({ onClo
         </div>
         <div className="px-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           <button type="button" onClick={onClose} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 text-sm font-semibold">Annulla</button>
-          <button type="button" onClick={save} disabled={busy} className="min-h-[48px] rounded-2xl bg-amber-400 disabled:opacity-50 text-slate-950 text-sm font-bold flex items-center justify-center gap-2" data-testid="meetup-save">
+          <button type="button" onClick={save} disabled={busy} className="min-h-[48px] rounded-2xl bg-amber-400 max-lg:bg-app-accent disabled:opacity-50 text-slate-950 max-lg:text-app-on-accent text-sm font-bold flex items-center justify-center gap-2" data-testid="meetup-save">
             {busy && <Loader2 className="w-4 h-4 animate-spin" />} {fixed ? 'Fissa il punto' : 'Avvisa il gruppo'}
           </button>
         </div>
@@ -333,7 +333,10 @@ const FixedCard: React.FC<{ m: Meetup; myUid: string; onRoute?: (placeId: string
 
 /* ---------- Scheda "Il gruppo adesso" ---------- */
 
-export const GroupLiveCard: React.FC<{ onRoute?: (placeId: string) => void; onShowMap?: () => void }> = ({ onRoute, onShowMap }) => {
+/** Stato e azioni del gruppo, condivisi dalla scheda classica (desktop e Oggi) e dalla pagina Gruppo del telefono. */
+export type StatusKind = 'none' | 'lost' | 'home' | 'live' | 'stale' | 'out';
+
+export function useGroupLiveModel(opts: { onIntent?: () => void } = {}) {
   const { user, slot, homeAcc, bySlot } = useMe();
   const g = useGroupLive();
   const now = useTick();
@@ -341,8 +344,12 @@ export const GroupLiveCard: React.FC<{ onRoute?: (placeId: string) => void; onSh
   const [sheet, setSheet] = useState<null | 'meetup' | 'fixed'>(null);
   const [lostConfirm, setLostConfirm] = useState(false);
   // Pulsante + → Ritrovo / Ho perso il gruppo
-  useQuickIntent('meetup', () => setSheet('meetup'));
+  useQuickIntent('meetup', () => {
+    opts.onIntent?.();
+    setSheet('meetup');
+  });
   useQuickIntent('lost', () => {
+    opts.onIntent?.();
     setLostConfirm(true);
     window.setTimeout(() => document.querySelector('[data-testid="lost-send"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
   });
@@ -361,21 +368,21 @@ export const GroupLiveCard: React.FC<{ onRoute?: (placeId: string) => void; onSh
 
   const statusOf = (s: TravelerSlotId) => {
     const d = byUidSlot[s];
-    if (!d) return { text: 'Nessuna notizia', tone: 'text-slate-500', share: null as null | { lat: number; lng: number }, lost: false };
+    if (!d) return { text: 'Nessuna notizia', tone: 'text-slate-500', share: null as null | { lat: number; lng: number }, lost: false, kind: 'none' as StatusKind };
     if (isLost(d, now)) {
       const sh = activeShare(d, now);
       const dist = sh && myPos && s !== slot ? ` · ${formatDistance(haversineMeters(myPos, [sh.lat, sh.lng]))} da te` : '';
-      return { text: `Ha perso il gruppo · ${formatAgo(now - d.lost!)}${sh ? dist : ' · posizione non condivisa'}`, tone: 'text-rose-300 font-semibold', share: sh, lost: true };
+      return { text: `Ha perso il gruppo · ${formatAgo(now - d.lost!)}${sh ? dist : ' · posizione non condivisa'}`, tone: 'text-rose-300 font-semibold', share: sh, lost: true, kind: 'lost' as StatusKind };
     }
-    if (isHome(d, now)) return { text: `A casa · ${seoulClock(d.statusAt!)}`, tone: 'text-emerald-300', share: null, lost: false };
+    if (isHome(d, now)) return { text: `A casa · ${seoulClock(d.statusAt!)}`, tone: 'text-emerald-300', share: null, lost: false, kind: 'home' as StatusKind };
     const sh = activeShare(d, now);
     if (sh) {
       const age = now - sh.at;
       const dist = myPos && s !== slot ? ` · ${formatDistance(haversineMeters(myPos, [sh.lat, sh.lng]))} da te` : '';
-      return { text: `Posizione ${formatAgo(age)}${dist}`, tone: age > STALE_POSITION_MS ? 'text-slate-400' : 'text-cyan-300', share: sh, lost: false };
+      return { text: `Posizione ${formatAgo(age)}${dist}`, tone: age > STALE_POSITION_MS ? 'text-slate-400' : 'text-cyan-300', share: sh, lost: false, kind: (age > STALE_POSITION_MS ? 'stale' : 'live') as StatusKind };
     }
-    if (d.status === 'out' && d.statusAt && now - d.statusAt < 12 * 3_600_000) return { text: `Fuori · da ${seoulClock(d.statusAt)}`, tone: 'text-slate-300', share: null, lost: false };
-    return { text: 'Nessuna notizia', tone: 'text-slate-500', share: null, lost: false };
+    if (d.status === 'out' && d.statusAt && now - d.statusAt < 12 * 3_600_000) return { text: `Fuori · da ${seoulClock(d.statusAt)}`, tone: 'text-slate-300', share: null, lost: false, kind: 'out' as StatusKind };
+    return { text: 'Nessuna notizia', tone: 'text-slate-500', share: null, lost: false, kind: 'none' as StatusKind };
   };
 
   const choose = (until: number) => {
@@ -404,6 +411,11 @@ export const GroupLiveCard: React.FC<{ onRoute?: (placeId: string) => void; onSh
     }
   };
 
+  return { user, slot, homeAcc, bySlot, g, now, chooser, setChooser, sheet, setSheet, lostConfirm, setLostConfirm, helpBusy, helpError, slots, myDoc, iAmHome, meetups, fixed, iAmLost, allowed, myPos, statusOf, choose, nextMeetup, meetupUntil, suggestShare, waitHere };
+}
+
+export const GroupLiveCard: React.FC<{ onRoute?: (placeId: string) => void; onShowMap?: () => void }> = ({ onRoute, onShowMap }) => {
+  const { user, slot, homeAcc, bySlot, g, now, chooser, setChooser, sheet, setSheet, lostConfirm, setLostConfirm, helpBusy, helpError, slots, myDoc, iAmHome, meetups, fixed, iAmLost, allowed, myPos, statusOf, choose, nextMeetup, meetupUntil, suggestShare, waitHere } = useGroupLiveModel();
   if (!user || !slot) return null;
   return (
     <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5 space-y-3" data-testid="group-live">

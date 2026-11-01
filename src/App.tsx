@@ -954,7 +954,7 @@ function TripPortal() {
       {isNavEditorOpen && <NavEditor tabs={SECTIONS.map((t) => ({ id: t.id, label: t.label, icon: t.icon, active: t.fg }))} current={nav.primaryIds} onSave={nav.save} onClose={() => setIsNavEditorOpen(false)} />}
 
       {/* Editorial Footer + Fonti Ufficiali Rete Metropolitana */}
-      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-8 px-4 sm:px-8 text-xs text-slate-500">
+      <footer className="max-lg:hidden mt-auto border-t border-slate-800/80 bg-slate-950 py-8 px-4 sm:px-8 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto space-y-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">

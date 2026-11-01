@@ -6,6 +6,8 @@ import { OPTIONAL_SHARE_FIELDS, type GroupMember, type OptionalShareField } from
 import { CHECKLIST_ITEMS, countDone } from '../shared/tripChecklist';
 import { useGroupChecklists } from './useGroupChecklists';
 import { GroupLiveCard } from './group/GroupLive';
+import { PhoneGroupView } from './mobile/PhoneGroup';
+import { useMediaQuery } from '../pwa';
 
 const FIELD_LABELS: Record<OptionalShareField, string> = {
   birthDate: 'Data di nascita',
@@ -113,6 +115,27 @@ export const GroupView: React.FC<{ onRoute?: (placeId: string) => void; onShowMa
   const { all: checklists, toggle, error: checklistError } = useGroupChecklists(user?.id);
   const openMember = group.find((m) => m.id === openId) ?? null;
   const openSlot = openMember ? travelers.find((s) => s.id === openMember.travelerId) : undefined;
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+  // Telefono: tre schede (Adesso · Persone · Preparativi); desktop e tablet restano come prima
+  if (!isDesktop) {
+    return (
+      <>
+        <PhoneGroupView
+          meId={user?.id}
+          group={group}
+          travelers={travelers}
+          checklists={checklists}
+          checklistError={checklistError}
+          onToggleCheck={(key) => void toggle(key)}
+          onOpenMember={setOpenId}
+          onRoute={onRoute}
+          onShowMap={onShowMap}
+        />
+        {openMember && <MemberSheet member={openMember} color={openSlot?.color ?? '#22d3ee'} onClose={() => setOpenId(null)} />}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
