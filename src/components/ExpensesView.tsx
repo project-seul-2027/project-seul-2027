@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuickIntent } from '../utils/quickIntent';
 import { createPortal } from 'react-dom';
 import {
   ArrowRight, Check, CircleAlert, CloudOff, HandCoins, Loader2, Pencil, PlaneTakeoff, Plus, Receipt, Search, Trash2, Undo2, Wallet, X
@@ -1023,6 +1024,11 @@ export const ExpensesView: React.FC = () => {
   };
 
   const openAdd = () => setQuick(true);
+  // Pulsante + → Spesa
+  useQuickIntent('expense', () => {
+    setForm(null);
+    setQuick(true);
+  });
   const openFullForm = () => setForm({ editing: null });
 
   // Lista raggruppata per giorno (telefono)
@@ -1235,7 +1241,7 @@ export const ExpensesView: React.FC = () => {
           onClick={openAdd}
           aria-label="Aggiungi spesa"
           data-testid="expense-fab"
-          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-[55] h-14 pl-4 pr-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-sm shadow-xl shadow-emerald-950/50 flex items-center gap-1.5 active:scale-95 transition-transform"
+          className="max-lg:hidden fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-[55] h-14 pl-4 pr-5 rounded-full bg-emerald-500 text-slate-950 font-bold text-sm shadow-xl shadow-emerald-950/50 flex items-center gap-1.5 active:scale-95 transition-transform"
         >
           <Plus className="w-5 h-5" strokeWidth={2.5} /> Spesa
         </button>

@@ -50,7 +50,11 @@ import {
   setResumeFlag
 } from '../services/pendingCamera';
 import { CameraCaptureModal } from './CameraCaptureModal';
-import { isIos } from '../pwa';
+import { useQuickIntent } from '../utils/quickIntent';
+import { isIos, useMediaQuery } from '../pwa';
+import { locateNow, TIMED_DAYS } from '../utils/tripClock';
+import { PhoneGalleryChips, PhoneGalleryGrid, PhoneGalleryHeader, PhoneGallerySkeleton, phoneOrder, type QuickFilter } from './mobile/PhoneGallery';
+import { PhonePhotoViewer } from './mobile/PhotoViewer';
 
 /** Foto caricate alla volta (ogni miniatura pesa ~30 KB); "Mostra altre" ne aggiunge altrettante */
 const PAGE_SIZE = 48;
@@ -104,6 +108,12 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   const [filterDay, setFilterDay] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'chronological'>('recent');
+  // Telefono: filtri rapidi (Tutte · Oggi · Le mie · Preferite) e filtri avanzati a scomparsa
+  const isPhone = !useMediaQuery('(min-width: 1024px)');
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const tripNow = useMemo(() => locateNow(Date.now()), []);
+  const todayDay = tripNow.phase === 'during' ? TIMED_DAYS[tripNow.dayIndex].day.id : null;
 
   // Form di caricamento
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -223,6 +233,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
         createdAt: d.createdAt,
         likes: d.likes,
         likeNames: d.likes.map((uid) => personByUid.get(uid)?.name ?? 'Ex partecipante'),
+        likeAvatars: d.likes.map((uid) => personByUid.get(uid)?.avatar),
         comments: commentsByPhoto.get(d.id) ?? []
       };
     });
@@ -421,6 +432,9 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     if (hasLiveCamera) setIsCameraOpen(true);
     else openSystemCamera();
   };
+
+  // Pulsante + → Foto: la fotocamera si apre subito
+  useQuickIntent('photo', openCamera);
 
   // Scatta di nuovo: chiude l'anteprima e riapre la fotocamera
   const retakeCameraPhoto = () => {
@@ -640,6 +654,11 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
       result = result.filter(p => p.dayNumber === dayNum);
     }
 
+    // Filtri rapidi del telefono
+    if (quickFilter === 'today' && todayDay !== null) result = result.filter(p => p.dayNumber === todayDay);
+    if (quickFilter === 'mine') result = result.filter(p => p.uploaderId === currentUserId);
+    if (quickFilter === 'liked') result = result.filter(p => p.likes.includes(currentUserId));
+
     // Ricerca testuale
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -662,7 +681,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     }
 
     return result;
-  }, [photos, filterLocation, filterUploader, filterDay, searchQuery, sortBy]);
+  }, [photos, filterLocation, filterUploader, filterDay, searchQuery, sortBy, quickFilter, todayDay, currentUserId]);
 
   // Calcolo statistiche bacheca (sulle foto caricate in pagina)
   const hasMore = photoDocs.length >= pageSize;
@@ -676,8 +695,58 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Fotocamera: input, finestra di scatto e avviso (comuni a telefono e computer) */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) handleCameraCapture(file);
+        }}
+      />
+
+      {isCameraOpen && (
+        <CameraCaptureModal
+          onCapture={(file) => {
+            setIsCameraOpen(false);
+            handleCameraCapture(file);
+          }}
+          onClose={() => setIsCameraOpen(false)}
+          onUseSystemCamera={() => {
+            setIsCameraOpen(false);
+            openSystemCamera();
+          }}
+        />
+      )}
+
+      {cameraLostNotice && (
+        <div className="md:hidden p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+          <p className="flex-1">
+            Il telefono ha chiuso l'app mentre usavi l'app Fotocamera e la foto non è arrivata. Riprova con
+            "Scatta Foto" e usa la fotocamera dentro l'app, oppure scatta con la fotocamera del telefono e poi
+            caricala con "Carica Nuova Foto".
+          </p>
+          <button
+            type="button"
+            onClick={() => setCameraLostNotice(false)}
+            aria-label="Chiudi avviso"
+            className="p-1 rounded-md hover:bg-amber-500/10"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header Bacheca Condivisa */}
-      <div className="bg-gradient-to-r from-slate-900 via-[#0d1424] to-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      {isPhone && (
+        <PhoneGalleryHeader onUpload={() => setIsUploadOpen(true)} onCamera={openCamera} stats={stats} totalDays={ITINERARY_DAYS.length} loaded={photosLoaded} />
+      )}
+      <div className={`bg-gradient-to-r from-slate-900 via-[#0d1424] to-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden ${isPhone ? 'hidden' : ''}`}>
         {/* Glow di sfondo */}
         <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-12 w-64 h-64 bg-pink-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -722,51 +791,6 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
               <span>Scatta Foto</span>
             </button>
 
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) handleCameraCapture(file);
-              }}
-            />
-
-            {isCameraOpen && (
-              <CameraCaptureModal
-                onCapture={(file) => {
-                  setIsCameraOpen(false);
-                  handleCameraCapture(file);
-                }}
-                onClose={() => setIsCameraOpen(false)}
-                onUseSystemCamera={() => {
-                  setIsCameraOpen(false);
-                  openSystemCamera();
-                }}
-              />
-            )}
-
-            {cameraLostNotice && (
-              <div className="basis-full md:hidden p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                <p className="flex-1">
-                  Il telefono ha chiuso l'app mentre usavi l'app Fotocamera e la foto non è arrivata. Riprova con
-                  "Scatta Foto" e usa la fotocamera dentro l'app, oppure scatta con la fotocamera del telefono e poi
-                  caricala con "Carica Nuova Foto".
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setCameraLostNotice(false)}
-                  aria-label="Chiudi avviso"
-                  className="p-1 rounded-md hover:bg-amber-500/10"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -818,7 +842,9 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
       )}
 
       {/* Caricamento iniziale, galleria vuota o contenuto */}
-      {!photosLoaded ? (
+      {!photosLoaded && isPhone ? (
+        <PhoneGallerySkeleton />
+      ) : !photosLoaded ? (
         <div className="flex items-center justify-center gap-3 p-12 rounded-3xl bg-slate-900 border border-slate-800 text-slate-300 text-sm">
           <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
           <span>Carico le foto del gruppo…</span>
@@ -850,7 +876,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             </div>
 
             {/* Schede informative per i 4 partecipanti */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-left text-xs">
+            <div className="max-lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-left text-xs">
               <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
                 <div className="flex items-center gap-2 font-bold text-cyan-300">
                   <Upload className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -906,8 +932,19 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
         </div>
       ) : (
         <>
+          {isPhone && (
+            <PhoneGalleryChips
+              value={quickFilter}
+              onChange={setQuickFilter}
+              showToday={todayDay !== null}
+              todayDay={todayDay}
+              onToggleFilters={() => setFiltersOpen((v) => !v)}
+              filtersOpen={filtersOpen}
+              activeExtra={[filterLocation, filterUploader, filterDay].filter((v) => v !== 'all').length + (searchQuery ? 1 : 0)}
+            />
+          )}
           {/* Toolbar Filtri, Ricerca e Ordinamento (visibile quando ci sono foto nella bacheca) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 ${isPhone && !filtersOpen ? 'hidden' : ''}`}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               {/* Cerca */}
               <div className="relative flex-1 max-w-md">
@@ -1060,6 +1097,8 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                 </button>
               </div>
             </div>
+          ) : isPhone ? (
+            <PhoneGalleryGrid photos={filteredPhotos} currentUserId={currentUserId} isMine={isPhotoPublisher} onOpen={(p) => setSelectedPhotoId(p.id)} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPhotos.map((photo) => {
@@ -1314,8 +1353,41 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
         </>
       )}
 
+      {/* Telefono: dettaglio foto come un post di Instagram */}
+      {selectedPhoto && isPhone && typeof document !== 'undefined' && (() => {
+        const order = phoneOrder(filteredPhotos);
+        const idx = order.findIndex((x) => x.id === selectedPhoto.id);
+        const prev = idx > 0 ? order[idx - 1] : null;
+        const next = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
+        return (
+          <PhonePhotoViewer
+            photo={selectedPhoto}
+            fullImageUrl={fullImageUrl}
+            fullImageFailed={fullImageFailed}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            currentUserAvatar={user?.avatarUrl || undefined}
+            mention={mentionSplit}
+            commentText={inlineCommentText}
+            commentMax={COMMENT_MAX_LENGTH}
+            onCommentText={setInlineCommentText}
+            onSendComment={() => handleAddComment(selectedPhoto.id, inlineCommentText)}
+            onDeleteComment={handleDeleteComment}
+            canDeleteComment={(c) => canDeleteComment(selectedPhoto, c)}
+            isOwner={isPhotoPublisher(selectedPhoto)}
+            onToggleLike={() => handleToggleLike(selectedPhoto.id)}
+            onDelete={() => onRequestDeletePhoto(selectedPhoto)}
+            onMap={selectedPhoto.locationId ? () => { const l = selectedPhoto.locationId!; const d = selectedPhoto.dayNumber; setSelectedPhoto(null); onNavigateToMap(l, d); } : null}
+            onDay={selectedPhoto.dayNumber !== undefined ? () => { const d = selectedPhoto.dayNumber!; setSelectedPhoto(null); onNavigateToDay(d); } : null}
+            onPrev={prev ? () => setSelectedPhotoId(prev.id) : null}
+            onNext={next ? () => setSelectedPhotoId(next.id) : null}
+            onClose={() => setSelectedPhoto(null)}
+          />
+        );
+      })()}
+
       {/* Modal Ingrandimento Foto & Discussione Completa (Portaled to document.body) */}
-      {selectedPhoto && typeof document !== 'undefined' && createPortal(
+      {selectedPhoto && !isPhone && typeof document !== 'undefined' && createPortal(
         <div
           role="dialog"
           aria-modal="true"

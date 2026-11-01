@@ -74,5 +74,7 @@ export interface GalleryPhoto {
   likes: string[];
   /** Nomi di chi ha messo "mi piace" */
   likeNames: string[];
+  /** Foto profilo di chi ha messo mi piace (stesso ordine di likes/likeNames) */
+  likeAvatars: (string | undefined)[];
   comments: GalleryComment[];
 }

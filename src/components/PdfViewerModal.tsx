@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { TRIP_META } from '../data/tripData';
 import { FileText, Download, Maximize2, X, BookOpen } from 'lucide-react';
 import { PdfPageViewer } from './PdfPageViewer';
+import { FoldText } from './mobile/FoldText';
 
 export const PdfViewerModal: React.FC = () => {
   const [selectedPageTopic, setSelectedPageTopic] = useState<number>(1);
@@ -45,9 +46,9 @@ export const PdfViewerModal: React.FC = () => {
             <h3 className="text-base font-bold text-white font-display">
               Documento Ufficiale Aggiornato: Itinerario Seul 2027
             </h3>
-            <p className="text-xs text-slate-400">
+            <FoldText className="text-xs text-slate-400">
               PDF aggiornato di 12 pagine: voli e ritrovo, alloggi a confronto, serate, programma giorno per giorno, lo scalo di 240 ore a Pechino e il rientro a Milano. Scegli una pagina qui sotto per leggere cosa contiene e aprirla nel visualizzatore.
-            </p>
+            </FoldText>
           </div>
         </div>
 
