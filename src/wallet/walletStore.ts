@@ -7,9 +7,10 @@ import type { WalletItem, WalletFileMeta } from './walletData';
 import { newId } from './walletData';
 
 const DB_NAME = 'seul2027-wallet';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const ITEMS = 'items';
 const FILES = 'files';
+const DRAFTS = 'drafts';
 /** Scheda da aprire appena si entra nel Wallet (impostata da "Oggi") */
 export const WALLET_OPEN_KEY = 'seul2027:wallet:open';
 export const WALLET_EVENT = 'seul2027:wallet';
@@ -35,6 +36,7 @@ function openDb(): Promise<IDBDatabase> {
         const db = req.result;
         if (!db.objectStoreNames.contains(ITEMS)) db.createObjectStore(ITEMS, { keyPath: 'id' });
         if (!db.objectStoreNames.contains(FILES)) db.createObjectStore(FILES, { keyPath: 'id' }).createIndex('itemId', 'itemId');
+        if (!db.objectStoreNames.contains(DRAFTS)) db.createObjectStore(DRAFTS, { keyPath: 'ownerId' });
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error ?? new Error('Archivio non disponibile'));
@@ -126,6 +128,78 @@ export async function prepareFile(file: File): Promise<{ file: Blob; meta: Walle
   }
   if (file.size > MAX_FILE_BYTES) throw new Error(`“${file.name}” è troppo grande (massimo 8 MB).`);
   return { file, meta: { id, name: file.name, type: file.type || 'application/octet-stream', size: file.size } };
+}
+
+/* ---------- Bozza del modulo ----------
+ * Aprendo la galleria o un'altra app, Android può chiudere la pagina: la bozza (testi e foto)
+ * resta nel telefono e il Wallet la riapre da solo al ritorno. */
+
+const DRAFT_FLAG = 'seul2027_wallet_draft';
+const DRAFT_MAX_AGE_MS = 12 * 3600_000;
+
+export interface WalletDraft {
+  ownerId: string;
+  kind: WalletItem['kind'];
+  presetId?: string;
+  /** Scheda in modifica (assente = nuova) */
+  itemId?: string;
+  initialLegId?: string;
+  fields: Record<string, unknown>;
+  added: { file: Blob; meta: WalletFileMeta }[];
+  qrImg: { file?: Blob; meta: WalletFileMeta } | null;
+  savedAt: number;
+}
+
+export function hasDraftFlag(): boolean {
+  try {
+    const t = Number(localStorage.getItem(DRAFT_FLAG));
+    return t > 0 && Date.now() - t < DRAFT_MAX_AGE_MS;
+  } catch {
+    return false;
+  }
+}
+
+export async function saveDraft(draft: WalletDraft): Promise<void> {
+  try {
+    localStorage.setItem(DRAFT_FLAG, String(draft.savedAt));
+  } catch {
+    /* modalità privata */
+  }
+  try {
+    const db = await openDb();
+    const tx = db.transaction(DRAFTS, 'readwrite');
+    tx.objectStore(DRAFTS).put(draft);
+    await done(tx);
+  } catch {
+    /* la bozza è un aiuto in più */
+  }
+}
+
+export async function loadDraft(ownerId: string): Promise<WalletDraft | null> {
+  try {
+    const db = await openDb();
+    const d = await request(db.transaction(DRAFTS).objectStore(DRAFTS).get(ownerId) as IDBRequest<WalletDraft | undefined>);
+    if (!d || Date.now() - d.savedAt > DRAFT_MAX_AGE_MS) return null;
+    return d;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearDraft(ownerId: string): Promise<void> {
+  try {
+    localStorage.removeItem(DRAFT_FLAG);
+  } catch {
+    /* ignora */
+  }
+  try {
+    const db = await openDb();
+    const tx = db.transaction(DRAFTS, 'readwrite');
+    tx.objectStore(DRAFTS).delete(ownerId);
+    await done(tx);
+  } catch {
+    /* ignora */
+  }
 }
 
 /* ---------- Copia di sicurezza ---------- */

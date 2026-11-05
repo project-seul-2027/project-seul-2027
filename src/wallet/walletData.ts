@@ -18,6 +18,21 @@ export interface WalletExtra {
   value: string;
 }
 
+/** Dati di un biglietto di treno (Trenitalia, Italo) */
+export interface TrainInfo {
+  from: string;
+  to: string;
+  /** Orario di arrivo HH:MM */
+  arrive?: string;
+  passenger?: string;
+  /** es. "FR 9700" */
+  number?: string;
+  /** Codice cliente / CP */
+  cp?: string;
+  carriage?: string;
+  seat?: string;
+}
+
 export interface WalletItem {
   id: string;
   ownerId: string;
@@ -32,6 +47,12 @@ export interface WalletItem {
   code?: string;
   /** Testo da trasformare in codice QR da mostrare alla cassa o al varco */
   qrText?: string;
+  /** Dettagli del biglietto del treno */
+  train?: TrainInfo;
+  /** Formato del codice letto da una foto (qr_code, aztec…); il testo è in qrText solo per i QR */
+  qrFormat?: string;
+  /** Foto del codice da mostrare così com'è (quando non è un QR leggibile): id di un allegato */
+  qrFileId?: string;
   /** Partenza del treno, ora italiana (AAAA-MM-GGTHH:MM) */
   departAt?: string;
   /** Validità (AAAA-MM-GG) */
@@ -74,8 +95,8 @@ export interface Preset {
 }
 
 export const PRESETS: Preset[] = [
-  { id: 'trenitalia', kind: 'train', title: 'Trenitalia', subtitle: 'Frecce, Intercity, Regionali', openUrl: 'https://www.trenitalia.com/', tip: 'Allega il PDF o la schermata del biglietto con il codice QR: lo trovi anche senza rete. Il codice di prenotazione è quello a 6 caratteri.' },
-  { id: 'italo', kind: 'train', title: 'Italo', subtitle: 'Italo Treno', openUrl: 'https://www.italotreno.it/', tip: 'Allega il PDF o la schermata del biglietto con il codice QR: lo trovi anche senza rete. Il codice di prenotazione (PNR) è nella mail di conferma.' },
+  { id: 'trenitalia', kind: 'train', title: 'Trenitalia', subtitle: 'Frecce, Intercity, Regionali', openUrl: 'https://www.trenitalia.com/', tip: 'Inquadra il QR del biglietto con «Inquadra» o scegli lo screenshot dalla galleria: lo trovi anche senza rete. Il PNR è il codice di prenotazione a 6 caratteri.' },
+  { id: 'italo', kind: 'train', title: 'Italo', subtitle: 'Italo Treno', openUrl: 'https://www.italotreno.it/', tip: 'Inquadra il QR del biglietto con «Inquadra» o scegli lo screenshot dalla galleria: lo trovi anche senza rete. Il PNR è nella mail di conferma.' },
   { id: 'climate', kind: 'pass', title: 'Climate Card', subtitle: 'Abbonamento metro e bus', openUrl: 'https://www.bus.go.kr/', tip: 'Abbonamento a tempo per metro, bus e Ttareungyi nella zona di Seul.' },
   { id: 'esim', kind: 'pass', title: 'eSIM', subtitle: 'Dati per la Corea', tip: 'Incolla il codice di attivazione o carica la schermata con il codice QR.' },
   { id: 'citypass', kind: 'pass', title: 'Pass turistico', subtitle: 'Discover Seoul Pass o simili' },
@@ -123,6 +144,17 @@ export function romeLocalToMs(local: string): number {
 
 /** Partenza di un biglietto di treno (NaN se manca l'orario). */
 export const trainDepartureMs = (item: WalletItem): number => (item.kind === 'train' && item.departAt ? romeLocalToMs(item.departAt) : NaN);
+
+/** "AAAA-MM-GGTHH:MM" → "01/03/2027" */
+export const trainDate = (departAt?: string) => (departAt ? departAt.slice(0, 10).split('-').reverse().join('/') : '');
+export const trainDepartTime = (departAt?: string) => (departAt && departAt.length >= 16 ? departAt.slice(11, 16) : '');
+
+/** Titolo e sottotitolo automatici di un biglietto di treno. */
+export function trainHeadings(t: TrainInfo, departAt?: string): { title: string; subtitle?: string } {
+  const dep = trainDepartTime(departAt);
+  const times = dep ? `${dep}${t.arrive ? ` → ${t.arrive}` : ''}` : '';
+  return { title: `${t.from} → ${t.to}`, subtitle: [t.number, times].filter(Boolean).join(' · ') || undefined };
+}
 
 /** Etichetta della scheda: "Treno · Italo". */
 export function kindLabel(item: WalletItem): string {
