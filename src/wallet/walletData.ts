@@ -4,7 +4,7 @@
  */
 import { FLIGHTS_SCHEDULE, type FlightLeg } from '../data/tripData';
 
-export type WalletKind = 'flight' | 'pass' | 'other';
+export type WalletKind = 'flight' | 'train' | 'pass' | 'other';
 
 export interface WalletFileMeta {
   id: string;
@@ -32,6 +32,8 @@ export interface WalletItem {
   code?: string;
   /** Testo da trasformare in codice QR da mostrare alla cassa o al varco */
   qrText?: string;
+  /** Partenza del treno, ora italiana (AAAA-MM-GGTHH:MM) */
+  departAt?: string;
   /** Validità (AAAA-MM-GG) */
   validFrom?: string;
   validTo?: string;
@@ -56,6 +58,7 @@ export interface KindInfo {
 
 export const KINDS: Record<WalletKind, KindInfo> = {
   flight: { label: 'Volo', plural: 'Voli', gradient: 'from-sky-600 via-sky-700 to-indigo-800', accent: 'text-sky-300', hint: 'Carta d’imbarco, e-ticket, codice di prenotazione' },
+  train: { label: 'Treno', plural: 'Treni', gradient: 'from-red-600 via-red-700 to-rose-900', accent: 'text-red-200', hint: 'Biglietto Trenitalia o Italo: prenotazione, carrozza e posto' },
   pass: { label: 'Abbonamento', plural: 'Abbonamenti', gradient: 'from-amber-500 via-orange-600 to-rose-700', accent: 'text-amber-200', hint: 'eSIM, pass turistici, voucher, prenotazioni' },
   other: { label: 'Altro', plural: 'Altro', gradient: 'from-slate-600 via-slate-700 to-slate-800', accent: 'text-slate-300', hint: 'Assicurazione, documenti, numeri utili' }
 };
@@ -71,6 +74,8 @@ export interface Preset {
 }
 
 export const PRESETS: Preset[] = [
+  { id: 'trenitalia', kind: 'train', title: 'Trenitalia', subtitle: 'Frecce, Intercity, Regionali', openUrl: 'https://www.trenitalia.com/', tip: 'Allega il PDF o la schermata del biglietto con il codice QR: lo trovi anche senza rete. Il codice di prenotazione è quello a 6 caratteri.' },
+  { id: 'italo', kind: 'train', title: 'Italo', subtitle: 'Italo Treno', openUrl: 'https://www.italotreno.it/', tip: 'Allega il PDF o la schermata del biglietto con il codice QR: lo trovi anche senza rete. Il codice di prenotazione (PNR) è nella mail di conferma.' },
   { id: 'climate', kind: 'pass', title: 'Climate Card', subtitle: 'Abbonamento metro e bus', openUrl: 'https://www.bus.go.kr/', tip: 'Abbonamento a tempo per metro, bus e Ttareungyi nella zona di Seul.' },
   { id: 'esim', kind: 'pass', title: 'eSIM', subtitle: 'Dati per la Corea', tip: 'Incolla il codice di attivazione o carica la schermata con il codice QR.' },
   { id: 'citypass', kind: 'pass', title: 'Pass turistico', subtitle: 'Discover Seoul Pass o simili' },
@@ -100,6 +105,30 @@ export const legSubtitle = (leg: FlightLeg) =>
   `${leg.flightNumber.replace(/\s*\(indicativo\)/i, '')} · ${leg.departureDate.replace(/ 2027$/, '')} ${leg.departureTime}`;
 
 export const FLIGHT_LEGS = FLIGHTS_SCHEDULE;
+
+/* ---------- Treni ---------- */
+
+/** "AAAA-MM-GGTHH:MM" scritto all'ora italiana → istante in millisecondi (tiene conto dell'ora legale). */
+export function romeLocalToMs(local: string): number {
+  const m = local.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return NaN;
+  const asUtc = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+  const offset = (t: number) => {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Rome', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(t));
+    const g = (k: string) => Number(parts.find((p) => p.type === k)?.value);
+    return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute')) - Math.floor(t / 60_000) * 60_000;
+  };
+  return asUtc - offset(asUtc - offset(asUtc));
+}
+
+/** Partenza di un biglietto di treno (NaN se manca l'orario). */
+export const trainDepartureMs = (item: WalletItem): number => (item.kind === 'train' && item.departAt ? romeLocalToMs(item.departAt) : NaN);
+
+/** Etichetta della scheda: "Treno · Italo". */
+export function kindLabel(item: WalletItem): string {
+  const carrier = item.kind === 'train' ? presetById(item.preset)?.title : undefined;
+  return carrier ? `${KINDS[item.kind].label} · ${carrier}` : KINDS[item.kind].label;
+}
 
 /* ---------- Controlli ---------- */
 

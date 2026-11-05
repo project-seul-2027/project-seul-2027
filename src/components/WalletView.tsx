@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Plane, Ticket, FileText, Plus, Lock, LockOpen, Copy, Check, X, Maximize2, Pencil, Trash2,
+  Plane, TrainFront, Ticket, FileText, Plus, Lock, LockOpen, Copy, Check, X, Maximize2, Pencil, Trash2,
   QrCode, Download, Upload, ExternalLink, Pin, ChevronRight, Info, Smartphone, ShieldCheck, Delete, WalletCards, Share2
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import {
-  KINDS, PRESETS, cardHeadline, legDepartureMs, FLIGHT_LEGS, validityLabel, type Preset, type WalletItem, type WalletKind
+  KINDS, PRESETS, cardHeadline, kindLabel, legDepartureMs, trainDepartureMs, FLIGHT_LEGS, validityLabel, type Preset, type WalletItem, type WalletKind
 } from '../wallet/walletData';
 import {
   WALLET_EVENT, WALLET_OPEN_KEY, checkPin, clearPin, deleteItem, exportBackup, getFileBlob, hasPin, importBackup, listItems, saveItem, setPin, totalBytes
@@ -15,10 +15,11 @@ import { WalletViewer, type ViewerEntry } from './WalletViewer';
 import { formatCountdown } from '../utils/tripClock';
 import { formatMb } from '../offline/offlinePack';
 
-const KIND_ICON: Record<WalletKind, React.ElementType> = { flight: Plane, pass: Ticket, other: FileText };
+const KIND_ICON: Record<WalletKind, React.ElementType> = { flight: Plane, train: TrainFront, pass: Ticket, other: FileText };
 const FILTERS: { id: 'all' | WalletKind; label: string }[] = [
   { id: 'all', label: 'Tutto' },
   { id: 'flight', label: 'Voli' },
+  { id: 'train', label: 'Treni' },
   { id: 'pass', label: 'Abbonamenti' },
   { id: 'other', label: 'Altro' }
 ];
@@ -96,8 +97,9 @@ function useNow(everyMs = 30_000) {
 
 function flightCountdown(item: WalletItem, now: number): string | null {
   const leg = FLIGHT_LEGS.find((l) => l.id === item.legId);
-  if (!leg) return null;
-  const ms = legDepartureMs(leg) - now;
+  const dep = item.kind === 'train' ? trainDepartureMs(item) : leg ? legDepartureMs(leg) : NaN;
+  if (Number.isNaN(dep)) return null;
+  const ms = dep - now;
   if (Number.isNaN(ms)) return null;
   if (ms < -3 * 3_600_000) return null;
   if (ms < 0) return 'In corso';
@@ -109,7 +111,7 @@ const PassCard: React.FC<{ item: WalletItem; now: number; onOpen: () => void }> 
   const info = KINDS[item.kind];
   const Icon = KIND_ICON[item.kind];
   const validity = validityLabel(item, now);
-  const countdown = item.kind === 'flight' ? flightCountdown(item, now) : null;
+  const countdown = item.kind === 'flight' || item.kind === 'train' ? flightCountdown(item, now) : null;
   const badge = countdown ?? validity?.text;
   const tone = countdown ? 'ok' : validity?.tone ?? 'ok';
   return (
@@ -125,7 +127,7 @@ const PassCard: React.FC<{ item: WalletItem; now: number; onOpen: () => void }> 
       <div className="relative flex items-start gap-3">
         <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-white" /></div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{info.label}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{kindLabel(item)}</p>
           <h3 className="text-lg font-bold text-white font-display leading-tight truncate">{item.title}</h3>
           {item.subtitle && <p className="text-xs text-white/80 truncate">{item.subtitle}</p>}
         </div>
@@ -187,7 +189,7 @@ const WalletDetail: React.FC<{
   const [viewerAt, setViewerAt] = useState<number | null>(null);
   const [confirm, setConfirm] = useState(false);
   const validity = validityLabel(item, now);
-  const countdown = item.kind === 'flight' ? flightCountdown(item, now) : null;
+  const countdown = item.kind === 'flight' || item.kind === 'train' ? flightCountdown(item, now) : null;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -229,7 +231,7 @@ const WalletDetail: React.FC<{
   }, [item]);
 
   const rows: { label: string; value: string; mono?: boolean }[] = [];
-  if (item.code) rows.push({ label: item.kind === 'flight' ? 'Prenotazione (PNR)' : item.kind === 'other' ? 'Numero polizza o documento' : 'Codice', value: item.code, mono: true });
+  if (item.code) rows.push({ label: item.kind === 'flight' || item.kind === 'train' ? 'Prenotazione (PNR)' : item.kind === 'other' ? 'Numero polizza o documento' : 'Codice', value: item.code, mono: true });
   if (item.validFrom || item.validTo) {
     const fmt = (d?: string) => (d ? d.split('-').reverse().join('/') : '…');
     rows.push({ label: 'Validità', value: `${fmt(item.validFrom)} → ${fmt(item.validTo)}` });
@@ -250,7 +252,7 @@ const WalletDetail: React.FC<{
             <div className="relative flex items-start gap-3">
               <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0"><Icon className="w-6 h-6 text-white" /></div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{info.label}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{kindLabel(item)}</p>
                 <h2 className="text-xl font-bold text-white font-display leading-tight">{item.title}</h2>
                 {item.subtitle && <p className="text-sm text-white/80">{item.subtitle}</p>}
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -484,7 +486,7 @@ const AddPicker: React.FC<{ onPick: (kind: WalletKind, preset?: Preset) => void;
           <span className="flex-1"><span className="block text-sm font-bold text-white">Biglietto aereo</span><span className="block text-[11px] text-white/80">Carta d’imbarco, e-ticket, prenotazione</span></span>
           <ChevronRight className="w-5 h-5 text-white/70" />
         </button>
-        {(['pass', 'other'] as const).map((kind) => (
+        {(['train', 'pass', 'other'] as const).map((kind) => (
           <div key={kind}>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">{KINDS[kind].plural}</p>
             <div className="space-y-1.5">
@@ -570,6 +572,10 @@ export const WalletView: React.FC = () => {
         const leg = FLIGHT_LEGS.find((l) => l.id === i.legId);
         return 1 + (leg ? Math.max(0, legDepartureMs(leg) / 1e13) : 0.9);
       }
+      if (i.kind === 'train') {
+        const dep = trainDepartureMs(i);
+        return 1 + (Number.isNaN(dep) ? 0.9 : Math.max(0, dep / 1e13));
+      }
       return 2;
     };
     return [...list].sort((a, b) => rank(a) - rank(b) || a.createdAt.localeCompare(b.createdAt));
@@ -623,7 +629,7 @@ export const WalletView: React.FC = () => {
           <h3 className="mt-3 text-base font-bold text-white font-display">Il Wallet è vuoto</h3>
           <p className="mt-1 text-sm text-slate-400 max-w-sm mx-auto">Salva qui carte d’imbarco, eSIM, voucher e prenotazioni: li trovi con un tocco, anche in aereo o in metro senza segnale.</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {[{ k: 'flight' as const, l: 'Biglietto aereo' }, { k: 'pass' as const, l: 'eSIM', p: 'esim' }, { k: 'pass' as const, l: 'Prenotazione alloggio', p: 'hotel' }, { k: 'other' as const, l: 'Assicurazione', p: 'insurance' }].map((s) => (
+            {[{ k: 'flight' as const, l: 'Biglietto aereo' }, { k: 'train' as const, l: 'Biglietto treno', p: 'trenitalia' }, { k: 'pass' as const, l: 'eSIM', p: 'esim' }, { k: 'pass' as const, l: 'Prenotazione alloggio', p: 'hotel' }, { k: 'other' as const, l: 'Assicurazione', p: 'insurance' }].map((s) => (
               <button key={s.l} type="button" onClick={() => setSheet({ type: 'form', kind: s.k, presetId: s.p })} className="min-h-[44px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold">{s.l}</button>
             ))}
           </div>

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plane, WalletCards, Pin, ChevronRight } from 'lucide-react';
+import { Plane, TrainFront, WalletCards, Pin, ChevronRight } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { FLIGHT_LEGS, KINDS, legDepartureMs, validityLabel, type WalletItem } from '../wallet/walletData';
+import { FLIGHT_LEGS, KINDS, kindLabel, legDepartureMs, trainDepartureMs, validityLabel, type WalletItem } from '../wallet/walletData';
 import { WALLET_EVENT, WALLET_OPEN_KEY, listItems } from '../wallet/walletStore';
 import { formatCountdown } from '../utils/tripClock';
 
@@ -19,11 +19,11 @@ export const WalletShortcut: React.FC<{ onOpen: () => void; nowMs: number }> = (
   }, [refresh]);
 
   const upcoming = items
-    .filter((i) => i.kind === 'flight' && i.legId)
-    .map((i) => ({ item: i, dep: legDepartureMs(FLIGHT_LEGS.find((l) => l.id === i.legId)!) }))
+    .filter((i) => (i.kind === 'flight' && i.legId) || (i.kind === 'train' && i.departAt))
+    .map((i) => ({ item: i, dep: i.kind === 'train' ? trainDepartureMs(i) : legDepartureMs(FLIGHT_LEGS.find((l) => l.id === i.legId)!) }))
     .filter((x) => !Number.isNaN(x.dep) && x.dep - nowMs > -3 * 3_600_000 && x.dep - nowMs < 36 * 3_600_000)
     .sort((a, b) => a.dep - b.dep);
-  const expiring = items.filter((i) => i.kind !== 'flight' && validityLabel(i, nowMs)?.tone === 'soon');
+  const expiring = items.filter((i) => i.kind !== 'flight' && i.kind !== 'train' && validityLabel(i, nowMs)?.tone === 'soon');
   const pinned = items.filter((i) => i.pinned && !upcoming.some((u) => u.item.id === i.id));
   const shown: { item: WalletItem; note: string }[] = [
     ...upcoming.slice(0, 2).map((u) => ({ item: u.item, note: u.dep > nowMs ? `Parte tra ${formatCountdown(u.dep - nowMs)}` : 'In corso' })),
@@ -47,10 +47,10 @@ export const WalletShortcut: React.FC<{ onOpen: () => void; nowMs: number }> = (
       <div className="space-y-2">
         {shown.map(({ item, note }) => (
           <button key={item.id} type="button" onClick={() => open(item.id)} className={`w-full min-h-[56px] rounded-2xl bg-gradient-to-br ${KINDS[item.kind].gradient} px-3.5 flex items-center gap-3 text-left`} data-testid="wallet-shortcut-item">
-            {item.kind === 'flight' ? <Plane className="w-5 h-5 text-white shrink-0" /> : item.pinned ? <Pin className="w-5 h-5 text-white shrink-0" /> : <WalletCards className="w-5 h-5 text-white shrink-0" />}
+            {item.kind === 'flight' ? <Plane className="w-5 h-5 text-white shrink-0" /> : item.kind === 'train' ? <TrainFront className="w-5 h-5 text-white shrink-0" /> : item.pinned ? <Pin className="w-5 h-5 text-white shrink-0" /> : <WalletCards className="w-5 h-5 text-white shrink-0" />}
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-white truncate">{item.title}</span>
-              <span className="block text-[11px] text-white/80 truncate">{item.subtitle}</span>
+              <span className="block text-[11px] text-white/80 truncate">{item.subtitle || kindLabel(item)}</span>
             </span>
             <span className="text-[10px] font-bold rounded-full px-2 py-1 bg-black/25 text-white shrink-0">{note}</span>
             <ChevronRight className="w-4 h-4 text-white/70 shrink-0" />
