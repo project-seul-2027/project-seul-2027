@@ -5,10 +5,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import {
-  KINDS, PRESETS, cardHeadline, kindLabel, legDepartureMs, trainDepartureMs, FLIGHT_LEGS, validityLabel, type Preset, type WalletItem, type WalletKind
+  KINDS, PRESETS, cardHeadline, kindLabel, presetById, trainDate, trainDepartTime, legDepartureMs, trainDepartureMs, FLIGHT_LEGS, validityLabel, type Preset, type WalletItem, type WalletKind
 } from '../wallet/walletData';
 import {
-  WALLET_EVENT, WALLET_OPEN_KEY, checkPin, clearPin, deleteItem, exportBackup, getFileBlob, hasPin, importBackup, listItems, saveItem, setPin, totalBytes
+  WALLET_EVENT, WALLET_OPEN_KEY, checkPin, clearPin, deleteItem, exportBackup, getFileBlob, hasPin, importBackup, listItems, loadDraft, saveItem, setPin, totalBytes, type WalletDraft
 } from '../wallet/walletStore';
 import { WalletForm } from './WalletForm';
 import { WalletViewer, type ViewerEntry } from './WalletViewer';
@@ -137,10 +137,10 @@ const PassCard: React.FC<{ item: WalletItem; now: number; onOpen: () => void }> 
         <p className="font-mono text-sm sm:text-base font-semibold text-white tracking-wide truncate">{cardHeadline(item)}</p>
         <div className="flex items-center gap-1.5 shrink-0">
           {badge && <span className={`text-[10px] font-bold rounded-full px-2 py-1 ${TONE[tone]}`}>{badge}</span>}
-          {(item.files.length > 0 || item.qrText) && (
+          {(item.files.length > 0 || item.qrText || item.qrFileId) && (
             <span className="text-[10px] font-bold rounded-full px-2 py-1 bg-black/25 text-white flex items-center gap-1">
               {item.qrText ? <QrCode className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-              {item.files.length || ''}
+              {item.qrText ? '' : item.files.length || ''}
             </span>
           )}
         </div>
@@ -175,6 +175,57 @@ const CopyRow: React.FC<{ label: string; value: string; mono?: boolean }> = ({ l
   );
 };
 
+const TrainTicket: React.FC<{ item: WalletItem; countdown: string | null; qrUrl?: string; onShowQr: () => void; onClose: () => void }> = ({ item, countdown, qrUrl, onShowQr, onClose }) => {
+  const t = item.train!;
+  const carrier = presetById(item.preset)?.title ?? 'Treno';
+  const dep = trainDepartureMs(item);
+  const depTime = trainDepartTime(item.departAt);
+  const bg = item.preset === 'italo' ? '#8e1b30' : '#b5123a';
+  const Cell: React.FC<{ label: string; value?: string; right?: boolean; mono?: boolean }> = ({ label, value, right, mono }) => (
+    <div className={right ? 'text-right' : ''}>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-white/75">{label}</p>
+      <p className={`text-lg font-medium text-white leading-snug break-words ${mono ? 'font-mono tracking-wide' : ''}`}>{value || '—'}</p>
+    </div>
+  );
+  return (
+    <div className="rounded-[28px] text-white shadow-lg shadow-black/40 overflow-hidden" style={{ backgroundColor: bg }} data-testid="train-ticket">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-white/15">
+        <div className="w-10 h-10 rounded-full border border-white/50 flex items-center justify-center shrink-0"><TrainFront className="w-5 h-5" /></div>
+        <p className="flex-1 min-w-0 text-lg font-medium truncate">{carrier}</p>
+        {countdown && !Number.isNaN(dep) && <span className="text-[11px] font-bold rounded-full px-2.5 py-1 bg-white/20">{countdown}</span>}
+        <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] -mr-2 rounded-full bg-black/20 flex items-center justify-center" aria-label="Chiudi"><X className="w-5 h-5" /></button>
+      </div>
+      <div className="px-5 pt-5">
+        <p className="text-base text-white/90">Da {t.from} a {t.to}</p>
+        {(depTime || t.arrive) && (
+          <p className="mt-1 text-[44px] leading-none font-medium tracking-tight tabular-nums" data-testid="train-times">
+            {depTime || '--:--'}{t.arrive ? <><span className="mx-3 text-[34px] align-[3px]">→</span>{t.arrive}</> : null}
+          </p>
+        )}
+        {t.passenger && <div className="mt-5"><p className="text-sm text-white/80">Passeggero</p><p className="text-xl font-medium">{t.passenger}</p></div>}
+      </div>
+      <div className="mt-5 mx-5 border-t border-white/20 pt-4 grid grid-cols-2 gap-3">
+        <Cell label="Treno" value={t.number} />
+        <Cell label="Data" value={trainDate(item.departAt)} right />
+      </div>
+      <div className="mt-4 mx-5 border-t border-white/20 pt-4 grid grid-cols-3 gap-3">
+        <Cell label="PNR" value={item.code} mono />
+        <div className="text-center"><Cell label="CP" value={t.cp} mono /></div>
+        <Cell label="Carr-Posto" value={[t.carriage, t.seat].filter(Boolean).join(' - ')} right />
+      </div>
+      <div className="px-5 pt-5 pb-6">
+        {qrUrl ? (
+          <button type="button" onClick={onShowQr} className="mx-auto block rounded-3xl bg-white p-3 w-full max-w-[260px] active:scale-[0.98] transition-transform" aria-label="Mostra il codice a schermo intero" data-testid="train-qr">
+            <img src={qrUrl} alt="Codice del biglietto" className="w-full h-auto rounded-xl" style={{ imageRendering: 'pixelated' }} />
+          </button>
+        ) : (
+          <p className="text-center text-sm text-white/80 rounded-2xl bg-black/15 py-4 px-3">Nessun codice: tocca «Modifica» e inquadra il QR del biglietto.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const WalletDetail: React.FC<{
   item: WalletItem;
   now: number;
@@ -190,6 +241,7 @@ const WalletDetail: React.FC<{
   const [confirm, setConfirm] = useState(false);
   const validity = validityLabel(item, now);
   const countdown = item.kind === 'flight' || item.kind === 'train' ? flightCountdown(item, now) : null;
+  const isTicket = item.kind === 'train' && !!item.train;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -208,13 +260,14 @@ const WalletDetail: React.FC<{
       if (item.qrText) {
         try {
           const QR = await import('qrcode');
-          const url = await QR.toDataURL(item.qrText, { width: 640, margin: 2, errorCorrectionLevel: 'M' });
+          const url = await QR.toDataURL(item.qrText, { width: 1000, margin: 3, errorCorrectionLevel: item.qrText.length > 400 ? 'L' : 'M' });
           list.push({ key: 'qr', name: `Codice QR · ${item.title}`, type: 'image/png', url });
         } catch {
           /* testo troppo lungo per un QR */
         }
       }
-      for (const f of item.files) {
+      const ordered = [...item.files].sort((a, b) => Number(b.id === item.qrFileId) - Number(a.id === item.qrFileId));
+      for (const f of ordered) {
         const blob = await getFileBlob(f.id);
         if (blob) {
           const url = URL.createObjectURL(blob);
@@ -231,7 +284,7 @@ const WalletDetail: React.FC<{
   }, [item]);
 
   const rows: { label: string; value: string; mono?: boolean }[] = [];
-  if (item.code) rows.push({ label: item.kind === 'flight' || item.kind === 'train' ? 'Prenotazione (PNR)' : item.kind === 'other' ? 'Numero polizza o documento' : 'Codice', value: item.code, mono: true });
+  if (item.code && !isTicket) rows.push({ label: item.kind === 'flight' || item.kind === 'train' ? 'Prenotazione (PNR)' : item.kind === 'other' ? 'Numero polizza o documento' : 'Codice', value: item.code, mono: true });
   if (item.validFrom || item.validTo) {
     const fmt = (d?: string) => (d ? d.split('-').reverse().join('/') : '…');
     rows.push({ label: 'Validità', value: `${fmt(item.validFrom)} → ${fmt(item.validTo)}` });
@@ -247,7 +300,7 @@ const WalletDetail: React.FC<{
     <>
       <div className="fixed inset-0 z-[700] flex items-end sm:items-center justify-center bg-black/70" role="dialog" aria-modal="true" aria-label={item.title} data-testid="wallet-detail">
         <div className="w-full sm:max-w-xl max-h-[94dvh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl">
-          <div className={`relative rounded-t-3xl sm:rounded-t-3xl bg-gradient-to-br ${info.gradient} p-4 pb-5 overflow-hidden`}>
+          {!isTicket && <div className={`relative rounded-t-3xl sm:rounded-t-3xl bg-gradient-to-br ${info.gradient} p-4 pb-5 overflow-hidden`}>
             <span className="pointer-events-none absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/10" />
             <div className="relative flex items-start gap-3">
               <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center shrink-0"><Icon className="w-6 h-6 text-white" /></div>
@@ -262,19 +315,22 @@ const WalletDetail: React.FC<{
               </div>
               <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-xl bg-black/25 text-white flex items-center justify-center" aria-label="Chiudi"><X className="w-5 h-5" /></button>
             </div>
-          </div>
+          </div>}
 
           <div className="overflow-y-auto px-4 py-4 space-y-4">
+            {isTicket && (
+              <TrainTicket item={item} countdown={countdown} qrUrl={entries[0] && (entries[0].key === 'qr' || entries[0].key === item.qrFileId) && entries[0].type !== 'application/pdf' ? entries[0].url : undefined} onShowQr={() => setViewerAt(0)} onClose={onClose} />
+            )}
             {entries.length > 0 && (
               <div>
-                <button
+                {!isTicket && <button
                   type="button"
                   onClick={() => setViewerAt(0)}
                   className="w-full min-h-[56px] rounded-2xl bg-white text-slate-950 font-bold text-base flex items-center justify-center gap-2 shadow-lg"
                   data-testid="wallet-show"
                 >
                   <Maximize2 className="w-5 h-5" /> Mostra {entries[0].key === 'qr' ? 'il codice QR' : entries[0].type === 'application/pdf' ? 'il PDF' : 'il codice'}
-                </button>
+                </button>}
                 <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
                   {entries.map((e, i) => (
                     <button key={e.key} type="button" onClick={() => setViewerAt(i)} className="shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-slate-700 bg-white flex items-center justify-center" aria-label={`Apri ${e.name}`}>
@@ -510,7 +566,7 @@ const AddPicker: React.FC<{ onPick: (kind: WalletKind, preset?: Preset) => void;
 
 /* ---------- Schermata principale ---------- */
 
-type Sheet = { type: 'picker' } | { type: 'form'; kind: WalletKind; presetId?: string; item?: WalletItem } | { type: 'detail'; id: string } | { type: 'settings' } | null;
+type Sheet = { type: 'picker' } | { type: 'form'; kind: WalletKind; presetId?: string; item?: WalletItem; draft?: WalletDraft } | { type: 'detail'; id: string } | { type: 'settings' } | null;
 
 export const WalletView: React.FC = () => {
   const { user } = useAuth();
@@ -563,6 +619,20 @@ export const WalletView: React.FC = () => {
       /* archiviazione bloccata */
     }
   }, [items, locked]);
+
+  // Ritorno dopo che l'app è stata chiusa durante la compilazione: riapre il modulo con la bozza
+  const draftChecked = useRef(false);
+  useEffect(() => {
+    if (!items || locked || draftChecked.current) return;
+    draftChecked.current = true;
+    (async () => {
+      const d = await loadDraft(ownerId);
+      if (!d || d.ownerId !== ownerId) return;
+      const item = d.itemId ? items.find((i) => i.id === d.itemId) : undefined;
+      if (d.itemId && !item) return;
+      setSheet((cur) => cur ?? { type: 'form', kind: d.kind, presetId: d.presetId ?? d.initialLegId, item, draft: d });
+    })();
+  }, [items, locked, ownerId]);
 
   const sorted = useMemo(() => {
     const list = (items ?? []).filter((i) => filter === 'all' || i.kind === filter);
@@ -684,6 +754,7 @@ export const WalletView: React.FC = () => {
           kind={sheet.kind}
           presetId={sheet.kind === 'flight' ? undefined : sheet.presetId}
           initial={sheet.item}
+          draft={sheet.draft}
           initialLegId={sheet.kind === 'flight' && !sheet.item ? sheet.presetId : undefined}
           onClose={() => setSheet(sheet.item ? { type: 'detail', id: sheet.item.id } : null)}
           onSaved={(it) => setSheet({ type: 'detail', id: it.id })}

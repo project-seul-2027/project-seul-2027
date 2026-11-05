@@ -17,6 +17,7 @@ import { ExpensesView } from './components/ExpensesView';
 import { PracticalGuideView } from './components/PracticalGuideView';
 import { PdfViewerModal } from './components/PdfViewerModal';
 import { hasResumeFlag } from './services/pendingCamera';
+import { hasDraftFlag } from './wallet/walletStore';
 import { GroupView } from './components/GroupView';
 import { WeatherView } from './components/WeatherView';
 import { TodayView } from './components/TodayView';
@@ -81,6 +82,8 @@ function initialTab(): Tab {
   if (!fromUrl && (sp.has('url') || sp.has('text') || sp.has('title'))) return 'places';
   // Ritorno dall'app Fotocamera: riapri la galleria con la foto da confermare
   if (hasResumeFlag()) return 'gallery';
+  // Ritorno dalla galleria o dalla fotocamera mentre si compilava una scheda del Wallet
+  if (hasDraftFlag()) return 'wallet';
   // Durante il viaggio (o con ?sim=) si apre direttamente "Oggi"
   const params = new URLSearchParams(window.location.search);
   const t = Date.now();
