@@ -17,6 +17,7 @@ import { activeShare, formatDistance } from '../shared/groupLive';
 import { currentPosition, useGroupLive } from './group/groupLiveStore';
 import { focusPlace, markVisited, removePlace, savePlace, updatePlace, usePlaces, vote } from './places/placesStore';
 import { PLACE_ID_PREFIX } from './places/placeLocation';
+import { LocationPicker } from './places/LocationPicker';
 import { geocodeAddress, type GeocodeHit } from '../utils/geocode';
 
 const NEAR_RADIUS_M = 1500;
@@ -102,7 +103,7 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
     if (address.trim().length < 3) return setError('Scrivi l’indirizzo (almeno qualche lettera) e poi tocca Cerca.');
     setSearching(true);
     try {
-      const found = await geocodeAddress(address);
+      const found = await geocodeAddress(address, name);
       if (found.length === 0) setError('Nessun risultato per questo indirizzo: prova con il nome della via e il quartiere, oppure usa il GPS.');
       setHits(found);
     } catch (err) {
@@ -113,7 +114,7 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
   };
 
   const pickHit = (h: GeocodeHit) => {
-    setCoords({ lat: h.lat, lng: h.lng, source: 'Trovata dall’indirizzo' });
+    setCoords({ lat: h.lat, lng: h.lng, source: h.precise ? 'Trovata dall’indirizzo: controlla il segnaposto' : 'Posizione approssimata: sposta il segnaposto sul punto giusto' });
     setNearId('');
     setHits([]);
   };
@@ -133,8 +134,13 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
       // Indirizzo scritto ma mai cercato: provo io a trovarlo
       let where = coords;
       if (!where && address.trim().length >= 3) {
-        const found = await geocodeAddress(address).catch(() => []);
-        if (found[0]) where = { lat: found[0].lat, lng: found[0].lng, source: 'Trovata dall’indirizzo' };
+        const found = await geocodeAddress(address, name).catch(() => []);
+        if (found[0]) {
+          // Il servizio può sbagliare di centinaia di metri: prima di salvare si controlla il segnaposto sulla mappa
+          setCoords({ lat: found[0].lat, lng: found[0].lng, source: 'Trovata dall’indirizzo (da controllare)' });
+          setBusy(false);
+          return setError('Ho trovato una posizione dall’indirizzo: controlla sulla mappa che il segnaposto sia giusto (puoi trascinarlo), poi tocca di nuovo Aggiungi.');
+        }
       }
       if (!where) {
         setBusy(false);
@@ -217,7 +223,7 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
                   {hits.map((h, i) => (
                     <li key={`${h.lat},${h.lng},${i}`}>
                       <button type="button" onClick={() => pickHit(h)} className="w-full min-h-[48px] px-3 py-2 text-left text-xs text-slate-200 hover:bg-slate-800 flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-violet-300 shrink-0 mt-0.5" /> <span className="leading-snug">{h.label}</span>
+                        <MapPin className="w-4 h-4 text-violet-300 shrink-0 mt-0.5" /> <span className="leading-snug">{h.label}{!h.precise && <span className="block text-[10.5px] text-amber-300 mt-0.5">Zona approssimata, non il civico esatto</span>}</span>
                       </button>
                     </li>
                   ))}
@@ -235,6 +241,12 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
             <p className={`mt-1.5 text-[11px] flex items-center gap-1.5 ${coords ? 'text-emerald-300' : 'text-slate-500'}`} data-testid="place-coords">
               {coords ? <><Check className="w-3.5 h-3.5" /> {coords.source}</> : 'Nessuna posizione scelta'}
             </p>
+            {coords && (
+              <div className="mt-2 space-y-1.5">
+                <LocationPicker lat={coords.lat} lng={coords.lng} onChange={(lat, lng) => setCoords({ lat, lng, source: 'Segnaposto spostato a mano' })} />
+                <p className="text-[11px] text-slate-400 leading-snug">Controlla che il segnaposto sia sul locale giusto: trascinalo o tocca il punto esatto. I numeri di lotto coreani (es. «160-1 Donggyo-dong») spesso vengono trovati solo in modo approssimato; il link di Google Maps ha sempre la posizione precisa.</p>
+              </div>
+            )}
           </div>
           <label className="block">
             <span className={label}>Link (facoltativo)</span>
