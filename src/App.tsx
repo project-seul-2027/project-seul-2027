@@ -864,7 +864,7 @@ function TripPortal() {
         <TripNotifierEngine />
         {activeTab === 'wallet' && <WalletView />}
         {activeTab === 'show' && <ShowKoreanView />}
-        {activeTab === 'places' && <PlacesView onShowMap={() => goToTab('map')} />}
+        {activeTab === 'places' && <PlacesView onShowMap={() => goToTab('map')} onRoute={handleRouteFromToday} />}
         {activeTab === 'sos' && <SosView />}
 
         {activeTab === 'itinerary' && (

@@ -62,7 +62,7 @@ export interface MapLocation {
   koreanName?: string;
   district: string;
   city: 'Seul' | 'Dintorni / Gite' | 'Pechino' | 'Milano';
-  category: 'alloggio' | 'cultura' | 'nightlife' | 'food' | 'natura' | 'gita' | 'logistica';
+  category: 'alloggio' | 'cultura' | 'nightlife' | 'food' | 'natura' | 'gita' | 'logistica' | 'luogo';
   lat: number;
   lng: number;
   dayNumbers: number[];

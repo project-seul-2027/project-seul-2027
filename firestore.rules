@@ -428,7 +428,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------
 
     function validPlace(d) {
-      return d.keys().hasOnly(['name', 'category', 'priority', 'lat', 'lng', 'link', 'note', 'addedBy', 'addedBySlot', 'createdAt', 'votes', 'visited'])
+      return d.keys().hasOnly(['name', 'category', 'priority', 'lat', 'lng', 'address', 'link', 'note', 'addedBy', 'addedBySlot', 'createdAt', 'votes', 'visited'])
         && d.keys().hasAll(['name', 'category', 'priority', 'lat', 'lng', 'link', 'note', 'addedBy', 'addedBySlot', 'createdAt', 'votes', 'visited'])
         && shortString(d.name, 80) && d.name.size() > 0
         && d.category in ['food', 'shop', 'sight', 'night', 'other']
@@ -437,6 +437,7 @@ service cloud.firestore {
         && d.lng is number && d.lng >= -180 && d.lng <= 180
         && shortString(d.link, 500) && (d.link == '' || d.link.matches('https?://.*'))
         && shortString(d.note, 300)
+        && (!('address' in d) || shortString(d.address, 200))
         && d.addedBySlot in slots()
         && d.votes is map
         && d.votes.keys().hasOnly(slots())
