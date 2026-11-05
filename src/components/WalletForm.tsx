@@ -22,14 +22,16 @@ const labelCls = 'block text-[11px] font-bold uppercase tracking-wider text-slat
 
 const DEFAULT_EXTRA: Partial<Record<WalletKind, string[]>> = {
   flight: ['Numero biglietto', 'Posto'],
+  train: ['Treno', 'Carrozza', 'Posto', 'Arrivo'],
   other: ['Telefono assistenza']
 };
 
 export const WalletForm: React.FC<Props> = ({ ownerId, kind, presetId, initial, initialLegId, onClose, onSaved }) => {
   const preset = presetById(initial?.preset ?? presetId);
   const startLeg = FLIGHT_LEGS.find((l) => l.id === initialLegId);
-  const [title, setTitle] = useState(initial?.title ?? (startLeg ? legTitle(startLeg) : preset?.title ?? ''));
-  const [subtitle, setSubtitle] = useState(initial?.subtitle ?? (startLeg ? legSubtitle(startLeg) : preset?.subtitle ?? ''));
+  const [title, setTitle] = useState(initial?.title ?? (startLeg ? legTitle(startLeg) : kind === 'train' ? '' : preset?.title ?? ''));
+  const [subtitle, setSubtitle] = useState(initial?.subtitle ?? (startLeg ? legSubtitle(startLeg) : kind === 'train' ? '' : preset?.subtitle ?? ''));
+  const [departAt, setDepartAt] = useState(initial?.departAt ?? '');
   const [legId, setLegId] = useState(initial?.legId ?? startLeg?.id ?? '');
   const [code, setCode] = useState(initial?.code ?? '');
   const [qrText, setQrText] = useState(initial?.qrText ?? '');
@@ -101,12 +103,14 @@ export const WalletForm: React.FC<Props> = ({ ownerId, kind, presetId, initial, 
       kind,
       preset: initial?.preset ?? presetId,
       legId: legId || undefined,
+      departAt: kind === 'train' && departAt ? departAt : undefined,
       title: t,
       subtitle: subtitle.trim() || undefined,
       code: code.trim() || undefined,
       qrText: qrText.trim() || undefined,
       validFrom: validFrom || undefined,
-      validTo: validTo || undefined,
+      // Il treno scade il giorno della partenza
+      validTo: kind === 'train' && departAt ? departAt.slice(0, 10) : validTo || undefined,
       openUrl: openUrl.trim() || undefined,
       extra: cleanExtra,
       note: note.trim() || undefined,
@@ -130,10 +134,10 @@ export const WalletForm: React.FC<Props> = ({ ownerId, kind, presetId, initial, 
     }
   };
 
-  const showQr = kind === 'pass';
+  const showQr = kind === 'pass' || kind === 'train';
   const showDates = kind === 'pass' || kind === 'other';
   const codeLabel =
-    kind === 'flight' ? 'Codice di prenotazione (PNR)' : kind === 'other' ? 'Numero polizza o documento' : 'Codice o numero prenotazione';
+    kind === 'flight' || kind === 'train' ? 'Codice di prenotazione (PNR)' : kind === 'other' ? 'Numero polizza o documento' : 'Codice o numero prenotazione';
 
   return (
     <div className="fixed inset-0 z-[800] flex items-end sm:items-center justify-center bg-black/70" role="dialog" aria-modal="true" aria-label="Scheda del Wallet" data-testid="wallet-form">
@@ -164,8 +168,8 @@ export const WalletForm: React.FC<Props> = ({ ownerId, kind, presetId, initial, 
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className={labelCls} htmlFor="wf-title">Nome</label>
-              <input id="wf-title" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="es. eSIM di Anna" maxLength={60} data-testid="wf-title" />
+              <label className={labelCls} htmlFor="wf-title">{kind === 'train' ? 'Tratta' : 'Nome'}</label>
+              <input id="wf-title" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder={kind === 'train' ? 'es. Milano Centrale → Roma Termini' : 'es. eSIM di Anna'} maxLength={60} data-testid="wf-title" />
             </div>
             <div>
               <label className={labelCls} htmlFor="wf-sub">Descrizione breve</label>
@@ -185,6 +189,14 @@ export const WalletForm: React.FC<Props> = ({ ownerId, kind, presetId, initial, 
             </div>
           )}
 
+          {kind === 'train' && (
+            <div>
+              <label className={labelCls} htmlFor="wf-depart">Partenza (ora italiana)</label>
+              <input id="wf-depart" type="datetime-local" value={departAt} onChange={(e) => setDepartAt(e.target.value)} className={`${inputCls} [color-scheme:dark]`} data-testid="wf-depart" />
+              <p className="mt-1 text-[11px] text-slate-500 leading-snug">Serve per il conto alla rovescia e per averlo in evidenza in «Oggi» prima di partire.</p>
+            </div>
+          )}
+
           {showDates && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -198,7 +210,7 @@ export const WalletForm: React.FC<Props> = ({ ownerId, kind, presetId, initial, 
             </div>
           )}
 
-          {kind === 'pass' && (
+          {(kind === 'pass' || kind === 'train') && (
             <div>
               <label className={labelCls} htmlFor="wf-url">Indirizzo che apre l’app o il sito (facoltativo)</label>
               <input id="wf-url" type="url" value={openUrl} onChange={(e) => setOpenUrl(e.target.value)} className={inputCls} placeholder="https://…" inputMode="url" />
