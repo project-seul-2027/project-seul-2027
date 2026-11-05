@@ -15,6 +15,8 @@ export interface SharedPlace {
   priority: PlacePriority;
   lat: number;
   lng: number;
+  /** Indirizzo scritto a mano o trovato con la ricerca (facoltativo) */
+  address: string;
   /** Link incollato (Naver, Google Maps, Instagram…) oppure vuoto */
   link: string;
   note: string;
@@ -32,6 +34,7 @@ export interface PlaceInput {
   priority: PlacePriority;
   lat: number;
   lng: number;
+  address: string;
   link: string;
   note: string;
 }

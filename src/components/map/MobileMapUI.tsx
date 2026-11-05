@@ -69,7 +69,7 @@ const CHIP_CATEGORIES = [
   { id: 'gita', label: 'Gite', emoji: '🚆' }
 ];
 
-const DEST_GROUP_ORDER = ['alloggio', 'cultura', 'food', 'nightlife', 'natura', 'gita', 'logistica'];
+const DEST_GROUP_ORDER = ['alloggio', 'luogo', 'cultura', 'food', 'nightlife', 'natura', 'gita', 'logistica'];
 const ORIGIN_GROUP_ORDER = DEST_GROUP_ORDER.filter((c) => c !== 'alloggio');
 
 const dayShort = (id: number): string => {
@@ -110,6 +110,10 @@ export interface MobileMapOverlayProps {
   activeDay: number | 'all';
   onDay: (d: number | 'all') => void;
   onResetFilters: () => void;
+  /** Luoghi aggiunti dal gruppo: cosa mostrare sulla mappa */
+  placesFilter: 'all' | 'stops' | 'added' | 'todo';
+  onPlacesFilter: (f: 'all' | 'stops' | 'added' | 'todo') => void;
+  addedCount: number;
 
   places: MapLocation[];
   selected: MapLocation | null;
@@ -577,6 +581,19 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               >
                 <TrainFront className="w-3.5 h-3.5" /> Metro
               </button>
+              {p.addedCount > 0 && (
+                <>
+                  <button type="button" onClick={() => p.onPlacesFilter(p.placesFilter === 'added' ? 'all' : 'added')} aria-pressed={p.placesFilter === 'added'} className={`${chipBase} ${p.placesFilter === 'added' ? chipOn : chipOff}`} data-testid="map-filter-added">
+                    <span aria-hidden="true">📍</span> Aggiunti ({p.addedCount})
+                  </button>
+                  <button type="button" onClick={() => p.onPlacesFilter(p.placesFilter === 'todo' ? 'all' : 'todo')} aria-pressed={p.placesFilter === 'todo'} className={`${chipBase} ${p.placesFilter === 'todo' ? chipOn : chipOff}`} data-testid="map-filter-todo">
+                    <span aria-hidden="true">⭐</span> Da visitare
+                  </button>
+                  <button type="button" onClick={() => p.onPlacesFilter(p.placesFilter === 'stops' ? 'all' : 'stops')} aria-pressed={p.placesFilter === 'stops'} className={`${chipBase} ${p.placesFilter === 'stops' ? chipOn : chipOff}`} data-testid="map-filter-stops">
+                    Solo tappe
+                  </button>
+                </>
+              )}
               {CHIP_CATEGORIES.map((c) => (
                 <button
                   key={c.id}

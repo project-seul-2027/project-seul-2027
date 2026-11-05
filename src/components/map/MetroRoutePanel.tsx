@@ -477,6 +477,7 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
               {[
                 { id: 'all', label: 'Tutti' },
                 { id: 'alloggio', label: '🏠 Alloggi (4)' },
+                ...(destinations.some((d) => d.category === 'luogo') ? [{ id: 'luogo', label: '📍 Aggiunti' }] : []),
                 { id: 'cultura', label: 'Cultura' },
                 { id: 'nightlife', label: 'Nightlife' },
                 { id: 'food', label: 'Food' },

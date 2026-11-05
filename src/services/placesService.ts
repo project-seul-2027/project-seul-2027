@@ -28,6 +28,7 @@ function parsePlace(id: string, d: DocumentData): SharedPlace | null {
     priority: PLACE_PRIORITIES.some((p) => p.id === d.priority) ? d.priority : 'nice',
     lat: d.lat,
     lng: d.lng,
+    address: typeof d.address === 'string' ? d.address.slice(0, 200) : '',
     link: typeof d.link === 'string' ? d.link.slice(0, 500) : '',
     note: typeof d.note === 'string' ? d.note.slice(0, 300) : '',
     addedBy: String(d.addedBy ?? ''),
@@ -64,10 +65,14 @@ const clean = (i: PlaceInput) => ({
   note: i.note.trim().slice(0, 300)
 });
 
+/** L'indirizzo si scrive solo se c'è: così i luoghi senza indirizzo restano validi anche con le regole precedenti. */
+const addressField = (i: PlaceInput) => (i.address.trim() ? { address: i.address.trim().slice(0, 200) } : {});
+
 export async function addPlace(uid: string, slot: TravelerSlotId, input: PlaceInput): Promise<void> {
   const { db } = firebase();
   await setDoc(doc(collection(db, PLACES)), {
     ...clean(input),
+    ...addressField(input),
     addedBy: uid,
     addedBySlot: slot,
     createdAt: serverTimestamp(),
@@ -78,7 +83,7 @@ export async function addPlace(uid: string, slot: TravelerSlotId, input: PlaceIn
 
 export async function editPlace(id: string, input: PlaceInput): Promise<void> {
   const { db } = firebase();
-  await updateDoc(doc(db, PLACES, id), clean(input));
+  await updateDoc(doc(db, PLACES, id), { ...clean(input), address: input.address.trim() ? input.address.trim().slice(0, 200) : deleteField() });
 }
 
 export async function votePlace(id: string, slot: TravelerSlotId, vote: PlaceVote | null): Promise<void> {

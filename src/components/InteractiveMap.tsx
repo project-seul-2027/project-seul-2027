@@ -34,6 +34,7 @@ import { useGroupLive } from './group/groupLiveStore';
 import { useAuth } from '../auth/AuthContext';
 import { categoryOf, directionsUrl } from '../shared/places';
 import { focusPlace, usePlaces } from './places/placesStore';
+import { placeToLocation, PLACE_ID_PREFIX } from './places/placeLocation';
 import { activeShare, fixedPoint, formatAgo, isLost, seoulClock, upcomingMeetups } from '../shared/groupLive';
 import { MetroPanel, LineBadge } from './map/MetroPanel';
 import { MetroRoutePanel, type LiveGeoState } from './map/MetroRoutePanel';
@@ -67,6 +68,8 @@ interface MetroPrefs {
   visible: string[] | null;
   googleLines: boolean;
 }
+
+export type PlacesFilter = 'all' | 'stops' | 'added' | 'todo';
 
 function readMetroPrefs(): MetroPrefs {
   try {
@@ -247,21 +250,41 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     () => MAP_LOCATIONS.filter((l) => l.category === 'alloggio'),
     []
   );
+  // Luoghi aggiunti dal gruppo: anche questi possono essere partenza o destinazione
+  const sharedPlaces = usePlaces();
+  const sharedLocs = useMemo(() => sharedPlaces.places.map(placeToLocation), [sharedPlaces.places]);
   const koreanDestinations = useMemo(
-    () =>
-      MAP_LOCATIONS.filter(
-        (l) => l.city === 'Seul' || l.city === 'Dintorni / Gite'
-      ),
-    []
+    () => [
+      ...MAP_LOCATIONS.filter((l) => l.city === 'Seul' || l.city === 'Dintorni / Gite'),
+      ...sharedLocs
+    ],
+    [sharedLocs]
   );
   // Qualsiasi punto della Corea del Sud raggiungibile in metro può fare da partenza (oltre ad alloggi e GPS)
   const originCandidates = useMemo(
-    () =>
-      MAP_LOCATIONS.filter(
-        (l) => l.category !== 'alloggio' && (l.city === 'Seul' || l.city === 'Dintorni / Gite')
-      ),
-    []
+    () => [
+      ...MAP_LOCATIONS.filter((l) => l.category !== 'alloggio' && (l.city === 'Seul' || l.city === 'Dintorni / Gite')),
+      ...sharedLocs
+    ],
+    [sharedLocs]
   );
+  // Quali luoghi mostrare sulla mappa: tappe e aggiunti, solo tappe, solo aggiunti, solo aggiunti da visitare
+  const [placesFilter, setPlacesFilterState] = useState<PlacesFilter>(() => {
+    try {
+      const v = localStorage.getItem('seul2027:map:places-filter');
+      return v === 'stops' || v === 'added' || v === 'todo' ? v : 'all';
+    } catch {
+      return 'all';
+    }
+  });
+  const setPlacesFilter = useCallback((v: PlacesFilter) => {
+    setPlacesFilterState(v);
+    try {
+      localStorage.setItem('seul2027:map:places-filter', v);
+    } catch {
+      // archiviazione bloccata: vale solo per questa sessione
+    }
+  }, []);
   // "Senza AREX": percorsi solo con le altre linee e a piedi (la scelta resta salvata sul dispositivo)
   const [avoidArex, setAvoidArex] = useState<boolean>(() => {
     try {
@@ -480,9 +503,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     return (
       accommodations.find((a) => a.id === selectedOriginId) ??
       MAP_LOCATIONS.find((l) => l.id === selectedOriginId) ??
+      sharedLocs.find((l) => l.id === selectedOriginId) ??
       accommodations[0]
     );
-  }, [selectedOriginId, geoState, accommodations]);
+  }, [selectedOriginId, geoState, accommodations, sharedLocs]);
 
   // Letti dai listener dei segnaposto
   const selectedIdRef = useRef<string | null>(null);
@@ -512,10 +536,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     if (mapMode !== 'route' || !metroNetwork) return null;
     const dest =
       MAP_LOCATIONS.find((d) => d.id === selectedDestinationId) ??
+      sharedLocs.find((d) => d.id === selectedDestinationId) ??
       koreanDestinations[0];
     if (!activeOriginLocation || !dest) return null;
     return computeMetroRoute(metroNetwork, activeOriginLocation, dest, routeOptions);
-  }, [mapMode, metroNetwork, activeOriginLocation, koreanDestinations, selectedDestinationId, routeOptions]);
+  }, [mapMode, metroNetwork, activeOriginLocation, koreanDestinations, sharedLocs, selectedDestinationId, routeOptions]);
 
   /** Margini della mappa coperti da barra in alto e foglio (solo telefono) con il foglio nella posizione indicata */
   const insetsFor = (snap: SheetSnap) => {
@@ -627,6 +652,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         (loc) => loc.city === 'Seul' || loc.city === 'Dintorni / Gite' || loc.id === selectedDestinationId
       );
     }
+    if (placesFilter === 'added' || placesFilter === 'todo') return [];
     return MAP_LOCATIONS.filter((loc) => {
       if (activeCategory !== 'all' && loc.category !== activeCategory) return false;
       if (activeCity !== 'all' && loc.city !== activeCity) return false;
@@ -640,7 +666,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       }
       return true;
     });
-  }, [mapMode, activeCategory, activeCity, activeDay, searchQuery, selectedDestinationId]);
+  }, [mapMode, activeCategory, activeCity, activeDay, searchQuery, selectedDestinationId, placesFilter]);
 
   // Initialize Map
   useEffect(() => {
@@ -896,8 +922,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }
   }, [groupLive.live, groupLive.meetups, authUser, authTravelers]);
 
-  // Luoghi condivisi: in viola, diversi dalle tappe ufficiali
-  const sharedPlaces = usePlaces();
+  // Luoghi condivisi: in viola, diversi dalle tappe ufficiali. Toccandone uno si apre la scheda con Percorso e Partenza.
   const placesLayerRef = useRef<L.LayerGroup | null>(null);
   const placeMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   useEffect(() => {
@@ -909,30 +934,38 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     placeMarkersRef.current.clear();
     const esc = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
     for (const p of sharedPlaces.places) {
+      const locId = `${PLACE_ID_PREFIX}${p.id}`;
+      const isRouteEnd = mapMode === 'route' && (locId === selectedOriginId || locId === selectedDestinationId);
+      if (placesFilter === 'stops' && !isRouteEnd) continue;
+      if (placesFilter === 'todo' && p.visited && !isRouteEnd) continue;
       const c = categoryOf(p.category);
-      const ring = p.priority === 'must' ? '#c4b5fd' : '#ffffff';
+      const role = mapMode === 'route' ? (locId === selectedOriginId ? 'origin' : locId === selectedDestinationId ? 'destination' : null) : null;
+      const ring = role === 'origin' ? '#22d3ee' : role === 'destination' ? '#34d399' : p.priority === 'must' ? '#c4b5fd' : '#ffffff';
       const icon = L.divIcon({
         className: '',
         iconSize: [30, 30],
         iconAnchor: [15, 15],
-        html: `<div style="width:30px;height:30px;border-radius:9px;background:${p.visited ? '#475569' : '#7c3aed'};border:2.5px solid ${ring};box-shadow:0 3px 10px #0009;display:flex;align-items:center;justify-content:center;font-size:15px;opacity:${p.visited ? 0.7 : 1}">${c.emoji}</div>`
+        html: `<div style="width:30px;height:30px;border-radius:9px;background:${p.visited ? '#475569' : '#7c3aed'};border:${role ? 3.5 : 2.5}px solid ${ring};box-shadow:0 3px 10px #0009${role ? ',0 0 0 4px ' + ring + '55' : ''};display:flex;align-items:center;justify-content:center;font-size:15px;opacity:${p.visited ? 0.7 : 1}">${c.emoji}</div>`
       });
-      const naver = `https://map.naver.com/p/search/${p.lat},${p.lng}`;
-      const popup = `<div style="font:600 13px system-ui;min-width:150px"><div>${esc(p.name)}</div><div style="font:400 11px system-ui;color:#64748b;margin:2px 0 6px">${esc(c.label)}${p.note ? ' · ' + esc(p.note) : ''}</div><a href="${naver}" target="_blank" rel="noopener noreferrer">Naver</a> · <a href="${directionsUrl(p)}" target="_blank" rel="noopener noreferrer">Indicazioni</a></div>`;
-      const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: 700 }).bindPopup(popup).bindTooltip(esc(p.name), { direction: 'top', offset: [0, -14] }).addTo(layer);
+      const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: role ? 900 : 700 })
+        .bindTooltip(esc(p.name) + (p.address ? `<div style="font-size:11px;opacity:.75">${esc(p.address)}</div>` : ''), { direction: 'top', offset: [0, -14] })
+        .on('click', () => handleSelectLocationRef.current(placeToLocation(p)))
+        .addTo(layer);
       placeMarkersRef.current.set(p.id, marker);
     }
-  }, [sharedPlaces.places]);
+  }, [sharedPlaces.places, placesFilter, mapMode, selectedOriginId, selectedDestinationId]);
   useEffect(() => {
     const map = mapInstanceRef.current;
     const id = sharedPlaces.focusId;
     if (!map || !id) return;
     const place = sharedPlaces.places.find((p) => p.id === id);
     if (!place) return;
+    // Il luogo scelto dalla scheda "Luoghi" deve vedersi anche se il filtro lo nascondeva
+    if (placesFilter === 'stops' || (placesFilter === 'todo' && place.visited)) setPlacesFilter('all');
+    handleSelectLocationRef.current(placeToLocation(place));
     map.setView([place.lat, place.lng], Math.max(map.getZoom(), 17));
-    placeMarkersRef.current.get(id)?.openPopup();
     focusPlace(null);
-  }, [sharedPlaces.focusId, sharedPlaces.places]);
+  }, [sharedPlaces.focusId, sharedPlaces.places, placesFilter, setPlacesFilter]);
 
   // Crea il livello delle linee quando mappa e dati sono pronti
   useEffect(() => {
@@ -1197,9 +1230,9 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const handledRouteNonceRef = useRef<number | null>(null);
   useEffect(() => {
     if (!routeRequest || handledRouteNonceRef.current === routeRequest.nonce) return;
-    handledRouteNonceRef.current = routeRequest.nonce;
     const dest = koreanDestinations.find((d) => d.id === routeRequest.destinationId);
     if (!dest) return;
+    handledRouteNonceRef.current = routeRequest.nonce;
     setSelectedDestinationId(dest.id);
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       handleActivateRealGps({ route: true, recenter: true });
@@ -1268,7 +1301,9 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   };
 
   const activeDestObj =
-    MAP_LOCATIONS.find((d) => d.id === selectedDestinationId) ?? koreanDestinations[0];
+    MAP_LOCATIONS.find((d) => d.id === selectedDestinationId) ??
+    sharedLocs.find((d) => d.id === selectedDestinationId) ??
+    koreanDestinations[0];
 
   const routePanelEl = (
     <MetroRoutePanel
@@ -1661,6 +1696,27 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 metroPanelEl
               ) : (
                 <>
+                  {/* Luoghi aggiunti dal gruppo */}
+                  {sharedPlaces.places.length > 0 && (
+                    <div className="p-3.5 border-b border-slate-800 space-y-2" data-testid="map-places-filter">
+                      <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cosa mostrare ({sharedPlaces.places.length} luoghi aggiunti):</div>
+                      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Cosa mostrare sulla mappa">
+                        {([['all', 'Tappe e aggiunti'], ['stops', 'Solo tappe'], ['added', '📍 Solo aggiunti'], ['todo', '⭐ Da visitare']] as const).map(([id, label]) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setPlacesFilter(id)}
+                            aria-pressed={placesFilter === id}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${placesFilter === id ? 'bg-violet-500 text-white shadow-md' : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800'}`}
+                            data-testid={`map-places-${id}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Filter Categories */}
                   <div className="p-3.5 border-b border-slate-800 space-y-2.5">
                     <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
@@ -2008,7 +2064,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                         <Navigation className="w-3.5 h-3.5" />
                         <span>Calcola Percorso Metro fin qui</span>
                       </button>
-                      {currentSelectedLoc.category === 'alloggio' && (
+                      {(currentSelectedLoc.category === 'alloggio' || currentSelectedLoc.category === 'luogo') && (
                         <button
                           type="button"
                           onClick={() => {
@@ -2071,6 +2127,9 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               activeDay={activeDay}
               onDay={toggleDayChip}
               onResetFilters={resetFilters}
+              placesFilter={placesFilter}
+              onPlacesFilter={setPlacesFilter}
+              addedCount={sharedPlaces.places.length}
               places={filteredLocations}
               selected={currentSelectedLoc}
               onPickPlace={handleSelectLocation}

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuickIntent } from '../utils/quickIntent';
 import { createPortal } from 'react-dom';
 import {
-  Bookmark, Check, CircleAlert, ExternalLink, Loader2, LocateFixed, Map as MapIcon, Navigation, Pencil, Plus, ThumbsDown, ThumbsUp, Trash2, X
+  Bookmark, Check, CircleAlert, ExternalLink, Loader2, LocateFixed, Map as MapIcon, MapPin, Navigation, Pencil, Plus, Search, ThumbsDown, ThumbsUp, Trash2, X
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { MAP_LOCATIONS, getNaverMapSearchUrl } from '../data/tripData';
@@ -16,6 +16,8 @@ import {
 import { activeShare, formatDistance } from '../shared/groupLive';
 import { currentPosition, useGroupLive } from './group/groupLiveStore';
 import { focusPlace, markVisited, removePlace, savePlace, updatePlace, usePlaces, vote } from './places/placesStore';
+import { PLACE_ID_PREFIX } from './places/placeLocation';
+import { geocodeAddress, type GeocodeHit } from '../utils/geocode';
 
 const NEAR_RADIUS_M = 1500;
 
@@ -45,6 +47,9 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
   const [category, setCategory] = useState<PlaceCategory>(place?.category ?? 'food');
   const [priority, setPriority] = useState<PlacePriority>(place?.priority ?? 'nice');
   const [note, setNote] = useState(place?.note ?? '');
+  const [address, setAddress] = useState(place?.address ?? '');
+  const [hits, setHits] = useState<GeocodeHit[]>([]);
+  const [searching, setSearching] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number; source: string } | null>(
     place ? { lat: place.lat, lng: place.lng, source: 'Posizione già salvata' } : initial?.lat != null && initial.lng != null ? { lat: initial.lat, lng: initial.lng, source: 'Trovata nel link' } : null
   );
@@ -91,6 +96,28 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
     }
   };
 
+  const searchAddress = async () => {
+    setError(null);
+    setHits([]);
+    if (address.trim().length < 3) return setError('Scrivi l’indirizzo (almeno qualche lettera) e poi tocca Cerca.');
+    setSearching(true);
+    try {
+      const found = await geocodeAddress(address);
+      if (found.length === 0) setError('Nessun risultato per questo indirizzo: prova con il nome della via e il quartiere, oppure usa il GPS.');
+      setHits(found);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const pickHit = (h: GeocodeHit) => {
+    setCoords({ lat: h.lat, lng: h.lng, source: 'Trovata dall’indirizzo' });
+    setNearId('');
+    setHits([]);
+  };
+
   const pickNear = (id: string) => {
     setNearId(id);
     const p = MAP_LOCATIONS.find((l) => l.id === id);
@@ -100,11 +127,20 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
   const save = async () => {
     setError(null);
     if (!name.trim()) return setError('Scrivi il nome del posto.');
-    if (!coords) return setError('Manca la posizione: usa il GPS, incolla un link con le coordinate o scegli un luogo vicino.');
     if (link.trim() && !/^https?:\/\//i.test(link.trim())) return setError('Il link deve iniziare con http:// o https://.');
     setBusy(true);
     try {
-      const input = { name, category, priority, lat: coords.lat, lng: coords.lng, link, note };
+      // Indirizzo scritto ma mai cercato: provo io a trovarlo
+      let where = coords;
+      if (!where && address.trim().length >= 3) {
+        const found = await geocodeAddress(address).catch(() => []);
+        if (found[0]) where = { lat: found[0].lat, lng: found[0].lng, source: 'Trovata dall’indirizzo' };
+      }
+      if (!where) {
+        setBusy(false);
+        return setError('Manca la posizione: cerca l’indirizzo, usa il GPS, incolla un link con le coordinate o scegli un luogo vicino.');
+      }
+      const input = { name, category, priority, lat: where.lat, lng: where.lng, address, link, note };
       if (place) await updatePlace(place.id, input);
       else await savePlace(myUid, mySlot, input);
       onClose();
@@ -159,6 +195,35 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
           <div>
             <span className={label}>Dov’è</span>
             <div className="grid grid-cols-1 gap-2">
+              <div className="flex gap-2">
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void searchAddress(); } }}
+                  maxLength={200}
+                  autoComplete="street-address"
+                  enterKeyHint="search"
+                  placeholder="Indirizzo (es. 12 Wausan-ro, Mapo-gu)"
+                  aria-label="Indirizzo"
+                  className={`${input} flex-1 min-w-0`}
+                  data-testid="place-address"
+                />
+                <button type="button" onClick={searchAddress} disabled={searching} className="min-h-[46px] px-4 rounded-xl bg-slate-800 text-cyan-100 text-sm font-semibold flex items-center gap-1.5 shrink-0 disabled:opacity-60" data-testid="place-address-search">
+                  {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Cerca
+                </button>
+              </div>
+              {hits.length > 0 && (
+                <ul className="rounded-xl border border-slate-700 divide-y divide-slate-800 overflow-hidden" aria-label="Risultati della ricerca" data-testid="place-address-hits">
+                  {hits.map((h, i) => (
+                    <li key={`${h.lat},${h.lng},${i}`}>
+                      <button type="button" onClick={() => pickHit(h)} className="w-full min-h-[48px] px-3 py-2 text-left text-xs text-slate-200 hover:bg-slate-800 flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-violet-300 shrink-0 mt-0.5" /> <span className="leading-snug">{h.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                  <li className="px-3 py-1.5 text-[10px] text-slate-500">Ricerca: © OpenStreetMap</li>
+                </ul>
+              )}
               <button type="button" onClick={useGps} disabled={gpsBusy} className="min-h-[44px] rounded-xl bg-slate-800 text-cyan-100 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60" data-testid="place-loc-gps">
                 {gpsBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />} Sono qui adesso
               </button>
@@ -195,7 +260,7 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
 
 /* ---------- Schermata ---------- */
 
-export const PlacesView: React.FC<{ onShowMap: () => void }> = ({ onShowMap }) => {
+export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinationId: string) => void }> = ({ onShowMap, onRoute }) => {
   const { user, travelers } = useAuth();
   const slot: TravelerSlotId | null = user && isSlot(user.travelerId) ? user.travelerId : null;
   const bySlot = useMemo(() => Object.fromEntries(travelers.map((t) => [t.id, t])), [travelers]);
@@ -341,6 +406,7 @@ export const PlacesView: React.FC<{ onShowMap: () => void }> = ({ onShowMap }) =
                     {c.label} · <span className={p.priority === 'must' ? 'text-violet-300 font-semibold' : ''}>{pr.label}</span> · di {p.addedBySlot === slot ? 'te' : bySlot[p.addedBySlot]?.name ?? 'un amico'}
                     {n && <> · <span className="text-cyan-300">a {formatDistance(n.m)} da {n.label}</span></>}
                   </p>
+                  {p.address && <p className="text-xs text-slate-300 mt-1.5 leading-snug flex items-start gap-1"><MapPin className="w-3.5 h-3.5 text-violet-300 shrink-0 mt-px" /> {p.address}</p>}
                   {p.note && <p className="text-xs text-slate-300 mt-1.5 leading-snug">{p.note}</p>}
                 </div>
                 {p.addedBy === user.id && (
@@ -368,6 +434,11 @@ export const PlacesView: React.FC<{ onShowMap: () => void }> = ({ onShowMap }) =
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 <button type="button" onClick={() => showOnMap(p.id)} className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-violet-200 text-xs font-semibold flex items-center gap-1.5" data-testid="place-on-map"><MapIcon className="w-3.5 h-3.5" /> Mappa</button>
                 <a href={getNaverMapSearchUrl({ lat: p.lat, lng: p.lng, name: p.name })} target="_blank" rel="noopener noreferrer" className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-emerald-200 text-xs font-semibold flex items-center gap-1.5"><ExternalLink className="w-3.5 h-3.5" /> Naver</a>
+                {onRoute && (
+                  <button type="button" onClick={() => onRoute(`${PLACE_ID_PREFIX}${p.id}`)} className="min-h-[38px] px-3 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold flex items-center gap-1.5" data-testid="place-route">
+                    <Navigation className="w-3.5 h-3.5" /> Portami lì
+                  </button>
+                )}
                 <a href={directionsUrl(p)} target="_blank" rel="noopener noreferrer" className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-cyan-200 text-xs font-semibold flex items-center gap-1.5"><Navigation className="w-3.5 h-3.5" /> Indicazioni</a>
                 {p.link && (
                   <a href={p.link} target="_blank" rel="noopener noreferrer" className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-1.5"><ExternalLink className="w-3.5 h-3.5" /> Link</a>
