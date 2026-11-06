@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FileText, Download, Maximize2, X, BookOpen, Upload } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { itineraryPdfService, type OverrideReport } from '../services/itineraryPdfService';
@@ -230,12 +231,12 @@ export const PdfViewerModal: React.FC = () => {
       </div>
 
       {/* Pannello a schermo intero dentro l'app */}
-      {fullscreen && (
+      {fullscreen && createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Itinerario Seul 2027 a schermo intero"
-          className="fixed inset-0 z-[70] bg-slate-950 flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          className="fixed inset-0 z-[200] bg-slate-950 flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
         >
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 shrink-0">
             <span className="text-sm font-bold text-white font-display truncate">Itinerario Seul 2027</span>
@@ -260,6 +261,8 @@ export const PdfViewerModal: React.FC = () => {
           </div>
           <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} className="flex-1 min-h-0" />
         </div>
+        ,
+        document.body
       )}
     </div>
   );
