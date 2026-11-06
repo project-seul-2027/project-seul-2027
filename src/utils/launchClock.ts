@@ -14,11 +14,6 @@ function milestone(dayId: number, prefix: string, fallback: number): number {
   return hit ? hit.ts : fallback;
 }
 
-const DEPART_TS = milestone(0, '12:30', Date.parse('2027-03-01T12:30:00+01:00'));
-const PEK_TS = milestone(1, '05:35', Date.parse('2027-03-02T05:35:00+08:00'));
-const ICN_TS = milestone(1, '11:40', Date.parse('2027-03-02T11:40:00+09:00'));
-const LAST = TIMED_DAYS[TIMED_DAYS.length - 1];
-
 const fmt = (ts: number, tz: string) => new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: tz }).format(new Date(ts));
 
 export interface LaunchState {
@@ -34,6 +29,11 @@ export interface LaunchState {
 }
 
 export function launchState(now: number): LaunchState {
+  // Gli istanti vengono dal programma di adesso: se arriva un nuovo PDF cambiano con lui.
+  const DEPART_TS = milestone(0, '12:30', Date.parse('2027-03-01T12:30:00+01:00'));
+  const PEK_TS = milestone(1, '05:35', Date.parse('2027-03-02T05:35:00+08:00'));
+  const ICN_TS = milestone(1, '11:40', Date.parse('2027-03-02T11:40:00+09:00'));
+  const LAST = TIMED_DAYS[TIMED_DAYS.length - 1];
   const dayTotal = TIMED_DAYS.length;
   const base = { target: 0, dayN: 0, dayTotal, title: '' };
 

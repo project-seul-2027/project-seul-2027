@@ -88,6 +88,11 @@ export function timeDay(day: ItineraryDay): TimedDay {
 
 export const TIMED_DAYS: TimedDay[] = ITINERARY_DAYS.map(timeDay);
 
+/** Ricalcola gli istanti quando il programma cambia (nuovo PDF), mantenendo lo stesso array. */
+export function rebuildTimedDays(): void {
+  TIMED_DAYS.splice(0, TIMED_DAYS.length, ...ITINERARY_DAYS.map(timeDay));
+}
+
 export type TripPhase = 'before' | 'during' | 'after';
 
 export interface TripNow {
