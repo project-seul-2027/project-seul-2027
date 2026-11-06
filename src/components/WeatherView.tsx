@@ -49,10 +49,10 @@ interface WeatherViewProps {
 
 /** Colore piatto dello sfondo della scheda "adesso", per tema: la scena animata ci sta sopra */
 const SKY_COLOR: Record<WeatherTheme, string> = {
-  sunny: '#1b2230',
+  sunny: '#1f5f94',
   clearNight: '#0f1730',
   partlyCloudyNight: '#131b2e',
-  partlyCloudy: '#14202f',
+  partlyCloudy: '#2a5a85',
   cloudy: '#151c27',
   rainy: '#11222a',
   snowy: '#172035',
