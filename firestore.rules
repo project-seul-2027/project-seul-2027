@@ -114,6 +114,37 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // PDF dell'itinerario e programma letto da quel PDF: li legge tutto il gruppo,
+    // li scrive solo chi occupa il Posto 1 (slots/t1)
+    match /appFiles/itineraryPdf {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && get(/databases/$(database)/documents/slots/t1).data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['name', 'size', 'updatedAt', 'data'])
+        && shortString(request.resource.data.name, 120)
+        && request.resource.data.size is number
+        && request.resource.data.size > 0
+        && request.resource.data.size <= 700000
+        && request.resource.data.updatedAt is number
+        && request.resource.data.data is string
+        && request.resource.data.data.size() <= 950000;
+      allow delete: if false;
+    }
+
+    match /appFiles/itineraryData {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && get(/databases/$(database)/documents/slots/t1).data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['pdfUpdatedAt', 'updatedAt', 'json', 'report'])
+        && request.resource.data.pdfUpdatedAt is number
+        && request.resource.data.updatedAt is number
+        && request.resource.data.json is string
+        && request.resource.data.json.size() <= 600000
+        && request.resource.data.report is string
+        && request.resource.data.report.size() <= 30000;
+      allow delete: if false;
+    }
+
     // Dati condivisi con il gruppo
     match /members/{uid} {
       allow read: if isParticipant();

@@ -19,6 +19,9 @@ import { BudgetTrackerView } from './components/BudgetTrackerView';
 import { ExpensesView } from './components/ExpensesView';
 import { PracticalGuideView } from './components/PracticalGuideView';
 import { PdfViewerModal } from './components/PdfViewerModal';
+import { useItineraryPdf } from './components/useItineraryPdf';
+import { useItineraryOverrideSync } from './components/useItineraryOverrideSync';
+import { useItineraryVersion } from './utils/itineraryOverride';
 import { hasResumeFlag } from './services/pendingCamera';
 import { hasDraftFlag } from './wallet/walletStore';
 import { GroupView } from './components/GroupView';
@@ -141,6 +144,9 @@ function inTripWindow(): boolean {
 }
 
 function TripPortal() {
+  const { url: pdfUrl } = useItineraryPdf();
+  useItineraryOverrideSync();
+  const itineraryVersion = useItineraryVersion();
   const { user, group, signOut } = useAuth();
   const currentUser = user!;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -265,7 +271,7 @@ function TripPortal() {
         onHome={() => { setActiveTab('cover'); window.scrollTo({ top: 0, behavior: 'auto' }); }}
         user={currentUser}
         groupCount={group.length}
-        pdfPath={TRIP_META.pdfPath}
+        pdfPath={pdfUrl}
         showInstall={!install.standalone}
         onInstall={handleInstall}
         onProfile={() => setIsProfileOpen(true)}
@@ -559,7 +565,7 @@ function TripPortal() {
             )}
           </div>
           <a
-            href={TRIP_META.pdfPath}
+            href={pdfUrl}
             download="Itinerario_Seul_2027.pdf"
             className="hidden lg:inline-flex p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
             title="Scarica PDF Ufficiale Aggiornato"
@@ -606,7 +612,7 @@ function TripPortal() {
       )}
 
       {/* Main Content Area */}
-      <main ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing'].includes(activeTab) ? 'desk-flat' : ''}`}>
+      <main key={activeTab === 'pdf' ? 'pdf' : itineraryVersion} ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing'].includes(activeTab) ? 'desk-flat' : ''}`}>
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
         {!isDesktop && !install.standalone && !installBannerHidden && !updateAvailable && !inTripWindow() && (install.canPrompt || install.needsIosInstructions) && (
           <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30">

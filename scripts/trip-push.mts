@@ -14,6 +14,8 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { LOOKBACK_MS, planPushes, type LiveInfo, type MeetupInfo, type MemberInfo, type PushTokenDoc } from '../src/utils/tripPushPlan';
+import { ITINERARY_DAYS } from '../src/data/tripData';
+import { rebuildTimedDays } from '../src/utils/tripClock';
 import { TRAVELER_SLOT_IDS, type TravelerSlotId } from '../src/shared/travelerProfile';
 
 const env = process.env;
@@ -66,6 +68,21 @@ const live: LiveInfo[] = (await db.collection('live').where('lost', '>', since).
 // Avvisi già mandati negli ultimi giorni
 const logged = new Set<string>();
 for (const d of (await db.collection('pushLog').where('at', '>', now - 3 * 86_400_000).get()).docs) logged.add(d.id);
+
+// Il programma letto dall'ultimo PDF (se c'è) prende il posto di quello incluso nel sito, come nell'app
+try {
+  const json = (await db.collection('appFiles').doc('itineraryData').get()).get('json');
+  if (typeof json === 'string' && json !== '') {
+    const days = JSON.parse(json);
+    if (Array.isArray(days) && days.length === ITINERARY_DAYS.length && days.every((d, i) => d?.id === i && Array.isArray(d.schedule))) {
+      ITINERARY_DAYS.splice(0, ITINERARY_DAYS.length, ...days);
+      rebuildTimedDays();
+      console.log('Programma letto dal PDF applicato.');
+    }
+  }
+} catch (e) {
+  console.warn('Programma da PDF non letto, uso quello del sito:', e instanceof Error ? e.message : e);
+}
 
 const plan = planPushes({ now, tokens, members, meetups, live, logged });
 console.log(`Telefoni: ${tokens.length} · avvisi da mandare: ${plan.length}`);

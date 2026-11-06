@@ -1,0 +1,42 @@
+# Avvisa i telefoni quando il Posto 1 carica un nuovo PDF dell'itinerario dal sito (pagina PDF → "Aggiorna PDF").
+# Controlla ogni ~5 minuti: GitHub può ritardare i controlli programmati di qualche minuto, quindi l'avviso arriva
+# di solito entro 5-15 minuti dal caricamento. Prova a mano: Actions → "Avviso nuovo PDF" → Run workflow.
+# Nota: GitHub sospende i workflow programmati dopo 60 giorni senza attività nel repository.
+name: Avviso nuovo PDF
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Solo elenco, non manda niente
+        type: boolean
+        default: true
+
+concurrency:
+  group: pdf-push
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/pdf-push.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock firebase-admin@13
+      - name: Controlla e avvisa
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          export SITE_URL="https://${owner}.github.io/${GITHUB_REPOSITORY#*/}/"
+          node scripts/pdf-push.mjs
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
