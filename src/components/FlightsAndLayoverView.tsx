@@ -5,13 +5,153 @@ import {
   CreditCard, Wifi, Thermometer, Luggage, CheckCircle2, ChevronRight, FileText, ExternalLink, Users, ShoppingBag
 } from 'lucide-react';
 import { FoldText } from './mobile/FoldText';
+import { useMediaQuery } from '../pwa';
 
 export const FlightsAndLayoverView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'flights' | 'beijing_guide' | 'malpensa'>('flights');
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+  const desktopTabs: [typeof activeTab, string][] = [
+    ['flights', 'Voli e biglietti Air China'],
+    ['beijing_guide', 'Scalo a Pechino (240 ore)'],
+    ['malpensa', '1 marzo: ritrovo a Malpensa'],
+  ];
+
+  const desktopNav = (
+    <div className="flex items-end justify-between border-b border-slate-800/80">
+      <div className="flex gap-8">
+        {desktopTabs.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            aria-current={activeTab === id ? 'page' : undefined}
+            className={`pb-3 -mb-px border-b-2 text-sm font-semibold transition-colors ${
+              activeTab === id ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <a
+        href={FLIGHTS_BOOKING_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pb-3 text-sm text-cyan-300 hover:text-cyan-200 transition-colors"
+        title="Apri i voli selezionati su GoToGate in una nuova scheda"
+      >
+        Voli su GoToGate
+      </a>
+    </div>
+  );
+
+  const renderLeg = (leg: (typeof FLIGHTS_SCHEDULE)[number]) => (
+    <li key={leg.id} className="py-5 border-t border-slate-800/80 first:border-t-0 space-y-3">
+      <div className="flex items-baseline justify-between text-sm text-slate-400">
+        <span>{leg.flightNumber} · {leg.departureDate}</span>
+        <span>{leg.duration}</span>
+      </div>
+      <div className="grid grid-cols-[6rem_1fr] gap-x-4 gap-y-3 items-baseline">
+        <span className="text-3xl font-semibold text-white tabular-nums leading-none">{leg.departureTime}</span>
+        <span className="text-sm text-slate-300">
+          <strong className="text-white">{leg.departureAirportCode}</strong> {leg.departureAirport}
+          <span className="text-slate-500"> · Terminal {leg.departureTerminal}</span>
+        </span>
+        <span className="text-3xl font-semibold text-white tabular-nums leading-none">{leg.arrivalTime}</span>
+        <span className="text-sm text-slate-300">
+          <strong className="text-white">{leg.arrivalAirportCode}</strong> {leg.arrivalAirport}
+          <span className="text-slate-500"> · Terminal {leg.arrivalTerminal}</span>
+        </span>
+      </div>
+      {leg.layoverNotice && <p className="text-sm text-slate-300">{leg.layoverNotice}</p>}
+      <p className="text-sm text-slate-400">{leg.baggageInfo}</p>
+    </li>
+  );
+
+  const desktopFlights = (
+    <div className="space-y-12 animate-in fade-in duration-200">
+      <section className="grid grid-cols-2 divide-x divide-slate-800/80">
+        <div className="pr-10 space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Andata, 1-2 marzo</h2>
+            <p className="text-sm text-slate-400 mt-1">Milano → Seul con Air China, scalo a Pechino</p>
+          </div>
+          <ul>{FLIGHTS_SCHEDULE.slice(0, 2).map(renderLeg)}</ul>
+          <div className="border-l-2 border-slate-700 pl-4 space-y-1 text-sm text-slate-300">
+            <p className="font-semibold text-white">Promemoria</p>
+            <p>Ritrovo al Terminal 1 di Malpensa entro le 10:00, davanti ai banchi Air China.</p>
+            <p>Chiedere valigie etichettate fino a Seul (ICN) e carte d'imbarco di entrambi i tratti.</p>
+          </div>
+        </div>
+
+        <div className="pl-10 space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Rientro dei tre, 19-20 marzo</h2>
+            <p className="text-sm text-slate-400 mt-1">Seul → Pechino → Milano, con 12 ore di scalo a Pechino</p>
+          </div>
+          <ul>{FLIGHTS_SCHEDULE.slice(2, 4).map(renderLeg)}</ul>
+          <div className="border-l-2 border-rose-400/70 pl-4 space-y-1 text-sm text-slate-300">
+            <p className="font-semibold text-white">Regola d'oro del rientro a Pechino</p>
+            <p>Partenza da Qianmen centro alle 21:15, senza ritardi.</p>
+            <p>Arrivo al T3 entro le 22:45 per il decollo delle 02:15 per Milano Malpensa.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-800/80 pt-10 space-y-6">
+        <div className="flex items-end justify-between gap-6">
+          <div>
+            <h2 className="text-xl font-semibold text-white">10 marzo: Pietro rientra a Milano</h2>
+            <p className="text-sm text-slate-400 mt-1">Incheon 11:10 → Milano Malpensa, arrivo alle 6:30 dell'11 marzo · 8 notti (2-9 marzo)</p>
+          </div>
+          <p className="text-sm text-slate-400">Quota affitto di Pietro: <strong className="text-white">50-88 €</strong></p>
+        </div>
+        <div className="grid grid-cols-3 divide-x divide-slate-800/80">
+          <div className="pr-8 space-y-2">
+            <h3 className="text-base font-semibold text-white">Check-out e partenza per l'aeroporto</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Lasciare l'alloggio verso le <strong className="text-white">5:45-6:00</strong> per essere a Incheon circa <strong className="text-white">3 ore prima</strong> del volo delle 11:10. Il primo AREX parte verso le 5:30 (da verificare); alternativa taxi o bus aeroporto.
+            </p>
+          </div>
+          <div className="px-8 space-y-2">
+            <h3 className="text-base font-semibold text-white">Saluto alla stazione</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Gli altri amici accompagnano Pietro alla stazione da cui parte per l'aeroporto e lo salutano lì; poi chi resta torna a dormire e fa colazione con calma. La sera prima, il 9 marzo, c'è l'ultima uscita in quattro.
+            </p>
+          </div>
+          <div className="pl-8 space-y-2">
+            <h3 className="text-base font-semibold text-white">Alloggio e chiavi</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Avvisare l'host Enko Stay che da mercoledì 10 marzo restano meno ospiti (prezzo invariato, da confermare). Verificare che Pietro non lasci oggetti e che le chiavi o i codici restino al gruppo.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-800/80 pt-10">
+        <div className="grid grid-cols-3 divide-x divide-slate-800/80">
+          <div className="pr-8 space-y-2">
+            <h3 className="text-base font-semibold text-white">Bagaglio in stiva: 23 kg</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">Pesare le valigie il 18 marzo. Superare i 23 kg comporta tariffe extra salate.</p>
+          </div>
+          <div className="px-8 space-y-2">
+            <h3 className="text-base font-semibold text-white">Power bank: marchio 3C</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">In Cina e in aereo sono severissimi: power bank solo nello zaino a mano e rigorosamente marcati 3C.</p>
+          </div>
+          <div className="pl-8 space-y-2">
+            <h3 className="text-base font-semibold text-white">Fuso orario</h3>
+            <p className="text-sm text-slate-300 leading-relaxed">Seul: UTC+9 (+8h rispetto a Milano). Pechino: UTC+8 (+7h). All'atterraggio a Pechino spostare l'orologio indietro di 1 ora.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+
 
   return (
     <div className="space-y-6">
       {/* Navigation Sub-Tabs & Direct GoToGate Action */}
+      {isDesktop ? desktopNav : (
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-3">
         <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2">
           <button
@@ -22,7 +162,6 @@ export const FlightsAndLayoverView: React.FC = () => {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Plane className="w-3.5 h-3.5" />
             <span>Voli & Biglietti Air China</span>
           </button>
 
@@ -34,7 +173,7 @@ export const FlightsAndLayoverView: React.FC = () => {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <span className="text-sm">🇨🇳</span>
+            <span className="text-sm"></span>
             <span>Guida Scalo Pechino 240h</span>
           </button>
 
@@ -46,7 +185,6 @@ export const FlightsAndLayoverView: React.FC = () => {
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <Clock className="w-3.5 h-3.5" />
             <span>1 Marzo: Ritrovo Malpensa</span>
           </button>
         </div>
@@ -56,7 +194,7 @@ export const FlightsAndLayoverView: React.FC = () => {
           href={FLIGHTS_BOOKING_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex w-full sm:w-auto justify-center items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-sky-200 bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/40 hover:border-sky-400 shadow-md shadow-sky-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] group"
+          className="lg:hidden inline-flex w-full sm:w-auto justify-center items-center gap-2 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-sky-200 bg-sky-950/70 hover:bg-sky-900/80 border border-sky-500/40 hover:border-sky-400 shadow-md shadow-sky-950/40 transition-all hover:scale-[1.02] active:scale-[0.98] group"
           title="Apri i voli selezionati su GoToGate in una nuova scheda"
         >
           <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
@@ -65,63 +203,11 @@ export const FlightsAndLayoverView: React.FC = () => {
           <ExternalLink className="w-3.5 h-3.5 text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </a>
       </div>
+      )}
 
       {/* Tab 1: Flights Schedule & Cards */}
-      {activeTab === 'flights' && (
+      {activeTab === 'flights' && (isDesktop ? desktopFlights : (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* Main GoToGate Hero Booking Banner */}
-          <div className="bg-gradient-to-r from-sky-950/80 via-slate-900 to-cyan-950/50 border border-sky-500/35 rounded-2xl p-5 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            <div className="absolute top-0 right-0 w-96 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="space-y-2.5 relative z-10 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 font-mono text-[11px] font-bold border border-sky-500/40 flex items-center gap-1.5">
-                  <Plane className="w-3.5 h-3.5 text-sky-400 transform rotate-45" />
-                  GoToGate · Voli Selezionati
-                </span>
-                <span className="text-[11px] text-slate-300 font-mono bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800 max-w-full break-words leading-relaxed">
-                  Air China · Milano (MXP) ⇄ Seul (ICN) via Pechino
-                </span>
-              </div>
-
-              <h3 className="text-base sm:text-xl font-bold text-white font-display tracking-tight">
-                Prenotazione Ufficiale Voli di Gruppo (1 - 19/20 Marzo 2027)
-              </h3>
-
-              <FoldText className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Abbiamo impostato la combinazione esatta dei voli concordata: <strong>Andata 1 Mar</strong> ore 12:30 da Malpensa con scalo a Pechino e arrivo a Seul il 2 Mar, e <strong>Ritorno 19 Mar</strong> ore 13:10 con scalo epico di 12 ore a Pechino per l'anatra laccata a Qianmen e rientro a Malpensa la mattina del 20 Mar.
-              </FoldText>
-
-              <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-300 font-medium">
-                <span className="flex items-center gap-1 bg-slate-950/50 px-2.5 py-1 rounded-lg border border-slate-800">
-                  <Luggage className="w-3.5 h-3.5 text-cyan-400" />
-                  Bagaglio da stiva 23 kg incluso
-                </span>
-                <span className="flex items-center gap-1 bg-slate-950/50 px-2.5 py-1 rounded-lg border border-slate-800">
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  Scalo lungo Pechino (14:20 ➔ 02:15)
-                </span>
-              </div>
-            </div>
-
-            <div className="shrink-0 relative z-10 flex flex-col sm:flex-row lg:flex-col gap-2">
-              <a
-                href={FLIGHTS_BOOKING_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-cyan-500 hover:from-sky-400 hover:via-blue-500 hover:to-cyan-400 text-white font-bold text-sm shadow-xl shadow-sky-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] group"
-              >
-                <Plane className="w-4 h-4 transform rotate-45 group-hover:scale-110 transition-transform" />
-                <span>Apri Voli su GoToGate</span>
-                <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              </a>
-              <span className="text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5 font-mono">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Configurazione e date pronte all'acquisto
-              </span>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Outbound Journey */}
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl relative overflow-hidden">
@@ -213,7 +299,7 @@ export const FlightsAndLayoverView: React.FC = () => {
 
               {/* Golden rules box */}
               <div className="p-3 bg-cyan-950/20 border border-cyan-500/20 rounded-xl text-xs text-cyan-200/90 space-y-1">
-                <div className="font-semibold text-cyan-300">💡 Promemoria Andata:</div>
+                <div className="font-semibold text-cyan-300">Promemoria Andata:</div>
                 <p>• Ritrovo al Terminal 1 di Malpensa entro le 10:00 (davanti ai banchi Air China).</p>
                 <p>• Chiedere valigie etichettate fino a Seul (ICN) e carte d'imbarco di entrambi i tratti.</p>
               </div>
@@ -309,7 +395,7 @@ export const FlightsAndLayoverView: React.FC = () => {
 
               {/* Return rules box */}
               <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl text-xs text-amber-200/90 space-y-1">
-                <div className="font-semibold text-amber-300">⚠️ Regola d'oro Rientro a Pechino:</div>
+                <div className="font-semibold text-amber-300">Regola d'oro Rientro a Pechino:</div>
                 <p>• Partenza da Qianmen centro ore 21:15 TASSATIVO.</p>
                 <p>• Arrivo al T3 entro le 22:45 per il decollo alle 02:15 per Milano Malpensa.</p>
               </div>
@@ -345,7 +431,6 @@ export const FlightsAndLayoverView: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
                 <div className="font-bold text-purple-300 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-purple-400" />
                   Check-out & Partenza per Aeroporto
                 </div>
                 <p className="text-slate-300 leading-relaxed">
@@ -355,7 +440,6 @@ export const FlightsAndLayoverView: React.FC = () => {
 
               <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
                 <div className="font-bold text-purple-300 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-purple-400" />
                   Saluto alla Stazione
                 </div>
                 <p className="text-slate-300 leading-relaxed">
@@ -365,7 +449,6 @@ export const FlightsAndLayoverView: React.FC = () => {
 
               <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
                 <div className="font-bold text-purple-300 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
                   Gestione Alloggio & Chiavi
                 </div>
                 <p className="text-slate-300 leading-relaxed">
@@ -378,7 +461,6 @@ export const FlightsAndLayoverView: React.FC = () => {
           {/* Quick Baggage & General Flight Rules */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-start gap-3">
-              <Luggage className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
                 <h4 className="font-bold text-white">Bagaglio in Stiva: 23 kg</h4>
                 <p className="text-slate-400">Pesare le valigie il 18 marzo. Superare i 23 kg comporta tariffe extra salate.</p>
@@ -386,7 +468,6 @@ export const FlightsAndLayoverView: React.FC = () => {
             </div>
 
             <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
                 <h4 className="font-bold text-white">Power Bank: Marchio 3C</h4>
                 <p className="text-slate-400">In Cina e in aereo sono severissimi: power bank solo nello zaino a mano e rigorosamente marcati 3C.</p>
@@ -394,7 +475,6 @@ export const FlightsAndLayoverView: React.FC = () => {
             </div>
 
             <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-start gap-3">
-              <Clock className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
                 <h4 className="font-bold text-white">Fuso Orario</h4>
                 <p className="text-slate-400">Seul: UTC+9 (+8h rispetto a Milano). Pechino: UTC+8 (+7h). All'atterraggio a Pechino spostare 1 ora indietro.</p>
@@ -402,16 +482,16 @@ export const FlightsAndLayoverView: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      ))}
 
       {/* Tab 2: Deep Guide for Beijing 240h Transit */}
       {activeTab === 'beijing_guide' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="space-y-6 animate-in fade-in duration-200 desk-flat-flights">
           {/* Header intro */}
           <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-xl space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">🇨🇳</span>
+                <span className="text-2xl"></span>
                 <h3 className="text-lg font-bold text-white font-display">
                   19 Marzo: Pomeriggio & Notte a Pechino (Transito 240 ore)
                 </h3>
@@ -527,7 +607,6 @@ export const FlightsAndLayoverView: React.FC = () => {
             <div className="space-y-4">
               <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-amber-400" />
                   Stima Spese Scalo a Persona
                 </h4>
                 <div className="divide-y divide-slate-800 text-xs">
@@ -553,7 +632,6 @@ export const FlightsAndLayoverView: React.FC = () => {
               {/* Crucial China rules */}
               <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3 text-xs">
                 <h4 className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-xs">
-                  <Wifi className="w-3.5 h-3.5 text-cyan-400" />
                   Internet, Pagamenti & Clima
                 </h4>
                 <div className="space-y-2 text-slate-300">
@@ -566,7 +644,7 @@ export const FlightsAndLayoverView: React.FC = () => {
 
               {/* Backup Plan */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs space-y-1 text-slate-400">
-                <span className="font-bold text-slate-300">🛡️ Piano di Riserva:</span>
+                <span className="font-bold text-slate-300">Piano di Riserva:</span>
                 <p>Se il permesso 240h non viene concesso per code o restrizioni doganali: si rimane nella zona transiti internazionali. Air China offre un hotel gratuito per scali lunghi (da prenotare almeno 24h prima se idonei).</p>
               </div>
             </div>
@@ -576,10 +654,10 @@ export const FlightsAndLayoverView: React.FC = () => {
 
       {/* Tab 3: Malpensa Meeting 1 March */}
       {activeTab === 'malpensa' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="space-y-6 animate-in fade-in duration-200 desk-flat-flights">
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-5">
             <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold lg:hidden">
                 1 MAR
               </div>
               <div>

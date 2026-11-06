@@ -151,27 +151,27 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
                       )}
                       {day.id === 8 && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                          👋 SERATA DI SALUTI (PIETRO RIPARTE IL 10)
+                          SERATA DI SALUTI (PIETRO RIPARTE IL 10)
                         </span>
                       )}
                       {day.id === 9 && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                          ✈️ RIENTRO DI PIETRO A MILANO (VOLO 11:10)
+                          RIENTRO DI PIETRO A MILANO (VOLO 11:10)
                         </span>
                       )}
                       {day.id === 13 && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/40">
-                          🌸 WHITE DAY COREANO
+                          WHITE DAY COREANO
                         </span>
                       )}
                       {day.id === 17 && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                          🛂 ARRIVAL CARD & TIANANMEN ONLINE
+                          ARRIVAL CARD & TIANANMEN ONLINE
                         </span>
                       )}
                       {isBeijing && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                          🇨🇳 SCALO PECHINO 240H (19 MAR)
+                          SCALO PECHINO 240H (19 MAR)
                         </span>
                       )}
                     </div>
@@ -213,7 +213,7 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
                       <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                       <div>
                         <strong className="block font-bold text-white mb-0.5">
-                          ⚠️ Sede e orari: non ancora pubblicati (in attesa di annuncio ufficiale Riot Games)
+                          Sede e orari: non ancora pubblicati (in attesa di annuncio ufficiale Riot Games)
                         </strong>
                         <span className="leading-relaxed">
                           Sede, orari della finale e biglietti del Valorant Masters Seoul non sono ancora stati annunciati. La posizione sulla mappa è indicativa: il giorno resta riservato e il piano va aggiornato appena escono le informazioni.

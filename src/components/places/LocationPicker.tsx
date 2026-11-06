@@ -22,7 +22,7 @@ export const LocationPicker: React.FC<{ lat: number; lng: number; onChange: (lat
       className: '',
       iconSize: [34, 34],
       iconAnchor: [17, 17],
-      html: '<div style="width:34px;height:34px;border-radius:11px;background:#7c3aed;border:3px solid #fff;box-shadow:0 3px 12px #000a;display:flex;align-items:center;justify-content:center;font-size:17px">📍</div>'
+      html: '<div style="width:34px;height:34px;border-radius:11px;background:#7c3aed;border:3px solid #fff;box-shadow:0 3px 12px #000a;display:flex;align-items:center;justify-content:center;font-size:17px"></div>'
     });
     const mk = L.marker([lat, lng], { icon, draggable: true }).addTo(m);
     mk.on('dragend', () => {

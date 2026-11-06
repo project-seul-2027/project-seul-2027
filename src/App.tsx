@@ -4,11 +4,14 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import HeroVideo, { HeroVideoToggle, useHeroAnimation } from './components/HeroVideo';
+import { pageFromUrl, rememberPage, takeRememberedPage, writePageToUrl } from './pageAddress';
+import { useHeroAnimation } from './components/HeroVideo';
+import { DesktopPageHero } from './components/desktop/DesktopPageHero';
 import { BrandIcon } from './components/BrandIcon';
 import { TRIP_META } from './data/tripData';
 import { OFFICIAL_METRO_SOURCES } from './data/seoulMetroOfficialData';
 import { ItineraryView } from './components/ItineraryView';
+import { DesktopItinerary } from './components/desktop/DesktopItinerary';
 import { InteractiveMap } from './components/InteractiveMap';
 import { AccommodationsView } from './components/AccommodationsView';
 import { FlightsAndLayoverView } from './components/FlightsAndLayoverView';
@@ -21,6 +24,8 @@ import { hasDraftFlag } from './wallet/walletStore';
 import { GroupView } from './components/GroupView';
 import { WeatherView } from './components/WeatherView';
 import { TodayView } from './components/TodayView';
+import { DesktopCover } from './components/desktop/DesktopCover';
+import { DesktopSidebar } from './components/desktop/DesktopSidebar';
 import { WalletView } from './components/WalletView';
 import { GroupLiveEngine } from './components/group/GroupLive';
 import { ShowKoreanView } from './components/ShowKoreanView';
@@ -31,7 +36,6 @@ import { NotificationBell, TripNotifierEngine } from './components/NotificationC
 import { useNavPrefs } from './utils/navPrefs';
 import { ChangelogView } from './components/ChangelogView';
 import { APP_VERSION } from './data/changelog';
-import { WorldClockBar } from './components/WorldClockBar';
 import { SharedGalleryView } from './components/SharedGalleryView';
 import { PackingListView } from './components/PackingListView';
 import { GoogleAuthModal } from './components/GoogleAuthModal';
@@ -45,7 +49,7 @@ import { MobileBottomNav, MoreSheet, QuickActionsSheet, useBackToClose, type Qui
 import { SECTIONS, sectionById } from './components/mobile/sections';
 import { requestIntent } from './utils/quickIntent';
 import { 
-  Clock, Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
+  Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
   CalendarDays, Map, Plane, Coins, BookOpen, FileText, Luggage, X, Smartphone, Share, SquarePlus, Wallet, History, Compass, Languages, WalletCards, Bookmark, ShieldAlert
 } from 'lucide-react';
 
@@ -54,6 +58,13 @@ import {
  */
 export default function App() {
   const { status } = useAuth();
+  // Login richiesto: ricorda la pagina del link, così si riapre dopo l'accesso
+  useEffect(() => {
+    if (status === 'signedOut') {
+      const requested = pageFromUrl(window.location.search);
+      if (requested) rememberPage(requested);
+    }
+  }, [status]);
 
   if (status === 'loading') {
     return (
@@ -68,15 +79,44 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'today' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
+type Tab = 'cover' | 'today' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
+
+/** Tipo di animazione d'ingresso della pagina (vedi index.css, classi page-anim-*). */
+type PageAnimKind = 'none' | 'rise' | 'slide-left' | 'slide-right' | 'fade';
+const PAGE_ANIM_CLASS: Record<PageAnimKind, string> = {
+  none: '',
+  rise: 'page-anim-rise',
+  'slide-left': 'page-anim-slide-left',
+  'slide-right': 'page-anim-slide-right',
+  fade: 'page-anim-fade',
+};
+
+/**
+ * Sceglie l'animazione in base a come si passa da una pagina all'altra:
+ * dalla copertina (o da Oggi sul telefono) la pagina sale; tra sezioni dello stesso gruppo scorre
+ * nella direzione della barra; altrove sfuma.
+ */
+function pageTransition(from: Tab, to: Tab, desktop: boolean): PageAnimKind {
+  const isHome = (t: Tab) => t === 'cover' || (t === 'today' && !desktop);
+  if (isHome(from) && !isHome(to)) return 'rise';
+  const a = sectionById(from);
+  const b = sectionById(to);
+  if (a && b && a.group && a.group === b.group) {
+    return SECTIONS.indexOf(b) > SECTIONS.indexOf(a) ? 'slide-right' : 'slide-left';
+  }
+  return 'fade';
+}
 
 const ALL_TABS: Tab[] = ['today', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
 
 /** Scheda iniziale dall'indirizzo (?tab=map), usata anche dalle scorciatoie dell'app installata. */
 function initialTab(): Tab {
   if (typeof window === 'undefined') return 'itinerary';
-  const fromUrl = new URLSearchParams(window.location.search).get('tab');
+  const fromUrl = pageFromUrl(window.location.search);
   if (fromUrl && (ALL_TABS as string[]).includes(fromUrl)) return fromUrl as Tab;
+  // Ritorno dal login senza indirizzo: riapri la pagina richiesta prima dell'accesso
+  const remembered = takeRememberedPage();
+  if (!fromUrl && remembered && (ALL_TABS as string[]).includes(remembered)) return remembered as Tab;
   // Condivisione dal telefono (Android): un link o un testo diventa un nuovo luogo
   const sp = new URLSearchParams(window.location.search);
   if (!fromUrl && (sp.has('url') || sp.has('text') || sp.has('title'))) return 'places';
@@ -90,7 +130,8 @@ function initialTab(): Tab {
   const inTripWindow = t >= Date.parse('2027-02-28T00:00:00+01:00') && t <= Date.parse('2027-03-21T00:00:00+01:00');
   // Telefono: "Oggi" è la schermata di partenza anche prima del viaggio (conto alla rovescia)
   const isPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 1023.98px)').matches;
-  return params.has('sim') || inTripWindow || isPhone ? 'today' : 'itinerary';
+  // Desktop: si apre la copertina; telefono: Oggi
+  return params.has('sim') || inTripWindow || isPhone ? 'today' : 'cover';
 }
 
 /** Durante il viaggio l'invito a installare non compare: non è mai prioritario. */
@@ -106,7 +147,14 @@ function TripPortal() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const heroAnim = useHeroAnimation();
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  // Indirizzo statico: la URL segue la pagina aperta (solo desktop nel browser)
+  useEffect(() => { writePageToUrl(activeTab); }, [activeTab]);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
+  // Animazione della pagina: si ricalcola quando cambia la scheda (stato derivato, senza effetti)
+  const [pageAnim, setPageAnim] = useState<{ tab: Tab; kind: PageAnimKind }>({ tab: activeTab, kind: 'none' });
+  if (pageAnim.tab !== activeTab) {
+    setPageAnim({ tab: activeTab, kind: pageTransition(pageAnim.tab, activeTab, isDesktop) });
+  }
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isNavEditorOpen, setIsNavEditorOpen] = useState(false);
   const nav = useNavPrefs(SECTIONS.map((t) => t.id));
@@ -189,36 +237,6 @@ function TripPortal() {
   // Giorno dell'itinerario da aprire (es. dal pulsante "Itinerario" della galleria)
   const [focusItineraryDay, setFocusItineraryDay] = useState<{ id: number; nonce: number } | null>(null);
 
-  // Countdown timer to 1 March 2027 10:00:00 CET
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  });
-
-  useEffect(() => {
-    const targetDate = new Date('2027-03-01T10:00:00+01:00').getTime();
-
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      const diff = targetDate - now;
-
-      if (diff > 0) {
-        setTimeLeft({
-          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((diff / 1000 / 60) % 60),
-          seconds: Math.floor((diff / 1000) % 60)
-        });
-      }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   const handleRouteFromToday = (destinationId: string) => {
     setRouteRequest({ destinationId, nonce: Date.now() });
     setTargetLocationId(destinationId);
@@ -239,12 +257,25 @@ function TripPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col font-sans pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+    <div className="min-h-screen bg-[#090d16] lg:bg-[#080D18] lg:pl-[232px] text-slate-100 flex flex-col font-sans pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+      {/* Desktop: barra laterale al posto di quella in alto */}
+      <DesktopSidebar
+        activeTab={activeTab}
+        onGo={(tab) => { setActiveTab(tab as Tab); window.scrollTo({ top: 0, behavior: 'auto' }); }}
+        onHome={() => { setActiveTab('cover'); window.scrollTo({ top: 0, behavior: 'auto' }); }}
+        user={currentUser}
+        groupCount={group.length}
+        pdfPath={TRIP_META.pdfPath}
+        showInstall={!install.standalone}
+        onInstall={handleInstall}
+        onProfile={() => setIsProfileOpen(true)}
+        onSignOut={signOut}
+      />
       {/* Sticky Global Top Container con Header e Orologio Mondiale Live */}
       <div
         ref={stickyRef}
         data-app-sticky
-        className={`sticky top-0 z-50 bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20 pt-[env(safe-area-inset-top)] ${
+        className={`sticky top-0 z-50 lg:hidden bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20 pt-[env(safe-area-inset-top)] ${
           // Mappa su telefono: via la barra in alto (resta solo l'area sicura sotto l'orologio) per dare spazio alla mappa
           activeTab === 'map' ? 'max-lg:shadow-none max-lg:[&>*]:hidden' : ''
         }`}
@@ -253,7 +284,7 @@ function TripPortal() {
         <header className="border-b border-slate-800/80 px-4 sm:px-8 py-2.5 lg:py-3 flex items-center justify-between gap-4 2xl:gap-6">
           {/* Zone 1: Brand Wordmark */}
           <button
-          onClick={() => { setActiveTab(isDesktop ? 'itinerary' : 'today'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onClick={() => { setActiveTab(isDesktop ? 'cover' : 'today'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex items-center gap-2.5 text-left group shrink-0"
           aria-label={isDesktop ? undefined : `${sectionById(activeTab)?.title ?? 'Seul 2027'}: torna a Oggi`}
         >
@@ -538,278 +569,21 @@ function TripPortal() {
         </div>
       </header>
 
-      {/* Barra Orologio Mondiale Live (Italia, Seul, Pechino): fissa su computer */}
-      {isDesktop && <WorldClockBar />}
     </div>
 
     {/* Su telefono gli orologi sono una riga dentro "Oggi" (toccandola si aprono i tre fusi) */}
 
-    {/* Mobile Tab Navigation Bar */}
-      <div className="hidden lg:max-[1535.9px]:flex bg-slate-900 border-b border-slate-800 px-3 py-2 items-center overflow-x-auto gap-2 text-xs scrollbar-none">
-        <button
-          onClick={() => setActiveTab('today')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'today' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Compass className="w-3.5 h-3.5" />
-          <span>Oggi</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('itinerary')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'itinerary' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <CalendarDays className="w-3.5 h-3.5" />
-          <span>Itinerario</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('accommodations')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'accommodations' ? 'bg-blue-600 text-white font-bold' : 'text-blue-300 bg-blue-950/30'
-          }`}
-        >
-          <Home className="w-3.5 h-3.5" />
-          <span>4 Alloggi</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('map')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'map' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Map className="w-3.5 h-3.5" />
-          <span>Mappa</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('weather')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'weather' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-amber-300 bg-amber-950/30'
-          }`}
-        >
-          <CloudSun className="w-3.5 h-3.5" />
-          <span>Meteo</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('gallery')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'gallery' ? 'bg-pink-500 text-slate-950 font-bold' : 'text-pink-300 bg-pink-950/30'
-          }`}
-        >
-          <Camera className="w-3.5 h-3.5" />
-          <span>Galleria</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('packing')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'packing' ? 'bg-teal-500 text-slate-950 font-bold' : 'text-teal-300 bg-teal-950/30'
-          }`}
-        >
-          <Luggage className="w-3.5 h-3.5" />
-          <span>Valigia</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('expenses')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'expenses' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-emerald-300 bg-emerald-950/30'
-          }`}
-        >
-          <Wallet className="w-3.5 h-3.5" />
-          <span>Spese</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('flights')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'flights' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Plane className="w-3.5 h-3.5" />
-          <span>Voli & Scalo</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('budget')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'budget' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Coins className="w-3.5 h-3.5" />
-          <span>Preventivo</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('guide')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'guide' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Guida</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('wallet')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'wallet' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <WalletCards className="w-3.5 h-3.5" />
-          <span>Wallet</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('places')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'places' ? 'bg-violet-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Bookmark className="w-3.5 h-3.5" />
-          <span>Luoghi</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('sos')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'sos' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <ShieldAlert className="w-3.5 h-3.5" />
-          <span>SOS</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('show')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'show' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Languages className="w-3.5 h-3.5" />
-          <span>In coreano</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('pdf')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'pdf' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>PDF</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('group')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'group' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Partecipanti</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('changelog')}
-          className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors flex items-center gap-1.5 ${
-            activeTab === 'changelog' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <History className="w-3.5 h-3.5" />
-          <span>Changelog</span>
-        </button>
-      </div>
-
-      {/* Hero Atmosphere Section */}
-      <div
-        className={`relative isolate overflow-hidden border-b border-slate-800/80 bg-slate-950 py-6 sm:py-12 px-4 sm:px-8 ${
-          activeTab === 'itinerary' ? 'hidden lg:block' : activeTab === 'today' || activeTab === 'show' || activeTab === 'wallet' || activeTab === 'places' || activeTab === 'sos' ? 'hidden' : 'hidden lg:block'
-        }`}
-      >
-        <HeroVideo enabled={heroAnim.enabled} className="-z-10" />
-        <HeroVideoToggle enabled={heroAnim.enabled} onToggle={heroAnim.toggle} />
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="space-y-2 max-w-2xl [text-shadow:0_2px_12px_rgba(2,6,23,0.85)]">
-              <div className="text-xs font-mono font-semibold text-cyan-300">Corea del Sud</div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-display tracking-tight text-white leading-tight">
-                Seul 2027 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-indigo-300 [text-shadow:none] drop-shadow-[0_2px_10px_rgba(2,6,23,0.9)]">· Viaggio di Gruppo</span>
-              </h1>
-            </div>
-
-            {/* Countdown Badge */}
-            <div className="bg-slate-950/90 border border-slate-800 p-4 rounded-2xl shadow-2xl flex flex-col items-center shrink-0 min-w-[260px]">
-              <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mb-2 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                Conto alla rovescia Malpensa
-              </span>
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800">
-                  <div className="font-mono text-xl sm:text-2xl font-bold text-cyan-400">
-                    {timeLeft.days}
-                  </div>
-                  <div className="text-[9px] text-slate-500 uppercase">Giorni</div>
-                </div>
-                <div className="bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800">
-                  <div className="font-mono text-xl sm:text-2xl font-bold text-slate-200">
-                    {timeLeft.hours}
-                  </div>
-                  <div className="text-[9px] text-slate-500 uppercase">Ore</div>
-                </div>
-                <div className="bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800">
-                  <div className="font-mono text-xl sm:text-2xl font-bold text-slate-200">
-                    {timeLeft.minutes}
-                  </div>
-                  <div className="text-[9px] text-slate-500 uppercase">Min</div>
-                </div>
-                <div className="bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800">
-                  <div className="font-mono text-xl sm:text-2xl font-bold text-amber-400">
-                    {timeLeft.seconds}
-                  </div>
-                  <div className="text-[9px] text-slate-500 uppercase">Sec</div>
-                </div>
-              </div>
-              <span className="text-[10px] text-slate-500 mt-2 font-mono">
-                1 marzo ore 10:00 al T1 Air China
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Metrics Bar with 4 Accommodations trigger and Weather widget */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2">
-            <button
-              onClick={() => setActiveTab('accommodations')}
-              className="p-3 bg-blue-950/30 hover:bg-blue-900/40 rounded-xl border border-blue-500/40 text-left transition-colors group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-blue-400 uppercase font-mono">Opzioni Dove Dormire</span>
-                <Home className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="text-sm sm:text-base font-bold text-white mt-0.5">4 Alloggi a Confronto</div>
-            </button>
-            <button
-              onClick={() => setActiveTab('weather')}
-              className="p-3 bg-amber-950/20 hover:bg-amber-900/30 rounded-xl border border-amber-500/40 text-left transition-colors group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-amber-400 uppercase font-mono">Clima Viaggio (2-19 Mar)</span>
-                <CloudSun className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
-              </div>
-              <div className="text-sm sm:text-base font-bold text-white mt-0.5">Meteo & Previsioni</div>
-              <div className="text-[10px] text-amber-300/80 font-mono mt-0.5">Live 7 Giorni + KMA Seul</div>
-            </button>
-            <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
-              <span className="text-[10px] text-slate-500 uppercase font-mono">Partecipanti</span>
-              <div className="text-sm sm:text-base font-bold text-cyan-400 mt-0.5">4 Viaggiatori</div>
-              <div className="text-[10px] text-amber-300 font-mono mt-0.5">Pietro (8n) + 3 (17n)</div>
-            </div>
-            <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
-              <span className="text-[10px] text-slate-500 uppercase font-mono">Durata Soggiorno</span>
-              <div className="text-sm sm:text-base font-bold text-white mt-0.5">17 Notti / 19 Giorni</div>
-            </div>
-            <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80">
-              <span className="text-[10px] text-slate-500 uppercase font-mono">Evento Principale</span>
-              <div className="text-sm sm:text-base font-bold text-red-400 mt-0.5 flex items-center gap-1.5 truncate">
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Valorant Masters</span>
-                <span className="text-[9px] bg-red-500/20 text-red-300 border border-red-500/40 px-1.5 py-0.5 rounded font-mono font-semibold shrink-0">
-                  Arena TBD
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Fascia video di ogni pagina (solo desktop): sfuma nello sfondo, titolo sempre nella stessa posizione */}
+      {isDesktop && activeTab !== 'today' && activeTab !== 'cover' && (
+        <DesktopPageHero
+          tab={activeTab}
+          heroEnabled={heroAnim.enabled}
+          onToggleHero={heroAnim.toggle}
+          actions={activeTab === 'sos' ? (
+            <a href="tel:112" className="inline-flex items-center gap-2 rounded-full bg-[#F87171] px-5 py-3 text-sm font-bold text-[#080D18]" data-testid="sos-hero-call">Chiama 112</a>
+          ) : undefined}
+        />
+      )}
 
       {/* Avviso di nuova versione: l'app installata non si ricarica da sola */}
       {updateAvailable && (
@@ -832,7 +606,7 @@ function TripPortal() {
       )}
 
       {/* Main Content Area */}
-      <main ref={mainRef} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8">
+      <main ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing'].includes(activeTab) ? 'desk-flat' : ''}`}>
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
         {!isDesktop && !install.standalone && !installBannerHidden && !updateAvailable && !inTripWindow() && (install.canPrompt || install.needsIosInstructions) && (
           <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30">
@@ -859,24 +633,43 @@ function TripPortal() {
           </div>
         )}
 
-        {activeTab === 'today' && (
-          <TodayView onRoute={handleRouteFromToday} onGoTo={(tab) => goToTab(tab)} />
-        )}
-
+        {/* Motori senza schermo: restano fuori dal contenitore animato, così non si rimontano al cambio pagina */}
         <GroupLiveEngine />
         <TripNotifierEngine />
+        <div key={activeTab} className={PAGE_ANIM_CLASS[pageAnim.kind]}>
+        {(activeTab === 'today' || (activeTab === 'cover' && !isDesktop)) && (
+          <TodayView
+            onRoute={handleRouteFromToday}
+            onGoTo={(tab) => goToTab(tab)}
+            heroEnabled={heroAnim.enabled}
+            onToggleHero={heroAnim.toggle}
+          />
+        )}
+        {activeTab === 'cover' && isDesktop && (
+          <DesktopCover
+            heroEnabled={heroAnim.enabled}
+            onGoTo={(tab) => setActiveTab(tab)}
+          />
+        )}
+
         {activeTab === 'wallet' && <WalletView />}
         {activeTab === 'show' && <ShowKoreanView />}
         {activeTab === 'places' && <PlacesView onShowMap={() => goToTab('map')} onRoute={handleRouteFromToday} />}
         {activeTab === 'sos' && <SosView />}
 
-        {activeTab === 'itinerary' && (
+        {activeTab === 'itinerary' && (isDesktop ? (
+          <DesktopItinerary
+            onViewOnMap={handleViewOnMap}
+            focusDay={focusItineraryDay}
+            onFocusHandled={() => setFocusItineraryDay(null)}
+          />
+        ) : (
           <ItineraryView
             onViewOnMap={handleViewOnMap}
             focusDay={focusItineraryDay}
             onFocusHandled={() => setFocusItineraryDay(null)}
           />
-        )}
+        ))}
 
         {activeTab === 'accommodations' && (
           <AccommodationsView onViewOnMap={handleViewOnMap} />
@@ -887,7 +680,7 @@ function TripPortal() {
             {/* Su telefono la mappa occupa tutto lo schermo e il titolo non serve */}
             <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <h2 className="text-xl font-bold font-display text-white">
+                <h2 className="hidden text-xl font-bold font-display text-white">
                   Mappa Interattiva (Tappe e Alloggi in Italiano)
                 </h2>
                 <p className="text-xs text-slate-400">
@@ -951,6 +744,7 @@ function TripPortal() {
         {activeTab === 'group' && <GroupView onRoute={handleRouteFromToday} onShowMap={() => goToTab('map')} />}
 
         {activeTab === 'changelog' && <ChangelogView />}
+        </div>
       </main>
 
       <GoogleAuthModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
@@ -1029,11 +823,14 @@ function TripPortal() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-900 flex flex-col lg:flex-row lg:items-center justify-between gap-2 text-[11px] text-slate-500">
-            <span>
-              Fonti ufficiali dati trasporti e metropolitana di Seul (orari, frequenze, tariffe T-money/Climate Card e tracciati):
-            </span>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <details className="group pt-4 border-t border-slate-900 text-[11px] text-slate-500">
+            <summary className="cursor-pointer list-none flex items-center justify-between gap-2 hover:text-slate-300 transition-colors">
+              <span>
+                Fonti ufficiali dati trasporti e metropolitana di Seul (orari, frequenze, tariffe T-money/Climate Card e tracciati):
+              </span>
+              <span aria-hidden="true" className="shrink-0 group-open:rotate-180 transition-transform">▾</span>
+            </summary>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               {OFFICIAL_METRO_SOURCES.map((src, idx) => (
                 <React.Fragment key={src.id}>
                   {idx > 0 && <span aria-hidden="true">·</span>}
@@ -1049,7 +846,7 @@ function TripPortal() {
                 </React.Fragment>
               ))}
             </div>
-          </div>
+          </details>
         </div>
       </footer>
 
@@ -1059,8 +856,8 @@ function TripPortal() {
       {!isDesktop && (
         <>
           <MobileBottomNav
-            activeTab={activeTab}
-            primary={nav.primaryIds as Tab[]}
+            activeTab={activeTab === 'cover' ? 'today' : activeTab}
+            primary={nav.primaryIds as Exclude<Tab, 'cover'>[]}
             sheet={isActionsOpen ? 'actions' : isMoreOpen ? 'more' : 'none'}
             onGo={(id) => goToTab(id)}
             onToggleMore={() => {
@@ -1075,7 +872,7 @@ function TripPortal() {
           <QuickActionsSheet open={isActionsOpen} onClose={() => setIsActionsOpen(false)} onAction={handleQuickAction} />
           <MoreSheet
             open={isMoreOpen}
-            activeTab={activeTab}
+            activeTab={activeTab === 'cover' ? 'today' : activeTab}
             onClose={() => setIsMoreOpen(false)}
             onGo={(id) => goToTab(id)}
             onEditBar={() => {

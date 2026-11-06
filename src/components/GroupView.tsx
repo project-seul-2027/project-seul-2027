@@ -138,8 +138,8 @@ export const GroupView: React.FC<{ onRoute?: (placeId: string) => void; onShowMa
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="flex items-start gap-3">
+    <div className="space-y-6 animate-in fade-in duration-200 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-x-12 lg:gap-y-6 lg:items-start">
+      <div className="flex items-start gap-3 lg:col-span-2">
         <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 shrink-0">
           <Users className="w-6 h-6" />
         </div>
@@ -154,7 +154,7 @@ export const GroupView: React.FC<{ onRoute?: (placeId: string) => void; onShowMa
 
       <GroupLiveCard onRoute={onRoute} onShowMap={onShowMap} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 lg:col-start-2 lg:row-start-2 lg:row-span-2">
         {travelers.map((slot) => {
           const member = group.find((m) => m.travelerId === slot.id);
           const vote = member?.accommodationPreference
@@ -167,7 +167,7 @@ export const GroupView: React.FC<{ onRoute?: (placeId: string) => void; onShowMa
             return (
               <div
                 key={slot.id}
-                className="p-5 rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 flex items-center gap-3 text-sm text-slate-500"
+                className={isDesktop ? 'p-5 rounded-3xl bg-white/[0.03] flex items-center gap-4 text-sm text-slate-500' : 'p-5 rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 flex items-center gap-3 text-sm text-slate-500'}
               >
                 <UserPlus className="w-5 h-5 shrink-0" />
                 <div>
@@ -303,7 +303,7 @@ export const GroupView: React.FC<{ onRoute?: (placeId: string) => void; onShowMa
       </div>
 
       {/* Checklist dei preparativi: righe = cosa fare, colonne = i 4 posti. Ognuno spunta solo le proprie caselle. */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden" aria-labelledby="checklist-title">
+      <section className={isDesktop ? 'rounded-3xl bg-white/[0.03] overflow-hidden' : 'rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden'} aria-labelledby="checklist-title">
         <div className="flex items-start gap-3 p-4 pb-3">
           <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
             <ClipboardCheck className="w-5 h-5" />

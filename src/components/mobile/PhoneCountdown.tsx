@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
-
-/** Stesso traguardo del conto alla rovescia della versione desktop: 1 marzo 2027, ore 10:00 (Corea). */
-const TARGET = new Date('2027-03-01T10:00:00+01:00').getTime();
+import { launchState } from '../../utils/launchClock';
 
 /** Conto alla rovescia per il telefono: giorni, ore, minuti e secondi, aggiornato ogni secondo. */
 export const PhoneCountdown: React.FC = () => {
@@ -12,7 +10,9 @@ export const PhoneCountdown: React.FC = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  const diff = Math.max(0, TARGET - now);
+  const L = launchState(now);
+  if (L.kind !== 'countdown') return null;
+  const diff = Math.max(0, L.target - now);
   const days = Math.floor(diff / 86_400_000);
   const hours = Math.floor(diff / 3_600_000) % 24;
   const minutes = Math.floor(diff / 60_000) % 60;
@@ -27,7 +27,7 @@ export const PhoneCountdown: React.FC = () => {
   ];
 
   return (
-    <div className="mt-1" role="group" aria-label={`Mancano ${days} giorni, ${hours} ore, ${minutes} minuti e ${seconds} secondi alla partenza`} data-testid="phone-countdown">
+    <div className="mt-1" role="group" aria-label={`${L.eyebrow}: ${days} giorni, ${hours} ore, ${minutes} minuti e ${seconds} secondi`} data-testid="phone-countdown">
       <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-app-muted">
         <Clock className="w-3.5 h-3.5 text-app-accent" aria-hidden />
         Conto alla rovescia Malpensa

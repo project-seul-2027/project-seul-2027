@@ -1,70 +1,95 @@
-# Seul 2027 · Viaggio di Gruppo
+# Seul 2027 · Viaggio di gruppo
 
-Portale del viaggio a Seul (2–19 marzo 2027): itinerario, alloggi a confronto con voto del gruppo, mappa, voli, preventivo, guida e partecipanti.
+Portale del viaggio a Seul e Pechino (1–20 marzo 2027, quattro amici): copertina, **Oggi** con il conto alla rovescia, itinerario riassunto giorno per giorno, alloggi a confronto con voto del gruppo, mappa, voli e scalo, meteo, spese, galleria, valigia, wallet, guida e SOS.
 
-- **Accesso solo con Google** (Firebase Authentication). Nessun altro metodo di registrazione.
-- Al primo accesso ognuno compila il **profilo viaggiatore** (nome, cognome, data di nascita, posto nel gruppo, telefono, contatto di emergenza, passaporto, K-ETA, preferenze).
-- **Voti sugli alloggi** e **partecipanti** condivisi in tempo reale tramite Firestore.
-- Nessun server da gestire: il sito è statico (GitHub Pages) e i dati stanno su Firebase, entrambi gratuiti.
-
-Gli altri partecipanti vedono sempre nome, posto, foto, telefono, preferenza alimentare e voto sull'alloggio. Gli altri dati del profilo (data di nascita, passaporto, KETA, assicurazione, contatto di emergenza, allergie, budget, note) sono privati per default: ogni campo ha un interruttore "Visibile al gruppo" nel profilo, e solo i campi attivati compaiono nel dettaglio del partecipante (tocca la sua card in "Partecipanti"). I campi non condivisi non vengono salvati nel database condiviso. La foto è quella di Google, ma puoi caricarne una dal telefono (e tornare a quella di Google). Lo garantiscono le regole in [`firestore.rules`](firestore.rules).
+**Versione 3.0.0.** Questa versione rifà l'interfaccia desktop e introduce gli indirizzi diretti delle pagine. Il telefono mantiene il layout di prima.
 
 ---
 
-## Galleria condivisa
+## Cosa c'è
 
-Le foto sono salvate in Firestore (Firebase Storage richiede il piano a pagamento), quindi tutti i partecipanti vedono le stesse foto in tempo reale. Prima di caricarle il sito le ridimensiona a 1600 px (JPEG) e crea una miniatura da circa 30 KB; la foto grande si scarica solo quando la si apre. Nei documenti non sono salvati nomi o avatar, solo gli uid: i nomi si ricavano dal profilo di ciascuno.
+- **Copertina desktop** con video di sfondo e accesso alle sezioni.
+- **Oggi**: conto alla rovescia verso il ritrovo a Malpensa, programma del giorno con riassunti brevi (il dettaglio si apre con "Dettagli"), meteo, promemoria, stato del gruppo.
+- **Itinerario**: tutti i giorni, con le tappe e i loro riassunti. Ogni tappa ha un testo completo e uno breve.
+- **Alloggi**: quattro proposte a confronto, voto del gruppo e totali calcolati per chi resta 17 notti e per chi riparte il 10 marzo. Il Posto 1 può aggiornare il prezzo totale di un alloggio, e il nuovo prezzo vale per tutti.
+- **Mappa**: alloggi, tappe, Metro e AREX, percorsi, con le icone per categoria. Su desktop il pannello è a sinistra, la mappa occupa il resto.
+- **Voli e scalo**: Milano–Seul con Air China e scalo a Pechino (permesso di transito di 240 ore), con le schede dei tratti.
+- **Meteo**: condizioni attuali, previsioni, clima di marzo e orario.
+- **Spese**: chi ha pagato e come si divide, saldi, riepilogo per persona. Aggiunge spese chiunque nel gruppo; modifica ed elimina solo chi l'ha creata o chi l'ha pagata.
+- **Galleria condivisa**: foto e video del gruppo, tag dei partecipanti, mi piace e commenti in tempo reale.
+- **Valigia e Preventivo**: liste personali (condivisibili in sola lettura) e stima dei costi.
+- **Wallet**: biglietti, voucher e prenotazioni, anche senza rete.
+- **SOS**: numeri di emergenza, posizione, frasi in coreano, mostra al tassista.
+- **Guida e PDF**: consigli pratici e l'itinerario scaricabile.
+- **Partecipanti e "Il gruppo adesso"**: chi è a casa, chi condivide la posizione, ritrovi e punti fissi, avviso "ho perso il gruppo".
+- **Novità**: changelog generato dai commit.
 
-- Se aggiorni `firestore.rules`, ripubblicalo in Firebase (Firestore → Regole → Pubblica): senza le regole nuove la galleria mostra "Operazione non consentita".
-- Piano gratuito (Spark): 1 GiB di spazio, circa 300–500 KB a foto → oltre 2000 foto; 50.000 letture al giorno. Ogni apertura della galleria legge fino a 48 miniature (e i commenti), e "Mostra altre foto" ne aggiunge altre 48.
+## Accesso
 
-## Valigia e lista delle cose da portare
+- Accesso **solo con Google** (Firebase Authentication).
+- Al primo accesso ognuno compila il proprio profilo viaggiatore e sceglie il posto nel gruppo.
+- I campi del profilo sono privati per default. Ogni campo ha l'interruttore "Visibile al gruppo". Lo garantiscono le regole in [`firestore.rules`](firestore.rules).
 
-Ogni partecipante ha la sua lista, salvata nel documento `packingLists/{uid}` di Firestore: la modifica solo il titolare. Con "Condividi lista" si sceglie chi può leggerla (sola lettura, elenco `sharedWith`) e gli altri possono copiare gli oggetti utili nella propria. La lista è visibile subito anche senza rete: una copia resta nel browser e, se è più recente di quella nel cloud, viene caricata appena possibile. L'etichetta in alto indica se la lista è salvata nel cloud o solo su quel dispositivo.
+## Indirizzi diretti
 
-- Come per la galleria, servono le regole aggiornate in `firestore.rules` (Firestore → Regole → Pubblica), altrimenti la lista resta solo sul dispositivo.
-- Il promemoria `.ics` (28 febbraio) si importa in Calendario/Promemoria; "Google Keep" copia il testo negli appunti da incollare nella nota.
+Su desktop nel browser la scheda aperta si riflette nell'indirizzo, così una pagina si può condividere:
 
-## Spese di gruppo
+```
+https://…/?p=map          apre la Mappa
+https://…/?p=accommodations
+```
 
-La sezione **Spese** tiene traccia di chi anticipa per gli altri. Ogni spesa è un documento `expenses/{id}` di Firestore, letto da tutti i partecipanti in tempo reale:
+Pagine disponibili: `today`, `itinerary`, `accommodations`, `map`, `weather`, `gallery`, `packing`, `expenses`, `flights`, `budget`, `guide`, `pdf`, `group`, `changelog`, `wallet`, `show`, `places`, `sos`. Il vecchio `?tab=` continua a funzionare. Un indirizzo con una pagina sconosciuta apre la copertina.
 
-- importo in €, ₩ o ¥, convertito in euro con il cambio del momento (salvato nella spesa); i calcoli sono in centesimi, senza errori di arrotondamento;
-- chi ha pagato e come si divide: parti uguali tra le persone scelte oppure importi esatti;
-- per ogni quota, se è già stata restituita: la segna chi la doveva o chi ha pagato;
-- **Saldi**: quanto deve ciascuno a ciascuno, al netto per coppia; "Salda" chiude in un colpo tutte le quote aperte tra due persone;
-- **Riepilogo**: per persona quanto ha pagato, la sua quota, quanto deve ancora, quanto ha restituito, quanto deve ricevere e quanto ha ricevuto.
+Il login non fa perdere la pagina richiesta: se l'accesso riporta alla home, la pagina viene riaperta. Sul telefono e nell'app installata l'indirizzo non cambia.
 
-Aggiunge spese chiunque nel gruppo; modifica ed elimina solo chi l'ha creata o chi l'ha pagata. Senza rete le spese restano visibili e le modifiche partono al ritorno della connessione.
+## Regole Firestore (da pubblicare)
 
-- Servono le regole aggiornate in `firestore.rules` (Firestore → Regole → Pubblica), altrimenti compare "Operazione non consentita".
+Le funzioni di questa versione richiedono le regole in `firestore.rules`. Senza di esse galleria, valigia, spese e prezzi degli alloggi mostrano "Operazione non consentita".
 
-## Changelog e numeri di versione
+1. Apri Firebase Console → Firestore Database → Regole.
+2. Incolla il contenuto di `firestore.rules`.
+3. Clicca **Pubblica**.
 
-La scheda **Changelog** (in "Altro" sul telefono, "Novità"/"Changelog" nel menu su computer, oppure toccando il numero di versione nel piè di pagina) elenca gli aggiornamenti pubblicati su GitHub. **Ogni commit è una versione**, e il numero finale sale di 1 a ogni commit, senza limite: 1.0.0, 1.0.1, … 1.0.9, poi dal commit `3a0f64a` (1.1.0) si prosegue con 1.1.1, 1.1.2, … 1.1.10, 1.1.20 e così via.
+Le regole nuove aggiungono la raccolta `accommodationPrices`, in cui solo il titolare del Posto 1 può scrivere.
 
-- L'elenco si crea da solo dalla cronologia git: `scripts/generate-changelog.mjs` gira a ogni `npm run dev` e `npm run build` e scrive `src/data/changelog.generated.json` (ignorato da git, non va modificato). Se il clone è parziale (come quello di GitHub Actions) lo script scarica da solo il resto della cronologia, quindi a ogni push il Changelog si aggiorna e il numero di versione compare nel piè di pagina e nell'avviso "Nuova versione disponibile".
-- **Titolo e punti elenco** vengono dal messaggio del commit: la prima riga è il titolo, le righe che iniziano con `- ` diventano voci. Conviene scrivere messaggi chiari, perché sono quello che si legge nella pagina.
-- **Per iniziare la serie successiva** (per esempio 1.2.0) aggiungi una riga all'elenco `RELEASES` in `scripts/generate-changelog.mjs` con l'hash del commit che deve diventare 1.2.0: da lì si riparte da 1.2.0, 1.2.1, …
-- Senza cronologia git (copia scaricata come zip) il sito funziona lo stesso e la scheda mostra un avviso.
-- Se la storia viene riscritta (rebase con force push) i numeri si ricalcolano: lo stesso commit può cambiare numero.
+## Sviluppo
 
-## App per Android e iPhone
+Requisiti: Node.js recente.
 
-Il sito è anche un'app installabile (PWA): si apre a schermo intero dall'icona sulla home, ha una barra di navigazione in basso e funziona anche senza rete con i dati già visti (itinerario, valigia, galleria). Gli aggiornamenti arrivano da soli a ogni push, senza passare dagli store.
+```bash
+npm install
+npm run dev      # sviluppo su http://localhost:3000
+npm run build    # build di produzione in dist/
+```
 
-- **Android (Chrome):** apri il sito → menu ⋮ → **Installa app**, oppure il pulsante "Installa" che compare nel sito.
-- **iPhone/iPad (Safari):** apri il sito → **Condividi** → **Aggiungi alla schermata Home**. Da Chrome su iPhone non si può installare.
-- Al primo avvio dell'app installata bisogna accedere di nuovo con Google.
+Lo stack è React 19, Vite, Tailwind CSS 4, lucide-react e Firebase (Auth, Firestore). Le icone della mappa sono in `src/components/map/categoryIcons.ts`.
 
-File coinvolti: `public/manifest.webmanifest` (nome, colori, icone), `public/icons/` (icone), `public/sw.js` (service worker per l'uso offline), `src/pwa.ts` (registrazione e pulsante "Installa").
+Il file `src/firebase/config.ts` contiene la configurazione pubblica del progetto Firebase; non ci sono chiavi segrete nel repository. Le notifiche push leggono la chiave VAPID da `src/firebase/push.config.ts`.
 
-## Linee della metro sulla mappa
+## Pubblicazione
 
-Nella scheda **Mappa** le linee metro (1–9, AREX, Gyeongui-Jungang, Suin-Bundang, Shinbundang e le altre linee dell'area di Seul, 24 in tutto) sono disegnate dal sito sopra la mappa Google, da cui sono state tolte le linee originali.
+Il sito è statico e viene pubblicato su **GitHub Pages** dal ramo `main`. Non servono server: i dati stanno su Firebase, con il piano gratuito.
 
-- Pannello **Metro & AREX**: mostra/nascondi ogni linea, preset "Principali / Tutte / Nessuna", ricerca stazioni, elenco ordinato delle stazioni della linea selezionata con gli interscambi.
-- Sulla mappa: passa sopra una linea per il nome, cliccala per evidenziarla (le altre si attenuano e compaiono i nomi delle stazioni), clicca una stazione per le linee che la servono e i link a Naver Map e Google Maps. Il pulsante in alto a destra spegne e riaccende tutte le linee.
-- Le scelte restano salvate nel browser di ognuno.
+Piano gratuito (Spark): la galleria tiene circa 2000 foto e ogni apertura legge fino a 48 miniature.
 
-I tracciati vengono dai binari reali di [OpenStreetMap](https://www.openstreetmap.org/copyright) (dati ODbL, attribuzione obbligatoria, già presente sulla mappa) tramite il progetto `kimmdr2/metroscope`, con precisione di circa 3 metri. Sono nel file `src/data/seoulMetro.json` (circa 60 KB compressi, scaricato solo quando si apre la mappa); i nomi inglesi delle stazioni sono quelli ufficiali per le stazioni principali e la romanizzazione ufficiale coreana per le altre.
+## Struttura
+
+```
+src/
+  App.tsx                 navigazione tra le pagine e indirizzi (?p=)
+  pageAddress.ts          lettura e scrittura dell'indirizzo della pagina
+  components/             una vista per pagina
+  components/desktop/     copertina, intestazioni e barra laterale desktop
+  components/group/       "Il gruppo adesso"
+  components/map/         mappa, pannelli e icone per categoria
+  data/tripData.ts        itinerario (con i riassunti), alloggi, luoghi
+  services/               accesso ai dati condivisi (Firestore)
+  firebase/               configurazione Firebase
+firestore.rules           regole di accesso ai dati condivisi
+```
+
+## Note
+
+- Il telefono ha un layout dedicato. Le modifiche di questa versione per i grandi schermi valgono solo da 1024 px in su.
+- I dati dell'itinerario, degli alloggi e dei numeri di emergenza vanno verificati prima della partenza.

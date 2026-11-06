@@ -3,8 +3,10 @@ import { TRIP_META } from '../data/tripData';
 import { FileText, Download, Maximize2, X, BookOpen } from 'lucide-react';
 import { PdfPageViewer } from './PdfPageViewer';
 import { FoldText } from './mobile/FoldText';
+import { useMediaQuery } from '../pwa';
 
 export const PdfViewerModal: React.FC = () => {
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [selectedPageTopic, setSelectedPageTopic] = useState<number>(1);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -37,7 +39,13 @@ export const PdfViewerModal: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div
+        className={
+          isDesktop
+            ? 'pb-5 border-b border-white/[0.06] flex flex-row items-center justify-between gap-6'
+            : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4'
+        }
+      >
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-xl bg-red-500/10 text-red-400 shrink-0">
             <FileText className="w-6 h-6" />
@@ -78,10 +86,16 @@ export const PdfViewerModal: React.FC = () => {
           <div
             key={pt.page}
             onClick={() => setSelectedPageTopic(pt.page)}
-            className={`p-3 rounded-xl border transition-all cursor-pointer ${
-              selectedPageTopic === pt.page
-                ? 'bg-slate-800 border-cyan-500/50 shadow-md text-white ring-1 ring-cyan-500/20'
-                : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
+            className={`p-3 transition-all cursor-pointer ${
+              isDesktop
+                ? selectedPageTopic === pt.page
+                  ? 'border-l-2 border-cyan-400 pl-4 text-white'
+                  : 'border-l-2 border-transparent pl-4 text-slate-300 hover:text-white'
+                : `rounded-xl border ${
+                    selectedPageTopic === pt.page
+                      ? 'bg-slate-800 border-cyan-500/50 shadow-md text-white ring-1 ring-cyan-500/20'
+                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
+                  }`
             }`}
           >
             <div className="font-bold text-xs text-cyan-300 mb-1 flex items-center justify-between">
@@ -96,8 +110,16 @@ export const PdfViewerModal: React.FC = () => {
       </div>
 
       {/* Visualizzatore incorporato: le pagine sono disegnate nel sito, senza download */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl h-[70svh] md:h-[780px] flex flex-col">
-        <div className="bg-slate-950 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono gap-2">
+      <div
+        className={`overflow-hidden h-[70svh] md:h-[780px] flex flex-col ${
+          isDesktop ? 'border border-slate-800/80 rounded-2xl' : 'bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl'
+        }`}
+      >
+        <div
+          className={`px-4 py-2.5 flex items-center justify-between text-xs text-slate-400 font-mono gap-2 ${
+            isDesktop ? 'border-b border-white/[0.06]' : 'bg-slate-950 border-b border-slate-800'
+          }`}
+        >
           <span>Visualizzatore PDF Ufficiale Aggiornato</span>
           <span className="truncate">{TRIP_META.pdfPath.split('/').pop()}</span>
         </div>

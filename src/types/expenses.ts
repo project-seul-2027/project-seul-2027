@@ -12,12 +12,12 @@ export type ExpenseCategory = 'food' | 'transport' | 'lodging' | 'activity' | 's
 export type SplitMode = 'equal' | 'exact';
 
 export const EXPENSE_CATEGORIES: { id: ExpenseCategory; label: string; emoji: string }[] = [
-  { id: 'food', label: 'Cibo', emoji: '🍜' },
-  { id: 'transport', label: 'Trasporti', emoji: '🚇' },
-  { id: 'lodging', label: 'Alloggio', emoji: '🏨' },
-  { id: 'activity', label: 'Attività', emoji: '🎟️' },
-  { id: 'shopping', label: 'Shopping', emoji: '🛍️' },
-  { id: 'other', label: 'Altro', emoji: '📦' }
+  { id: 'food', label: 'Cibo', emoji: '' },
+  { id: 'transport', label: 'Trasporti', emoji: '' },
+  { id: 'lodging', label: 'Alloggio', emoji: '' },
+  { id: 'activity', label: 'Attività', emoji: '' },
+  { id: 'shopping', label: 'Shopping', emoji: '' },
+  { id: 'other', label: 'Altro', emoji: '' }
 ];
 
 export const CURRENCY_SYMBOL: Record<ExpenseCurrency, string> = { EUR: '€', KRW: '₩', CNY: '¥' };

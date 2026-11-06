@@ -22,7 +22,7 @@ export const WEATHER_LOCATIONS: WeatherLocation[] = [
     shortName: 'Seul Centro',
     koreanName: '서울 중구 · 마포구',
     country: 'Corea del Sud',
-    flag: '🇰🇷',
+    flag: '',
     lat: 37.5665,
     lng: 126.9780,
     tag: 'Base del Viaggio'
@@ -33,7 +33,7 @@ export const WEATHER_LOCATIONS: WeatherLocation[] = [
     shortName: 'Incheon',
     koreanName: '인천국제공항 · 차이나타운',
     country: 'Corea del Sud',
-    flag: '🇰🇷',
+    flag: '',
     lat: 37.4602,
     lng: 126.4407,
     tag: 'Aeroporto & Giorno 9'
@@ -44,7 +44,7 @@ export const WEATHER_LOCATIONS: WeatherLocation[] = [
     shortName: 'Suwon',
     koreanName: '수원 화성',
     country: 'Corea del Sud',
-    flag: '🇰🇷',
+    flag: '',
     lat: 37.2636,
     lng: 127.0286,
     tag: 'Gita Giorno 11'
@@ -55,7 +55,7 @@ export const WEATHER_LOCATIONS: WeatherLocation[] = [
     shortName: 'Pechino',
     koreanName: '北京 (前门大街)',
     country: 'Cina',
-    flag: '🇨🇳',
+    flag: '',
     lat: 39.9042,
     lng: 116.4074,
     tag: 'Scalo 240h · 19 Mar'
@@ -167,7 +167,7 @@ export function getWmoCondition(code: number, isDay = 1): WeatherConditionInfo {
     case 77:
       return {
         code,
-        labelIt: code === 71 ? 'Nevicata leggera' : 'Nevicata su Seul',
+        labelIt: code === 71 ? 'Nevicata leggera' : 'Nevicata',
         theme: 'snowy',
         iconName: 'CloudSnow',
         descriptionIt: 'Fiocchi di neve o nevischio coreano',

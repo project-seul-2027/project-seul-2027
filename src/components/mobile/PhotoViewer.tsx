@@ -140,7 +140,7 @@ export const PhonePhotoViewer: React.FC<Props> = (p) => {
   const ratio = photo.dimensions.width > 0 && photo.dimensions.height > 0 ? photo.dimensions.width / photo.dimensions.height : 1;
 
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label={`Foto di ${photo.uploaderName}`} className="fixed inset-0 z-[9999] bg-app-bg flex flex-col" data-testid="photo-viewer">
+    <div role="dialog" aria-modal="true" aria-label={`Foto di ${photo.uploaderName}`} className="fixed inset-0 z-[9999] bg-app-bg flex flex-col animate-viewer-in" data-testid="photo-viewer">
       {/* Barra superiore */}
       <header className="shrink-0 h-14 pt-[env(safe-area-inset-top)] box-content flex items-center gap-1 px-1.5 border-b border-app-line bg-app-bg">
         <button ref={closeRef} type="button" onClick={p.onClose} aria-label="Chiudi la foto" className="w-11 h-11 rounded-xl flex items-center justify-center text-app-text focus-visible:outline-2 focus-visible:outline-app-accent" data-testid="pv-close">

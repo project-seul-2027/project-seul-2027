@@ -1,5 +1,5 @@
 /**
- * 🌐 TRADUZIONE LIBERA (Google Cloud Translation) — chiave API.
+ * TRADUZIONE LIBERA (Google Cloud Translation) — chiave API.
  *
  * Come ottenerla:
  *   Console Google Cloud (stesso progetto di Firebase) → API e servizi → Libreria → "Cloud Translation API" → Abilita

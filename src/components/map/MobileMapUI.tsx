@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { categoryIconSvg } from './categoryIcons';
 import {
   ArrowLeft,
   BookOpen,
@@ -61,12 +62,12 @@ export function useIsMobileMap(): boolean {
 }
 
 const CHIP_CATEGORIES = [
-  { id: 'alloggio', label: 'Alloggi', emoji: '🏠' },
-  { id: 'cultura', label: 'Cultura', emoji: '🏯' },
-  { id: 'food', label: 'Food', emoji: '🍜' },
-  { id: 'nightlife', label: 'Nightlife', emoji: '🍸' },
-  { id: 'natura', label: 'Parchi', emoji: '🌲' },
-  { id: 'gita', label: 'Gite', emoji: '🚆' }
+  { id: 'alloggio', label: 'Alloggi', emoji: '' },
+  { id: 'cultura', label: 'Cultura', emoji: '' },
+  { id: 'food', label: 'Food', emoji: '' },
+  { id: 'nightlife', label: 'Nightlife', emoji: '' },
+  { id: 'natura', label: 'Parchi', emoji: '' },
+  { id: 'gita', label: 'Gite', emoji: '' }
 ];
 
 const DEST_GROUP_ORDER = ['alloggio', 'luogo', 'cultura', 'food', 'nightlife', 'natura', 'gita', 'logistica'];
@@ -193,7 +194,7 @@ const PlaceRow: React.FC<{ loc: MapLocation; onPick: () => void }> = ({ loc, onP
         className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 bg-slate-950"
         style={{ border: `2px solid ${style.badge}`, boxShadow: `0 0 10px ${style.ring}` }}
       >
-        {loc.id === 'valorant_masters_arena' ? '🎮' : style.letter}
+        <span className="inline-flex" dangerouslySetInnerHTML={{ __html: categoryIconSvg(loc.id === 'valorant_masters_arena' ? 'valorant' : loc.category, 16) }} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
@@ -205,9 +206,9 @@ const PlaceRow: React.FC<{ loc: MapLocation; onPick: () => void }> = ({ loc, onP
           {loc.city !== 'Seul' ? ` · ${loc.city}` : ''}
         </span>
         <span className="block text-xs text-slate-400 line-clamp-2 mt-1">{loc.description}</span>
-        {loc.mustTry && <span className="block text-[11px] text-amber-400 mt-1">⭐ {loc.mustTry}</span>}
+        {loc.mustTry && <span className="block text-[11px] text-amber-400 mt-1">{loc.mustTry}</span>}
         {loc.id === 'valorant_masters_arena' && (
-          <span className="block text-[11px] text-red-400 font-semibold mt-1">⚠️ Sede non ancora annunciata</span>
+          <span className="block text-[11px] text-red-400 font-semibold mt-1">Sede non ancora annunciata</span>
         )}
       </span>
     </button>
@@ -361,7 +362,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0 bg-slate-950"
             style={{ border: `2px solid ${style.badge}`, boxShadow: `0 0 12px ${style.ring}` }}
           >
-            {loc.id === 'valorant_masters_arena' ? '🎮' : style.letter}
+            <span className="inline-flex" dangerouslySetInnerHTML={{ __html: categoryIconSvg(loc.id === 'valorant_masters_arena' ? 'valorant' : loc.category, 16) }} />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold text-white leading-tight">{loc.italianName}</h2>
@@ -412,7 +413,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 space-y-4">
         {loc.id === 'valorant_masters_arena' && (
           <div className="rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs text-red-300 font-semibold">
-            ⚠️ Sede non ancora annunciata: Riot Games deve ancora comunicare l&apos;arena.
+            Sede non ancora annunciata: Riot Games deve ancora comunicare l&apos;arena.
           </div>
         )}
         {(loc.koreanName || loc.name !== loc.italianName) && (
@@ -424,7 +425,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         <p className="text-sm text-slate-200 leading-relaxed">{loc.description}</p>
         {loc.mustTry && (
           <div className="rounded-xl bg-amber-950/25 border border-amber-500/30 px-3 py-2 text-sm text-amber-200">
-            💡 <span className="font-semibold">Da provare:</span> {loc.mustTry}
+            <span className="font-semibold">Da provare:</span> {loc.mustTry}
           </div>
         )}
         {loc.tips && (
@@ -584,10 +585,10 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               {p.addedCount > 0 && (
                 <>
                   <button type="button" onClick={() => p.onPlacesFilter(p.placesFilter === 'added' ? 'all' : 'added')} aria-pressed={p.placesFilter === 'added'} className={`${chipBase} ${p.placesFilter === 'added' ? chipOn : chipOff}`} data-testid="map-filter-added">
-                    <span aria-hidden="true">📍</span> Aggiunti ({p.addedCount})
+                    <span aria-hidden="true"></span> Aggiunti ({p.addedCount})
                   </button>
                   <button type="button" onClick={() => p.onPlacesFilter(p.placesFilter === 'todo' ? 'all' : 'todo')} aria-pressed={p.placesFilter === 'todo'} className={`${chipBase} ${p.placesFilter === 'todo' ? chipOn : chipOff}`} data-testid="map-filter-todo">
-                    <span aria-hidden="true">⭐</span> Da visitare
+                    <span aria-hidden="true"></span> Da visitare
                   </button>
                   <button type="button" onClick={() => p.onPlacesFilter(p.placesFilter === 'stops' ? 'all' : 'stops')} aria-pressed={p.placesFilter === 'stops'} className={`${chipBase} ${p.placesFilter === 'stops' ? chipOn : chipOff}`} data-testid="map-filter-stops">
                     Solo tappe
@@ -602,7 +603,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                   aria-pressed={p.activeCategory === c.id}
                   className={`${chipBase} ${p.activeCategory === c.id ? chipOn : chipOff}`}
                 >
-                  <span aria-hidden="true">{c.emoji}</span> {c.label}
+                  <span aria-hidden="true" className="inline-flex align-middle" dangerouslySetInnerHTML={{ __html: categoryIconSvg(c.id, 14) }} /> {c.label}
                 </button>
               ))}
               <label className={`${chipBase} relative ${p.activeDay !== 'all' ? chipOn : chipOff}`}>
@@ -643,17 +644,17 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             </div>
             <div className="flex-1 min-w-0 space-y-1.5">
               <SelectField label="Punto di partenza" value={p.originId} onChange={p.onOrigin}>
-                <option value="gps_origin">📍 {gpsActive ? 'La mia posizione' : 'La mia posizione (attiva il GPS)'}</option>
+                <option value="gps_origin">{gpsActive ? 'La mia posizione' : 'La mia posizione (attiva il GPS)'}</option>
                 {p.accommodations.map((a) => (
                   <option key={a.id} value={a.id}>
-                    🏠 Alloggio {a.accommodationCode} · {a.district}
+                    Alloggio {a.accommodationCode} · {a.district}
                   </option>
                 ))}
                 {ORIGIN_GROUP_ORDER.map((cat) => {
                   const list = p.origins.filter((o) => o.category === cat);
                   if (list.length === 0) return null;
                   return (
-                    <optgroup key={cat} label={`${CATEGORY_STYLE[cat]?.letter ?? ''} ${CATEGORY_LABEL[cat] ?? cat}`}>
+                    <optgroup key={cat} label={CATEGORY_LABEL[cat] ?? cat}>
                       {list.map((o) => (
                         <option key={o.id} value={o.id}>
                           {o.italianName}
@@ -668,7 +669,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                   const list = p.destinations.filter((d) => d.category === cat);
                   if (list.length === 0) return null;
                   return (
-                    <optgroup key={cat} label={`${CATEGORY_STYLE[cat]?.letter ?? ''} ${CATEGORY_LABEL[cat] ?? cat}`}>
+                    <optgroup key={cat} label={CATEGORY_LABEL[cat] ?? cat}>
                       {list.map((d) => (
                         <option key={d.id} value={d.id}>
                           {d.italianName}

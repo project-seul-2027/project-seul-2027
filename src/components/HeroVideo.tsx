@@ -33,7 +33,6 @@ export function useHeroAnimation() {
       try {
         localStorage.setItem(KEY, v ? 'off' : 'on');
       } catch {
-        /* ignora */
       }
       return !v;
     });
@@ -57,7 +56,7 @@ export function HeroVideoToggle({ enabled, onToggle }: { enabled: boolean; onTog
   );
 }
 
-export default function HeroVideo({ enabled, className = '' }: { enabled: boolean; className?: string }) {
+export default function HeroVideo({ enabled, className = '', overlay = true }: { enabled: boolean; className?: string; overlay?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -109,10 +108,14 @@ export default function HeroVideo({ enabled, className = '' }: { enabled: boolea
           <source src={SRC_MP4} type="video/mp4" />
         </video>
       )}
-      {/* velo per leggere testo e riquadri sopra il video */}
-      <div className="absolute inset-0 bg-slate-950/45" />
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-slate-950/10 to-slate-950/45" />
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-slate-950/85 to-transparent" />
+      {/* velo per leggere testo e riquadri sopra il video (se la pagina non ne impone uno suo) */}
+      {overlay && (
+        <>
+          <div className="absolute inset-0 bg-slate-950/45" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-slate-950/10 to-slate-950/45" />
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-slate-950/85 to-transparent" />
+        </>
+      )}
     </div>
   );
 }

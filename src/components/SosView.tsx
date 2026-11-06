@@ -66,8 +66,8 @@ const tel = (n: string) => `tel:${n.replace(/[^\d+]/g, '')}`;
 const koOf = (s?: string) => (s ?? '').split('/')[0].trim();
 
 const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; tone?: string; testId?: string }> = ({ title, icon, children, tone = 'border-slate-800 bg-slate-900/70', testId }) => (
-  <section className={`rounded-3xl border p-4 space-y-3 ${tone}`} data-testid={testId}>
-    <h3 className="text-sm font-bold text-white font-display flex items-center gap-2">{icon} {title}</h3>
+  <section className={`rounded-3xl border p-4 space-y-3 lg:rounded-2xl lg:p-6 lg:space-y-4 ${tone}`} data-testid={testId}>
+    <h3 className="text-sm font-bold text-white font-display flex items-center gap-2 lg:text-base">{icon} {title}</h3>
     {children}
   </section>
 );
@@ -152,12 +152,12 @@ export const SosView: React.FC = () => {
   const input = 'w-full min-h-[44px] rounded-xl bg-slate-950 border border-slate-700 focus:border-rose-400 focus:outline-none px-3 text-sm text-white';
 
   return (
-    <div className="space-y-4" data-testid="sos-view">
-      <header className="flex items-start gap-3">
-        <span className="w-11 h-11 rounded-2xl bg-rose-500/20 text-rose-300 flex items-center justify-center shrink-0"><ShieldAlert className="w-6 h-6" /></span>
+    <div className="space-y-4 lg:space-y-0 lg:columns-2 lg:gap-6 lg:[&>*]:mb-6 lg:[&>*]:break-inside-avoid" data-testid="sos-view">
+      <header className="flex items-start gap-3 lg:[column-span:all]">
+        <span className="w-11 h-11 rounded-2xl bg-rose-500/20 text-rose-300 flex items-center justify-center shrink-0 lg:hidden"><ShieldAlert className="w-6 h-6" /></span>
         <div>
-          <h2 className="text-xl font-bold text-white font-display">Emergenze</h2>
-          <p className="text-xs text-slate-400 mt-0.5 leading-snug">In pericolo, chiama prima i numeri qui sotto.</p>
+          <h2 className="text-xl font-bold text-white font-display lg:hidden">Emergenze</h2>
+          <p className="text-xs text-slate-400 mt-0.5 leading-snug lg:hidden">In pericolo, chiama prima i numeri qui sotto.</p>
           {offlineReady !== null && (
             <p className={`mt-1 text-[11px] font-semibold ${offlineReady ? 'text-emerald-300' : 'text-amber-300'}`} data-testid="sos-offline">
               {offlineReady ? 'Disponibile anche senza internet' : 'Senza internet potrebbe non aprirsi: scarica il pacchetto offline da “Oggi”.'}
@@ -167,16 +167,16 @@ export const SosView: React.FC = () => {
       </header>
 
       {/* Chiamate rapide */}
-      <div className="grid grid-cols-2 gap-2.5" data-testid="sos-calls">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3 lg:gap-3 lg:[column-span:all]" data-testid="sos-calls">
         {EMERGENCY_NUMBERS.slice(0, 2).map((n, i) => (
-          <a key={n.number} href={tel(n.number)} className={`min-h-[96px] rounded-3xl flex flex-col items-center justify-center gap-1 text-white shadow-lg active:scale-[0.98] ${i === 0 ? 'bg-blue-600' : 'bg-rose-600'}`} data-testid={`sos-call-${n.number}`}>
-            <span className="text-4xl font-black tracking-tight font-mono">{n.number}</span>
-            <span className="text-[11px] font-semibold px-2 text-center leading-tight">{n.label}</span>
+          <a key={n.number} href={tel(n.number)} className={`min-h-[96px] rounded-3xl flex flex-col items-center justify-center gap-1 text-white shadow-lg active:scale-[0.98] lg:min-h-0 lg:flex-row lg:items-baseline lg:justify-start lg:gap-4 lg:py-6 lg:px-0 ${i === 0 ? 'bg-blue-600' : 'bg-rose-600'}`} data-testid={`sos-call-${n.number}`}>
+            <span className="text-4xl font-black tracking-tight font-mono lg:text-5xl lg:font-semibold">{n.number}</span>
+            <span className="text-[11px] font-semibold px-2 text-center leading-tight lg:text-sm lg:font-normal lg:text-slate-300 lg:text-left lg:px-0">{n.label}</span>
           </a>
         ))}
         {EMERGENCY_NUMBERS.slice(2).map((n) => (
-          <a key={n.number} href={tel(n.number)} className="col-span-2 min-h-[56px] rounded-2xl bg-slate-800 text-white flex items-center justify-center gap-3 px-3" data-testid={`sos-call-${n.number}`}>
-            <Phone className="w-5 h-5 text-emerald-300" /> <span className="text-xl font-black font-mono">{n.number}</span> <span className="text-[11px] text-slate-300 leading-tight">{n.label}</span>
+          <a key={n.number} href={tel(n.number)} className="col-span-2 lg:col-span-1 min-h-[56px] rounded-2xl bg-slate-800 text-white flex items-center justify-center gap-3 px-3 lg:justify-start lg:gap-4 lg:px-0 lg:py-6 lg:items-baseline" data-testid={`sos-call-${n.number}`}>
+            <Phone className="w-5 h-5 text-emerald-300 lg:hidden" /> <span className="text-xl font-black font-mono lg:text-5xl lg:font-semibold">{n.number}</span> <span className="text-[11px] text-slate-300 leading-tight lg:text-sm">{n.label}</span>
           </a>
         ))}
       </div>

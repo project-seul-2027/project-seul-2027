@@ -40,11 +40,11 @@ export interface PlaceInput {
 }
 
 export const PLACE_CATEGORIES: { id: PlaceCategory; label: string; emoji: string; color: string }[] = [
-  { id: 'food', label: 'Cibo', emoji: '🍜', color: '#f97316' },
-  { id: 'shop', label: 'Negozi', emoji: '🛍️', color: '#ec4899' },
-  { id: 'sight', label: 'Da vedere', emoji: '🏯', color: '#22c55e' },
-  { id: 'night', label: 'Locali', emoji: '🍻', color: '#a855f7' },
-  { id: 'other', label: 'Altro', emoji: '📍', color: '#94a3b8' }
+  { id: 'food', label: 'Cibo', emoji: '', color: '#f97316' },
+  { id: 'shop', label: 'Negozi', emoji: '', color: '#ec4899' },
+  { id: 'sight', label: 'Da vedere', emoji: '', color: '#22c55e' },
+  { id: 'night', label: 'Locali', emoji: '', color: '#a855f7' },
+  { id: 'other', label: 'Altro', emoji: '', color: '#94a3b8' }
 ];
 
 export const PLACE_PRIORITIES: { id: PlacePriority; label: string; rank: number }[] = [

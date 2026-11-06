@@ -1,8 +1,8 @@
 /**
- * ⚙️ CONFIGURAZIONE FIREBASE — l'unico file da compilare.
+ * CONFIGURAZIONE FIREBASE — l'unico file da compilare.
  *
  * Dove trovare questi valori:
- *   Console Firebase → ⚙️ Impostazioni progetto → Generali → "Le tue app" → app Web (</>)
+ *   Console Firebase → Impostazioni progetto → Generali → "Le tue app" → app Web (</>)
  *   → "Configurazione SDK" → copia i valori dell'oggetto `firebaseConfig`.
  *
  * Questi valori NON sono segreti: identificano il progetto e finiscono comunque nel codice del sito.

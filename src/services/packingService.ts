@@ -273,7 +273,7 @@ export const packingService = {
   formatListForSharing(list: PackingListDoc): string {
     const packedCount = list.items.filter((i) => i.packed).length;
     const total = list.items.length;
-    let out = `🎒 Valigia Seul 2027 · ${list.ownerName}\n`;
+    let out = `Valigia Seul 2027 · ${list.ownerName}\n`;
     out += `Progresso: ${packedCount}/${total} oggetti preparati\n\n`;
 
     const byCategory: { [cat: string]: PackingItem[] } = {};
@@ -283,27 +283,27 @@ export const packingService = {
     }
 
     const categoryNames: { [k: string]: string } = {
-      documents: '📄 DOCUMENTI & SOLDI',
-      clothing: '👕 ABBIGLIAMENTO & METEO',
-      electronics: '🔌 ELETTRONICA & ADATTATORI',
-      health: '💊 SALUTE & FARMACI',
-      hygiene: '✨ IGIENE & CURA',
-      flight: '✈️ BAGAGLIO A MANO & SCALO',
-      misc: '📦 ACCESSORI & VARIE'
+      documents: 'DOCUMENTI & SOLDI',
+      clothing: 'ABBIGLIAMENTO & METEO',
+      electronics: 'ELETTRONICA & ADATTATORI',
+      health: 'SALUTE & FARMACI',
+      hygiene: 'IGIENE & CURA',
+      flight: 'BAGAGLIO A MANO & SCALO',
+      misc: 'ACCESSORI & VARIE'
     };
 
     for (const [catKey, items] of Object.entries(byCategory)) {
       out += `${categoryNames[catKey] || catKey.toUpperCase()}:\n`;
       for (const item of items) {
-        const check = item.packed ? '✅' : '⬜';
+        const check = item.packed ? '[x]' : '[ ]';
         const qty = item.quantity && item.quantity > 1 ? ` (x${item.quantity})` : '';
         const locTag =
           item.location === 'backpack'
-            ? ' [🎒 Zaino]'
+            ? ' [Zaino]'
             : item.location === 'cabin'
-            ? ' [🧳 A mano]'
+            ? ' [A mano]'
             : item.location === 'checked'
-            ? ' [✈️ Stiva]'
+            ? ' [Stiva]'
             : '';
         const notes = item.notes ? ` — ${item.notes}` : '';
         out += `${check} ${item.title}${qty}${locTag}${notes}\n`;
@@ -311,7 +311,7 @@ export const packingService = {
       out += '\n';
     }
 
-    out += '🇰🇷 Viaggio Seul 2027 (2-19 Marzo)';
+    out += 'Viaggio Seul 2027 (2-19 Marzo)';
     return out;
   },
 
@@ -349,7 +349,7 @@ export const packingService = {
    */
   downloadIcsReminder(list: PackingListDoc) {
     const uncompleted = list.items.filter((i) => !i.packed);
-    const summary = `🎒 Controllo finale valigia Seul 2027 (${list.ownerName})`;
+    const summary = `Controllo finale valigia Seul 2027 (${list.ownerName})`;
     const description = `Ricordati di verificare gli oggetti mancanti prima di partire per Malpensa:\n\n${uncompleted
       .map((i) => `- ${i.title}${i.notes ? ` (${i.notes})` : ''}`)
       .join('\n')}\n\nVolo Air China da Malpensa: 1 marzo ore 12:30.`;

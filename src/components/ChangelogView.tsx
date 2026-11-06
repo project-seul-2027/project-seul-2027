@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { History, GitCommit, ExternalLink, Search, ChevronDown, ChevronUp, Sparkles, Tag } from 'lucide-react';
 import { APP_VERSION, CHANGELOG, REPO_URL, seriesOf, type ChangelogEntry } from '../data/changelog';
 import { FoldText } from './mobile/FoldText';
+import { useMediaQuery } from '../pwa';
 
 const PAGE_SIZE = 25;
 const COLLAPSED_ITEMS = 4;
@@ -9,7 +10,7 @@ const COLLAPSED_ITEMS = 4;
 const dateFormat = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
 const timeFormat = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' });
 
-const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent: boolean }> = ({ entry, isLatest, isCurrent }) => {
+const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent: boolean; isDesktop: boolean }> = ({ entry, isLatest, isCurrent, isDesktop }) => {
   const [open, setOpen] = useState(false);
   const date = new Date(entry.date);
   const shown = open ? entry.items : entry.items.slice(0, COLLAPSED_ITEMS);
@@ -18,11 +19,15 @@ const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent:
   return (
     <article
       id={`v${entry.version}`}
-      className={`rounded-2xl border p-4 sm:p-5 space-y-3 scroll-mt-40 ${
-        isLatest ? 'border-cyan-500/40 bg-gradient-to-br from-cyan-950/20 to-slate-900/90' : 'border-slate-800 bg-slate-900/70'
-      }`}
+      className={
+        isDesktop
+          ? 'grid grid-cols-[200px_minmax(0,1fr)] gap-x-8 gap-y-3 py-6 border-t border-white/[0.06] first:border-t-0 scroll-mt-40'
+          : `rounded-2xl border p-4 sm:p-5 space-y-3 scroll-mt-40 ${
+              isLatest ? 'border-cyan-500/40 bg-gradient-to-br from-cyan-950/20 to-slate-900/90' : 'border-slate-800 bg-slate-900/70'
+            }`
+      }
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 lg:col-start-1 lg:row-start-1 lg:flex-col lg:items-start">
         <span className="font-mono text-sm font-bold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-cyan-300">
           v{entry.version}
         </span>
@@ -43,15 +48,15 @@ const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent:
             Nuova serie {seriesOf(entry.version)}
           </span>
         )}
-        <span className="ml-auto text-[11px] text-slate-400 font-mono tabular-nums">
+        <span className="ml-auto lg:ml-0 text-[11px] text-slate-400 font-mono tabular-nums">
           {dateFormat.format(date)} · {timeFormat.format(date)}
         </span>
       </div>
 
-      <h3 className="text-sm sm:text-base font-bold text-white leading-snug">{entry.title}</h3>
+      <h3 className="text-sm sm:text-base font-bold text-white leading-snug lg:col-start-2 lg:row-start-1 lg:text-lg">{entry.title}</h3>
 
       {entry.items.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 lg:col-start-2 lg:row-start-2">
           <ul className="space-y-1.5">
             {shown.map((item, i) => (
               <li key={i} className="text-xs sm:text-[13px] text-slate-300 flex items-start gap-2 leading-relaxed">
@@ -73,7 +78,7 @@ const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent:
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px] text-slate-500">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px] text-slate-500 lg:col-start-1 lg:row-start-2 lg:self-start">
         <a
           href={entry.url}
           target="_blank"
@@ -96,6 +101,7 @@ export const ChangelogView: React.FC = () => {
   const [series, setSeries] = useState<string>('all');
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   const seriesList = useMemo(() => {
     const counts = new Map<string, number>();
@@ -123,7 +129,13 @@ export const ChangelogView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div
+        className={
+          isDesktop
+            ? 'rounded-3xl bg-white/[0.03] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4'
+            : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4'
+        }
+      >
         <div className="flex items-start gap-3">
           <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 shrink-0">
             <History className="w-6 h-6" />
@@ -162,7 +174,7 @@ export const ChangelogView: React.FC = () => {
       </div>
 
       {entries.length === 0 ? (
-        <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl space-y-2">
+        <div className={isDesktop ? 'p-8 text-center bg-white/[0.03] rounded-3xl space-y-2' : 'p-8 text-center bg-slate-900/40 border border-slate-800 rounded-2xl space-y-2'}>
           <p className="text-sm text-slate-300">Nessun aggiornamento da mostrare.</p>
           <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
             Il changelog si crea dalla cronologia git quando si esegue <span className="font-mono">npm run build</span> (o{' '}
@@ -172,7 +184,13 @@ export const ChangelogView: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-3 md:items-center justify-between">
+          <div
+            className={
+              isDesktop
+                ? 'rounded-3xl bg-white/[0.03] p-4 flex flex-col md:flex-row gap-3 md:items-center justify-between'
+                : 'bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-3 md:items-center justify-between'
+            }
+          >
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
               <button
                 type="button"
@@ -204,18 +222,22 @@ export const ChangelogView: React.FC = () => {
                 placeholder="Cerca una novità o una versione…"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setVisible(PAGE_SIZE); }}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-950/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+                className={
+                  isDesktop
+                    ? 'w-full pl-9 pr-4 py-2 text-xs bg-white/[0.05] rounded-full text-slate-100 placeholder:text-slate-500 focus:outline-none focus:bg-white/[0.08]'
+                    : 'w-full pl-9 pr-3 py-1.5 text-xs bg-slate-950/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500'
+                }
               />
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 lg:space-y-0 lg:max-w-4xl">
             {shown.map((entry) => (
-              <EntryCard key={entry.sha} entry={entry} isLatest={entry === entries[0]} isCurrent={entry.version === APP_VERSION} />
+              <EntryCard key={entry.sha} entry={entry} isLatest={entry === entries[0]} isCurrent={entry.version === APP_VERSION} isDesktop={isDesktop} />
             ))}
 
             {filtered.length === 0 && (
-              <div className="p-10 text-center bg-slate-900/40 border border-slate-800 rounded-2xl space-y-2">
+              <div className={`p-10 text-center space-y-2 ${isDesktop ? 'bg-white/[0.03] rounded-3xl' : 'bg-slate-900/40 border border-slate-800 rounded-2xl'}`}>
                 <p className="text-slate-400 text-sm">Nessun aggiornamento corrisponde a "{query}".</p>
                 <button
                   type="button"
@@ -231,7 +253,7 @@ export const ChangelogView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setVisible((v) => v + PAGE_SIZE)}
-                className="w-full py-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5"
+                className={`w-full py-3 text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5 ${isDesktop ? 'rounded-3xl bg-white/[0.03] hover:bg-white/[0.06]' : 'rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700'}`}
               >
                 <ChevronDown className="w-4 h-4" />
                 Mostra altri {Math.min(PAGE_SIZE, filtered.length - shown.length)} aggiornamenti
