@@ -449,7 +449,30 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
 
     return (
       <div className="space-y-3 animate-in fade-in duration-200">
-        {/* Barra compatta: aggiornamento, unità, aggiorna, info */}
+        {/* Meteo adesso: sfondo piatto, animazione sfumata verso il basso, dati in una riga */}
+        <section
+          className="ms-wx-hero relative isolate overflow-hidden -mx-5 -mt-5 px-5 pb-6"
+          style={{ backgroundColor: SKY_COLOR[currentTheme], paddingTop: 'calc(84px + env(safe-area-inset-top))', minHeight: 'calc(500px + env(safe-area-inset-top))' }}
+          data-testid="weather-hero"
+        >
+          {current && (
+            <WeatherScene
+              code={current.weatherCode}
+              isDay={current.isDay === 1}
+              precipitationMm={current.precipitationMm}
+              windKmH={current.windSpeedKmH}
+              compact
+              className="-z-20"
+            />
+          )}
+          {/* Sfumatura: dal primo pixel la scena è visibile, poi si fonde nel blu della pagina come in Oggi */}
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10"
+            style={{ background: 'linear-gradient(to bottom, rgba(10,17,25,0) 0%, rgba(10,17,25,0.06) 30%, rgba(10,17,25,0.5) 58%, rgba(10,17,25,0.9) 82%, #0a1119 100%)' }}
+          />
+          <div className="relative z-10 flex flex-col justify-between" style={{ minHeight: 'calc(410px + env(safe-area-inset-top))' }}>
+            <div style={{ textShadow: '0 1px 10px rgba(4,10,16,0.55)' }}>
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
@@ -499,6 +522,43 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
             </button>
           </div>
         </div>
+            </div>
+            <div>
+            <p className="text-[15px] font-medium text-[#eaf0f6] truncate">{selectedLocation.name.split(' (')[0]}</p>
+            <p className="text-[14px] text-[#97a5b9]">{current?.condition.labelIt ?? '…'}</p>
+
+            <div className="mt-3 font-[Outfit] text-[76px] font-light leading-[0.95] tracking-[-0.03em] tabular-nums text-white">
+              {current ? formatTemp(current.temperatureC) : '--'}
+            </div>
+            <p className="mt-2 text-[14px] text-[#97a5b9] tabular-nums">
+              Percepita{' '}
+              <strong className={`font-semibold ${getTemperatureColorClass(current?.apparentTemperatureC ?? 10)}`}>
+                {current ? formatTemp(current.apparentTemperatureC) : '--'}
+              </strong>
+              {' · '}Oggi{' '}
+              <strong className="font-semibold text-[#eaf0f6]">
+                {today ? `${formatTemp(today.tempMinC)} / ${formatTemp(today.tempMaxC)}` : '--'}
+              </strong>
+            </p>
+
+            <dl className="mt-4 grid grid-cols-3 border-t border-[rgba(234,240,246,.11)] pt-3 tabular-nums">
+              {[
+                { v: `${current?.windSpeedKmH ?? '--'}`, u: ' km/h', l: 'Vento' },
+                { v: `${current?.relativeHumidity ?? '--'}`, u: '%', l: 'Umidità' },
+                { v: `${today?.precipitationProbability ?? 0}`, u: '%', l: 'Pioggia' }
+              ].map((m, i) => (
+                <div key={m.l} className={i > 0 ? 'pl-4 border-l border-[rgba(234,240,246,.11)]' : ''}>
+                  <dd className="font-[Outfit] text-[22px] font-medium leading-none text-[#eaf0f6]">
+                    {m.v}
+                    <span className="text-[13px] font-normal text-[#97a5b9]">{m.u}</span>
+                  </dd>
+                  <dt className="mt-1 text-[13px] text-[#97a5b9]">{m.l}</dt>
+                </div>
+              ))}
+            </dl>
+            </div>
+          </div>
+        </section>
 
         {isNoteOpen && (
           <div className="p-3 rounded-2xl border border-slate-800 bg-slate-900/70 text-[11px] text-slate-300 leading-relaxed">
@@ -553,57 +613,6 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
             </button>
           </div>
         )}
-
-        {/* Meteo adesso: sfondo piatto, animazione sfumata verso il basso, dati in una riga */}
-        <div
-          className="relative rounded-2xl overflow-hidden px-5 pt-4 pb-3"
-          style={{ backgroundColor: SKY_COLOR[currentTheme] }}
-        >
-          {current && (
-            <WeatherScene
-              code={current.weatherCode}
-              isDay={current.isDay === 1}
-              precipitationMm={current.precipitationMm}
-              windKmH={current.windSpeedKmH}
-              compact
-              className="[mask-image:linear-gradient(to_bottom,#000_50%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_50%,transparent_92%)]"
-            />
-          )}
-          <div className="relative z-10">
-            <p className="text-[15px] font-medium text-[#eaf0f6] truncate">{selectedLocation.name.split(' (')[0]}</p>
-            <p className="text-[14px] text-[#97a5b9]">{current?.condition.labelIt ?? '…'}</p>
-
-            <div className="mt-3 font-[Outfit] text-[76px] font-light leading-[0.95] tracking-[-0.03em] tabular-nums text-white">
-              {current ? formatTemp(current.temperatureC) : '--'}
-            </div>
-            <p className="mt-2 text-[14px] text-[#97a5b9] tabular-nums">
-              Percepita{' '}
-              <strong className={`font-semibold ${getTemperatureColorClass(current?.apparentTemperatureC ?? 10)}`}>
-                {current ? formatTemp(current.apparentTemperatureC) : '--'}
-              </strong>
-              {' · '}Oggi{' '}
-              <strong className="font-semibold text-[#eaf0f6]">
-                {today ? `${formatTemp(today.tempMinC)} / ${formatTemp(today.tempMaxC)}` : '--'}
-              </strong>
-            </p>
-
-            <dl className="mt-4 grid grid-cols-3 border-t border-[rgba(234,240,246,.11)] pt-3 tabular-nums">
-              {[
-                { v: `${current?.windSpeedKmH ?? '--'}`, u: ' km/h', l: 'Vento' },
-                { v: `${current?.relativeHumidity ?? '--'}`, u: '%', l: 'Umidità' },
-                { v: `${today?.precipitationProbability ?? 0}`, u: '%', l: 'Pioggia' }
-              ].map((m, i) => (
-                <div key={m.l} className={i > 0 ? 'pl-4 border-l border-[rgba(234,240,246,.11)]' : ''}>
-                  <dd className="font-[Outfit] text-[22px] font-medium leading-none text-[#eaf0f6]">
-                    {m.v}
-                    <span className="text-[13px] font-normal text-[#97a5b9]">{m.u}</span>
-                  </dd>
-                  <dt className="mt-1 text-[13px] text-[#97a5b9]">{m.l}</dt>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </div>
 
         {/* Sotto-schede */}
         <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-900 border border-slate-800" role="tablist" aria-label="Sezioni meteo">

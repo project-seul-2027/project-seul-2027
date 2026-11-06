@@ -30,7 +30,8 @@ const RELEASES = [
   { from: 'b9ba4e7', series: '1.2' },
   { from: '4c01416', series: '2.0'},
   { from: 'b56f8ec', series: '2.1'},
-  { from: 'f00dba5', series: '3.0'}
+  { from: 'f00dba5', series: '3.0'},
+  { from: '128b4a5', series: '3.1'}
 ];
 const FALLBACK_REPO = 'https://github.com/IamAxell/project-seul-2027';
 // ---------------------------------------------------------------------------------------------------------
