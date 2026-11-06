@@ -460,3 +460,8 @@
   .ms-flat :has(> [data-testid='fixed-new']) { margin-bottom: 20px; }
   .ms-flat > :has([data-testid='meetup-new']) { padding-bottom: 6px; }
 }
+
+/* Meteo, testata a tutta pagina: la luna/sole scende sotto i pulsanti °C/°F, aggiorna, info */
+@media (max-width: 1023px) {
+  .ms-wx-hero .wx-celestial { top: 36% !important; }
+}

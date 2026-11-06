@@ -281,7 +281,7 @@ function TripPortal() {
       <div
         ref={stickyRef}
         data-app-sticky
-        className={`sticky top-0 z-50 lg:hidden ms-sticky pt-[env(safe-area-inset-top)] ${activeTab === 'today' ? 'ms-over' : ''} ${
+        className={`sticky top-0 z-50 lg:hidden ms-sticky pt-[env(safe-area-inset-top)] ${activeTab === 'today' || activeTab === 'weather' ? 'ms-over' : ''} ${
           // Mappa su telefono: via la barra in alto (resta solo l'area sicura sotto l'orologio) per dare spazio alla mappa
           activeTab === 'map' ? 'max-lg:shadow-none max-lg:[&>*]:hidden ms-hide' : ''
         }`}
