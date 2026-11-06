@@ -138,7 +138,7 @@ const WX_CSS = `
 .wx-cloud svg{display:block;width:100%;height:auto}
 @keyframes wx-drift{from{transform:translate3d(calc(-1 * var(--w) - 12px),0,0)}to{transform:translate3d(100cqw,0,0)}}
 .wx-celestial{position:absolute}
-.wx-sun-glow{position:absolute;inset:-45%;border-radius:50%;background:radial-gradient(circle,rgba(253,224,71,.42) 0%,rgba(251,191,36,.16) 38%,transparent 66%);animation:wx-pulse 7s ease-in-out infinite}
+.wx-sun-glow{position:absolute;inset:-55%;border-radius:50%;background:radial-gradient(circle,rgba(255,236,120,.6) 0%,rgba(251,191,36,.22) 40%,transparent 68%);animation:wx-pulse 7s ease-in-out infinite}
 .wx-sun-rays{position:absolute;inset:-35%;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(253,224,71,.2) 0deg 4deg,transparent 4deg 18deg);-webkit-mask-image:radial-gradient(circle,transparent 26%,#000 38%,transparent 68%);mask-image:radial-gradient(circle,transparent 26%,#000 38%,transparent 68%);animation:wx-spin 100s linear infinite}
 .wx-sun-core{position:absolute;inset:24%;border-radius:50%;background:radial-gradient(circle at 36% 34%,#fffbe0,#fde047 45%,#f59e0b 100%);box-shadow:0 0 34px rgba(251,191,36,.55)}
 .wx-moon-glow{position:absolute;inset:-50%;border-radius:50%;background:radial-gradient(circle,rgba(165,180,252,.34) 0%,rgba(129,140,248,.12) 40%,transparent 66%);animation:wx-pulse 8s ease-in-out infinite}
