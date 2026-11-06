@@ -40,7 +40,7 @@ import { activeShare, fixedPoint, formatAgo, isLost, seoulClock, upcomingMeetups
 import { MetroPanel, LineBadge } from './map/MetroPanel';
 import { MetroRoutePanel, type LiveGeoState } from './map/MetroRoutePanel';
 import { RealMetroDataDrawer } from './map/RealMetroDataDrawer';
-import { CATEGORY_STYLE, originLabel } from './map/categoryStyle';
+import { CATEGORY_STYLE, mobileCategoryColor, originLabel } from './map/categoryStyle';
 import { MobileMapOverlay, sheetHeight, useIsMobileMap, type SheetSnap } from './map/MobileMapUI';
 
 interface InteractiveMapProps {
@@ -113,6 +113,18 @@ function makeMarkerIcon(
       ? '#34d399'
       : style.badge;
   const opacity = routeRole === 'dimmed' ? 0.55 : 1;
+
+  // Telefono: segnaposto piatto (fondo scuro, anello colorato, nessun bagliore), come nel mockup
+  if (touch) {
+    const ring = isRouteActiveNode ? borderColor : mobileCategoryColor(loc.category);
+    const d = isRouteActiveNode ? 22 : isSelected ? 20 : 16;
+    return L.divIcon({
+      className: 'custom-map-marker',
+      html: `<div style="width:${d}px;height:${d}px;border-radius:50%;background:#0d1824;border:${isSelected || isRouteActiveNode ? 3.5 : 2.6}px solid ${ring};opacity:${opacity};cursor:pointer;box-sizing:border-box"></div>`,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22]
+    });
+  }
 
   return L.divIcon({
     className: 'custom-map-marker',

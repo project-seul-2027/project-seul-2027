@@ -6,9 +6,14 @@ coverage/
 *.log
 .env*
 !.env.example
+.impeccable/
+PRODUCT.md
 # Cronologia degli aggiornamenti: si rigenera da git a ogni dev/build (scripts/generate-changelog.mjs)
 src/data/changelog.generated.json
 
 # Residui della vecchia versione con server (dati personali di prova)
 /data/
 /server.js
+.claude/
+ 
+ 

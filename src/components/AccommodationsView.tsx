@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { FoldText } from './mobile/FoldText';
 import { useMediaQuery } from '../pwa';
+import { MobileAlloggi } from './mobile/MobileAlloggi';
+import { MobileAlloggioDetail } from './mobile/MobileAlloggioDetail';
+import './mobile/mobile.css';
 
 interface AccommodationsViewProps {
   onViewOnMap: (locationId: string) => void;
@@ -64,6 +67,7 @@ const PriceEditor: React.FC<{ accId: string; current: number; canEdit: boolean }
 
 export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOnMap }) => {
   const [selectedAccId, setSelectedAccId] = useState<string>('acc_a');
+  const [detailId, setDetailId] = useState<string | null>(null);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   // Voti del gruppo: salvati su Firestore nel profilo di ciascuno, visibili a tutti in tempo reale
@@ -395,14 +399,45 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
     );
   }
 
+  const detailAcc = detailId ? accs.find((a) => a.id === detailId) : null;
+  if (detailAcc) {
+    return (
+      <div className="ms-deep">
+        <MobileAlloggioDetail
+          acc={detailAcc}
+          mine={myVote === detailAcc.id}
+          voters={votersByAcc[detailAcc.id] ?? []}
+          busy={isVoting}
+          priceEditor={<PriceEditor key={detailAcc.id} accId={detailAcc.id} current={detailAcc.totalEur17Nights} canEdit={canEditPrice} />}
+          onBack={() => setDetailId(null)}
+          onVote={() => handleVote(detailAcc.id)}
+          onMap={() => onViewOnMap(detailAcc.id)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className={`space-y-8 animate-in fade-in duration-200${isDesktop ? '' : ' ms-deep'}`}>
+      {!isDesktop && (
+        <MobileAlloggi
+          accs={accs}
+          myVote={myVote}
+          votes={Object.fromEntries(Object.entries(votersByAcc).map(([k, v]) => [k, v.length]))}
+          leadingId={leadingVotes > 0 ? leading.id : null}
+          totalVotes={totalVotes}
+          voteError={voteError}
+          busy={isVoting}
+          onVote={handleVote}
+          onOpen={setDetailId}
+        />
+      )}
       {/* Top Header Banner */}
       <div
         className={
           isDesktop
             ? 'pb-6 border-b border-white/[0.06] space-y-4'
-            : 'bg-gradient-to-r from-blue-950/40 via-slate-900 to-slate-900 border border-blue-500/30 rounded-2xl p-6 shadow-xl space-y-4'
+            : 'hidden'
         }
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -466,10 +501,10 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
         }
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm sm:text-base">
-            <h3>Come Dividere l'Affitto (Formula Ufficiale del Gruppo)</h3>
+          <div className={isDesktop ? 'flex items-center gap-2 text-cyan-400 font-bold text-sm sm:text-base' : 'flex items-center gap-2'}>
+            <h3 className={isDesktop ? '' : "font-[Outfit] text-[21px] font-medium leading-tight tracking-[-0.01em] text-[#eaf0f6]"}>Come dividere l'affitto</h3>
           </div>
-          <span className="text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+          <span className={isDesktop ? 'text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800' : 'text-[14px] text-[#97a5b9]'}>
             Regola: ogni notte costa totale / 17 e la pagano i presenti
           </span>
         </div>
@@ -478,8 +513,36 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
           Siete in <strong>4 dall'inizio</strong>. <strong>Pietro riparte il 10 marzo</strong> e paga <strong>8 notti</strong> (2-9 marzo). Gli altri tre amici restano fino al 19 marzo e pagano tutte le 17 notti. Il prezzo di ogni alloggio è fisso.
         </p>
 
-        {/* Tabella riassuntiva quote */}
-        <div className="overflow-x-auto">
+        {/* Telefono: una riga per alloggio, tre cifre con il loro nome */}
+        {!isDesktop && (
+          <ul>
+            {accs.map((acc) => (
+              <li key={acc.id} className="border-t border-[rgba(234,240,246,.11)]">
+                <button type="button" onClick={() => setDetailId(acc.id)} className="w-full text-left py-3 active:opacity-70">
+                  <span className="flex items-baseline gap-3">
+                    <span className="font-[Outfit] text-[28px] font-normal leading-none text-[#eaf0f6]">{acc.code}</span>
+                    <span className="text-[15px] font-semibold text-[#eaf0f6]">{acc.name.replace(/^Alloggio [A-Z]:\s*/, '')}</span>
+                  </span>
+                  <span className="mt-2 grid grid-cols-3 gap-3 tabular-nums">
+                    {[
+                      { l: 'Totale 17 notti', v: acc.totalEur17Nights },
+                      { l: 'Pietro, 8 notti', v: acc.pietroCost8Nights },
+                      { l: 'Ognuno dei 3', v: acc.other3Cost17Nights }
+                    ].map((m) => (
+                      <span key={m.l} className="block">
+                        <span className="block font-[Outfit] text-[20px] font-medium leading-none text-[#eaf0f6]">{m.v} €</span>
+                        <span className="block mt-1 text-[13px] text-[#97a5b9]">{m.l}</span>
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Tabella riassuntiva quote (desktop) */}
+        <div className={isDesktop ? 'overflow-x-auto' : 'hidden'}>
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
@@ -529,7 +592,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
         </div>
 
         {/* Esempio matematico */}
-        <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
+        <div className={isDesktop ? 'p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1' : 'text-[14px] text-[#97a5b9] leading-relaxed space-y-1'}>
           <strong className="text-white block flex items-center gap-1.5">
             Esempio di calcolo per C (748 €, 44 € a notte):
           </strong>
@@ -538,251 +601,6 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
           </p>
         </div>
       </div>
-
-      {/* 4 Cards Grid Preview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {accs.map((acc) => {
-          const isSelected = selectedAccId === acc.id;
-
-          return (
-            <div
-              key={acc.id}
-              onClick={() => setSelectedAccId(acc.id)}
-              className={`p-5 rounded-2xl transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
-                isDesktop
-                  ? isSelected
-                    ? 'bg-white/[0.06] border-l-2 border-cyan-400'
-                    : 'bg-white/[0.02] border-l-2 border-transparent hover:bg-white/[0.04]'
-                  : `border ${
-                      isSelected
-                        ? 'bg-slate-900 border-cyan-500/70 shadow-xl shadow-cyan-500/10 ring-1 ring-cyan-500/30'
-                        : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/80'
-                    }`
-              }`}
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                    acc.code === 'A'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : acc.code === 'C'
-                      ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
-                      : acc.code === 'D'
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                      : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
-                  }`}>
-                    {acc.highlightBadge}
-                  </span>
-
-                  <VoteButton accId={acc.id} />
-                </div>
-
-                {(votersByAcc[acc.id]?.length ?? 0) > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {votersByAcc[acc.id].map((v) => (
-                      <span
-                        key={v.name}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300 flex items-center gap-1"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: v.color }} />
-                        {v.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div>
-                  <h3 className="font-bold text-sm text-white">
-                    {acc.name}
-                  </h3>
-                  <div className="text-xs text-slate-400 font-mono italic">
-                    {acc.adTitle}
-                  </div>
-                </div>
-
-                {/* Price block con suddivisione Pietro vs Altri */}
-                <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-[11px] text-slate-400">Totale 17 notti:</span>
-                    <span className="text-base font-bold font-mono text-cyan-400">
-                      {acc.totalEur17Nights} €
-                    </span>
-                  </div>
-                  <PriceEditor key={acc.id} accId={acc.id} current={acc.totalEur17Nights} canEdit={canEditPrice} />
-
-                  <div className="pt-1.5 border-t border-slate-800/60 space-y-1 font-mono text-xs">
-                    <div className="flex items-center justify-between text-amber-300">
-                      <span className="text-[11px] font-sans flex items-center gap-1">
-                        <User className="w-3 h-3" /> Pietro (8 notti):
-                      </span>
-                      <span className="font-bold">{acc.pietroCost8Nights} €</span>
-                    </div>
-                    <div className="flex items-center justify-between text-emerald-400">
-                      <span className="text-[11px] font-sans flex items-center gap-1">
-                        <Users className="w-3 h-3" /> Ognuno dei 3 (17 notti):
-                      </span>
-                      <span className="font-bold">{acc.other3Cost17Nights} €</span>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60 flex items-center justify-between">
-                    <span>Mensile Enko: {acc.monthlyKrw.toLocaleString('it-IT')} ₩</span>
-                    <span>~{acc.nightlyRateEur} € / notte</span>
-                  </div>
-                </div>
-
-                <p className="text-xs text-slate-300 line-clamp-3">
-                  {acc.typeDescription}
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                <span className="text-[11px] text-slate-400">
-                  Hongdae: {acc.hongdaeTransit}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewOnMap(acc.id);
-                  }}
-                  className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1"
-                >
-                  <span>Mappa</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Detailed View of Selected Accommodation */}
-      {(() => {
-        const acc = accs.find((a) => a.id === selectedAccId) || accs[0];
-
-        return (
-          <div
-            className={
-              isDesktop
-                ? 'pt-8 border-t border-white/[0.06] space-y-6'
-                : 'bg-slate-900/95 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6'
-            }
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 font-bold font-mono text-base flex items-center justify-center border border-cyan-500/40">
-                    {acc.code}
-                  </span>
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white font-display">
-                      {acc.name}
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      Titolo annuncio Enko: <strong>{acc.adTitle}</strong> · Quartiere: {acc.district}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <VoteButton accId={acc.id} large />
-                <button
-                  onClick={() => onViewOnMap(acc.id)}
-                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition-all"
-                >
-                  <span>Vedi sulla Mappa & Dintorni</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Spec grid con quote ripartite */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
-                <span className="font-bold text-cyan-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  Divisione Spesa Fissata
-                </span>
-                <div className="text-lg font-bold font-mono text-white">
-                  {acc.totalEur17Nights} € totali
-                </div>
-                <PriceEditor key={acc.id} accId={acc.id} current={acc.totalEur17Nights} canEdit={canEditPrice} />
-                <div className="text-amber-300 font-bold text-xs font-mono">
-                  Pietro (8 notti): {acc.pietroCost8Nights} €
-                </div>
-                <div className="text-emerald-400 font-bold text-xs font-mono">
-                  Ognuno dei 3 (17 notti): {acc.other3Cost17Nights} €
-                </div>
-                <div className="text-slate-400 text-[11px] pt-1">
-                  Canone mensile indicato: {acc.monthlyKrw.toLocaleString('it-IT')} ₩
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
-                <span className="font-bold text-cyan-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  Metro & Stazioni a Piedi
-                </span>
-                <p className="text-slate-200 leading-relaxed font-medium">
-                  {acc.metroWalk}
-                </p>
-                <div className="text-slate-400 text-[11px] pt-1">
-                  Verso Hongdae: {acc.hongdaeTransit}
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs">
-                <span className="font-bold text-cyan-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                  Trasferimento Aeroporto & Dintorni
-                </span>
-                <p className="text-slate-200 leading-relaxed font-medium">
-                  {acc.airportTransit}
-                </p>
-                <div className="text-slate-400 text-[11px] pt-1">
-                  Attrazioni vicine: {acc.nearbyAttractions}
-                </div>
-              </div>
-            </div>
-
-            {/* Pro & Contro Breakdown */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-              <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2.5">
-                <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  Vantaggi e Punti di Forza
-                </h4>
-                <ul className="space-y-1.5 text-xs text-slate-200">
-                  {acc.pro.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-emerald-400 font-bold shrink-0">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="p-4 rounded-xl bg-red-950/20 border border-red-500/30 space-y-2.5">
-                <h4 className="text-xs font-bold text-red-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <XCircle className="w-4 h-4 text-red-400" />
-                  Svantaggi e Aspetti Critici
-                </h4>
-                <ul className="space-y-1.5 text-xs text-slate-200">
-                  {acc.contro.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-red-400 font-bold shrink-0">•</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Host notes */}
-            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
-              <strong className="text-cyan-300 block">Nota di sintesi dal documento:</strong>
-              <p>{acc.importantNotes}</p>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Guide: "Quale Scegliere" (from Page 3 of PDF) */}
       <div

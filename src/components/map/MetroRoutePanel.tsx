@@ -660,19 +660,19 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-400">Fermate</div>
-                  <div className="text-sm font-bold text-cyan-400 font-mono tabular-nums mt-0.5">
+                  <div className="text-sm font-bold text-white font-mono tabular-nums mt-0.5">
                     {currentRoute.totalStops}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-400">Cambi linea</div>
-                  <div className="text-sm font-bold text-slate-100 font-mono tabular-nums mt-0.5">
+                  <div className="text-sm font-bold text-white font-mono tabular-nums mt-0.5">
                     {currentRoute.totalTransfers === 0 ? 'Diretto' : currentRoute.totalTransfers}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-400">Tot. a piedi</div>
-                  <div className="text-sm font-bold text-slate-200 font-mono tabular-nums mt-0.5">
+                  <div className="text-sm font-bold text-white font-mono tabular-nums mt-0.5">
                     {currentRoute.totalWalkMeters}m
                   </div>
                 </div>

@@ -451,7 +451,7 @@ export const PackingListView: React.FC = () => {
                 )}
               </span>
             </div>
-            <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2.5">
+            <h2 className="max-md:hidden text-lg sm:text-2xl font-bold text-white flex items-center gap-2.5">
               <Luggage className="w-6 h-6 text-teal-400" />
               <span>Valigia & Checklist Personale Seul 2027</span>
             </h2>
@@ -490,38 +490,16 @@ export const PackingListView: React.FC = () => {
           </div>
         </div>
 
-        {/* Telefono: riepilogo in due numeri, barra e data del volo in una riga */}
-        <div className="md:hidden pt-2 border-t border-slate-800/80 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-              <div className="text-[9px] uppercase font-mono text-slate-400">Oggetti in valigia</div>
-              <div className="text-base font-bold text-teal-400 font-mono">
-                {packedCount}/{totalItems}{' '}
-                <span className="text-[10px] font-normal text-slate-400">{percentPacked}%</span>
-              </div>
-            </div>
-            <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80">
-              <div className="text-[9px] uppercase font-mono text-slate-400">Essenziali</div>
-              <div className="text-base font-bold text-amber-400 font-mono">
-                {essentialPacked}/{essentialCount}{' '}
-                <span className="text-[10px] font-normal text-slate-400">pronti</span>
-              </div>
-            </div>
-          </div>
-          <div className="w-full bg-slate-800/70 rounded-full h-1.5 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-teal-500 to-cyan-400 rounded-full transition-all duration-300" style={{ width: `${percentPacked}%` }} />
-          </div>
-          <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-300">
-            <span className="min-w-0 truncate">
-              Malpensa 1 mar · 12:30 <span className="text-cyan-400">· check bagaglio 28 feb</span>
-            </span>
-            <button
-              onClick={handleDownloadIcs}
-              aria-label="Aggiungi sveglia al calendario"
-              className="p-1.5 rounded-lg bg-slate-800 text-teal-300 shrink-0"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-            </button>
+        {/* Telefono: una riga di numeri e una barra sottile */}
+        <div className="md:hidden space-y-2">
+          <p className="text-sm text-slate-300" data-testid="packing-summary">
+            <strong className="text-white font-semibold">{packedCount}/{totalItems}</strong> in valigia
+            <span className="text-slate-500"> · </span>
+            <strong className="text-white font-semibold">{essentialPacked}/{essentialCount}</strong> essenziali
+            <button onClick={handleDownloadIcs} aria-label="Aggiungi sveglia al calendario" className="ml-2 align-middle text-teal-300"><Calendar className="w-4 h-4 inline" /></button>
+          </p>
+          <div className="w-full bg-slate-800/70 rounded-full h-1 overflow-hidden">
+            <div className="h-full bg-cyan-400 rounded-full transition-all duration-300" style={{ width: `${percentPacked}%` }} />
           </div>
         </div>
 
@@ -599,7 +577,7 @@ export const PackingListView: React.FC = () => {
         </div>
 
         {/* Telefono: i tre bagagli in chip affiancati (toccando si filtra) */}
-        <div className="md:hidden grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800/80">
+        <div className="ms-bags md:hidden grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
           {PACKING_LOCATIONS.map((loc) => {
             const isSelected = selectedLocation === loc.id;
             const totalInLoc = myList.items.filter((i) => (i.location || 'checked') === loc.id).length;
@@ -717,9 +695,10 @@ export const PackingListView: React.FC = () => {
       </div>
 
       {/* Selezione Scheda: "La mia Valigia" vs "Valigie Condivise con Me" */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3 max-md:border-0 max-md:pb-0 max-md:-mt-3">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2" role="tablist" aria-label="Valigie">
           <button
+            role="tab" aria-selected={activeSubTab === 'my_list'}
             onClick={() => setActiveSubTab('my_list')}
             className={`w-full sm:w-auto min-w-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeSubTab === 'my_list'
@@ -737,6 +716,7 @@ export const PackingListView: React.FC = () => {
           </button>
 
           <button
+            role="tab" aria-selected={activeSubTab === 'shared_lists'}
             onClick={() => setActiveSubTab('shared_lists')}
             className={`w-full sm:w-auto min-w-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeSubTab === 'shared_lists'
@@ -758,7 +738,7 @@ export const PackingListView: React.FC = () => {
           <div className="grid grid-cols-1 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setIsAddCustomOpen(true)}
-              className="w-full sm:w-auto justify-center px-3 py-2.5 sm:py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              className="ms-tint w-full sm:w-auto justify-center px-3 py-2.5 sm:py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Aggiungi Oggetto</span>
@@ -767,7 +747,7 @@ export const PackingListView: React.FC = () => {
             {myList.items.length === 0 && (
               <button
                 onClick={handleAddEssentials}
-                className="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="ms-tint max-sm:w-full max-sm:justify-center px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Carica Essenziali Seul (20 oggetti)</span>
@@ -788,7 +768,7 @@ export const PackingListView: React.FC = () => {
               className={
                 isDesktop
                   ? 'py-3 border-y border-amber-500/20 flex flex-row items-center justify-between gap-4'
-                  : 'p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3'
+                  : 'max-md:hidden p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3'
               }
             >
               <div className="flex items-start gap-3">

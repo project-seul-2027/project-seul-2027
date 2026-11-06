@@ -12,6 +12,15 @@ export const CATEGORY_STYLE: Record<string, { badge: string; ring: string; icon:
   luogo: { badge: '#7c3aed', ring: 'rgba(124, 58, 237, 0.5)', icon: CATEGORY_ICON_INNER.luogo }
 };
 
+/** Colori della versione telefono: alloggi viola, cultura ambra, cibo e vita notturna rosa, il resto neutro. */
+const MOBILE_CATEGORY_COLOR: Record<string, string> = {
+  alloggio: '#a78bfa',
+  cultura: '#fbbf24',
+  food: '#f472b6',
+  nightlife: '#f472b6'
+};
+export const mobileCategoryColor = (cat: string): string => MOBILE_CATEGORY_COLOR[cat] ?? '#97a5b9';
+
 export const CATEGORY_LABEL: Record<string, string> = {
   alloggio: 'Alloggio',
   nightlife: 'Nightlife',

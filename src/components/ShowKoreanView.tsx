@@ -1,3 +1,4 @@
+import './mobile/mobile.css';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuickIntent } from '../utils/quickIntent';
 import { Search, X, ExternalLink, Phone, Maximize2, Car, Utensils, MessageCircle, Languages, Siren, AlertTriangle, Home } from 'lucide-react';
@@ -184,7 +185,7 @@ export const ShowKoreanView: React.FC = () => {
   const noRestriction = dietKind(person?.diet) === 'any' && diet.recognized.length === 0 && !diet.unrecognized;
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200" data-testid="show-korean-view">
+    <div className="space-y-4 animate-in fade-in duration-200 ms-kr" data-testid="show-korean-view">
       <div>
         <h2 className="text-xl sm:text-2xl font-black font-display text-white lg:hidden">Mostra in coreano</h2>
         <p className="text-xs text-slate-400">Tocca una scheda: si apre a schermo intero, con testo grande da far leggere a tassista o cameriere.</p>
