@@ -153,13 +153,13 @@ export const QuickActionsSheet: React.FC<{ open: boolean; onClose: () => void; o
         role="dialog"
         aria-modal="true"
         aria-labelledby="qa-title"
-        className="absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top)-1rem)] overflow-y-auto rounded-t-2xl bg-app-raised border-t border-app-line pb-[calc(5rem+env(safe-area-inset-bottom))] short:pb-[calc(4.5rem+env(safe-area-inset-bottom))] animate-sheet-up"
+        className="absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top)-1rem)] overflow-y-auto rounded-t-2xl bg-[#0a1119] shadow-[0_-6px_24px_rgba(0,0,0,0.4)] pb-[calc(5rem+env(safe-area-inset-bottom))] short:pb-[calc(4.5rem+env(safe-area-inset-bottom))] animate-sheet-up"
       >
         <div className="mx-auto max-w-xl px-4 pt-2.5 space-y-4 short:max-w-3xl short:space-y-2.5">
           <div aria-hidden className="mx-auto h-1 w-10 rounded-full bg-slate-600" />
           <div className="flex items-baseline justify-between gap-3">
-            <h2 id="qa-title" className="text-xl font-extrabold text-app-text">Cosa vuoi fare?</h2>
-            <span className="text-[13px] text-app-muted">Foto apre la fotocamera</span>
+            <h2 id="qa-title" className="font-[Outfit] text-[22px] font-medium text-[#eaf0f6]">Cosa vuoi fare?</h2>
+            <span className="text-[13px] text-[#97a5b9]">Foto apre la fotocamera</span>
           </div>
           <div className="grid grid-cols-3 gap-2.5 short:grid-cols-6">
             {ACTIONS.map((a, i) => (
@@ -169,9 +169,9 @@ export const QuickActionsSheet: React.FC<{ open: boolean; onClose: () => void; o
                 data-autofocus={i === 0 ? true : undefined}
                 onClick={() => onAction(a.id)}
                 data-testid={`qa-${a.id}`}
-                className="min-h-[96px] short:min-h-[76px] short:gap-1.5 rounded-2xl border border-app-line bg-app-surface active:bg-app-bg flex flex-col items-center justify-center gap-2.5 text-sm font-semibold text-app-text focus-visible:outline-2 focus-visible:outline-app-accent"
+                className="min-h-[96px] short:min-h-[76px] short:gap-1.5 rounded-xl bg-[#152231] active:bg-[#1c2d40] flex flex-col items-center justify-center gap-2.5 text-[14px] font-semibold text-[#eaf0f6] focus-visible:outline-2 focus-visible:outline-[#52d9e6]"
               >
-                <span className={`w-11 h-11 rounded-[14px] flex items-center justify-center ${a.tile}`}>
+                <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${a.tile}`}>
                   <a.icon className={`w-[22px] h-[22px] ${a.fg}`} />
                 </span>
                 {a.label}
@@ -179,12 +179,12 @@ export const QuickActionsSheet: React.FC<{ open: boolean; onClose: () => void; o
             ))}
           </div>
           {/* Coordinamento ed emergenza: separati dalle azioni ordinarie e distinti tra loro */}
-          <div className="pt-3 border-t border-app-line grid grid-cols-2 gap-2.5 short:pt-2.5">
+          <div className="grid grid-cols-2 gap-2.5 short:pt-0">
             <button
               type="button"
               onClick={() => onAction('lost')}
               data-testid="qa-lost"
-              className="min-h-[52px] rounded-2xl border border-fam-sos/45 bg-fam-sos/10 text-red-200 text-[15px] font-bold flex items-center justify-center gap-2 focus-visible:outline-2 focus-visible:outline-app-accent"
+              className="min-h-[52px] rounded-xl bg-[#152231] text-[#fca5a5] text-[15px] font-semibold flex items-center justify-center gap-2 focus-visible:outline-2 focus-visible:outline-[#52d9e6]"
             >
               <LifeBuoy className="w-[18px] h-[18px]" /> Ho perso il gruppo
             </button>
@@ -192,7 +192,7 @@ export const QuickActionsSheet: React.FC<{ open: boolean; onClose: () => void; o
               type="button"
               onClick={() => onAction('sos')}
               data-testid="qa-sos"
-              className="min-h-[52px] rounded-2xl bg-app-danger text-white text-[15px] font-extrabold flex items-center justify-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent"
+              className="min-h-[52px] rounded-xl bg-[#dc2626] text-white text-[15px] font-semibold flex items-center justify-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6]"
             >
               <ShieldAlert className="w-[18px] h-[18px]" strokeWidth={2.4} /> SOS emergenza
             </button>
