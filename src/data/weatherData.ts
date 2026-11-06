@@ -170,7 +170,7 @@ export function getWmoCondition(code: number, isDay = 1): WeatherConditionInfo {
         labelIt: code === 71 ? 'Nevicata leggera' : 'Nevicata',
         theme: 'snowy',
         iconName: 'CloudSnow',
-        descriptionIt: 'Fiocchi di neve o nevischio coreano',
+        descriptionIt: 'Fiocchi di neve o nevischio',
         activityTipIt: 'Spettacolo fiabesco nei Palazzi Reali con la neve sui tetti tradizionali in tegole hanok.'
       };
     case 80:
