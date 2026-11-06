@@ -116,12 +116,14 @@ const WorldTimes: React.FC<{ now: number }> = ({ now }) => (
 
 export const MobileOggi: React.FC<Props> = (p) => {
   useTick(1000);
-  const L = !p.simulated && !p.after ? launchState(p.now) : null;
+  // Il conto scorre ogni secondo: TodayView aggiorna "now" solo ogni 20 secondi
+  const liveNow = p.simulated ? p.now : Date.now();
+  const L = !p.simulated && !p.after ? launchState(liveNow) : null;
 
   /* ---------------- Prima della partenza e durante i voli: video con gradiente ---------------- */
   if (L && L.kind !== 'trip') {
     const isCount = L.kind === 'countdown';
-    const ms = isCount ? Math.max(0, L.target - p.now) : 0;
+    const ms = isCount ? Math.max(0, L.target - liveNow) : 0;
     const label = L.eyebrow.startsWith('Prossimo ritrovo')
       ? 'Al ritrovo a Malpensa T1 mancano'
       : L.eyebrow.startsWith('Verso Pechino')
