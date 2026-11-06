@@ -4,6 +4,11 @@
  * e `npm run build` (e quindi a ogni pubblicazione su GitHub Pages). Non va modificato a mano.
  */
 
+/** Un blocco del messaggio del commit, nello stesso ordine in cui è scritto */
+export type ChangelogBlock =
+  | { kind: 'text'; text: string }
+  | { kind: 'list'; heading: string | null; items: string[] };
+
 export interface ChangelogEntry {
   /** Es. 1.1.22 */
   version: string;
@@ -13,7 +18,9 @@ export interface ChangelogEntry {
   date: string;
   author: string;
   title: string;
-  /** Voci elenco ricavate dal messaggio del commit */
+  /** Testo e sezioni con punti elenco, come nel messaggio del commit (assente nei changelog vecchi) */
+  content?: ChangelogBlock[];
+  /** Tutte le voci elenco, appiattite (ricerca e conteggio) */
   items: string[];
   /** Primo commit di una serie (x.y.0) */
   release: boolean;

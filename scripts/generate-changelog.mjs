@@ -20,6 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseMessage, clean } from './changelog-parse.mjs';
 
 // ---- CONFIGURAZIONE -------------------------------------------------------------------------------------
 /** `from`: hash (anche corto) del commit che apre quella serie; null = dall'inizio del progetto. */
@@ -28,7 +29,8 @@ const RELEASES = [
   { from: '3a0f64a', series: '1.1' }, // 3a0f64a = 1.1.0, poi 1.1.1, 1.1.2 ...
   { from: 'b9ba4e7', series: '1.2' },
   { from: '4c01416', series: '2.0'},
-  { from: 'b56f8ec', series: '2.1'}
+  { from: 'b56f8ec', series: '2.1'},
+  { from: 'f00dba5', series: '3.0'}
 ];
 const FALLBACK_REPO = 'https://github.com/IamAxell/project-seul-2027';
 // ---------------------------------------------------------------------------------------------------------
@@ -53,27 +55,6 @@ function repoUrl() {
   } catch {
     return FALLBACK_REPO;
   }
-}
-
-const TRAILER = /^((co-authored-by|claude-session|signed-off-by|generated with)\b|release:)/i;
-const clean = (s) => s.replace(/^﻿/, '').replace(/\s+/g, ' ').trim();
-
-/** Titolo e punti elenco: i messaggi con "titolo - voce - voce" (commit unificati) vengono separati */
-function describe(subject, body) {
-  let title = clean(subject);
-  const items = [];
-  const parts = title.split(/\s+-\s+/);
-  if (parts.length >= 3 || /:\s+-\s+/.test(title)) {
-    title = clean(parts[0]).replace(/:$/, '');
-    for (const p of parts.slice(1)) if (clean(p)) items.push(clean(p));
-  }
-  for (const raw of body.split('\n')) {
-    const line = raw.trim();
-    if (!line || TRAILER.test(line)) continue;
-    const text = clean(line.replace(/^[-*•]\s+/, ''));
-    if (text) items.push(text);
-  }
-  return { title, items };
 }
 
 let hashes;
@@ -120,7 +101,7 @@ const entries = commits.map((rec, i) => {
   let start = starts[0];
   for (const s of starts) if (s.index <= i) start = s;
   const patch = i - start.index;
-  const { title, items } = describe(subject ?? '', body);
+  const { title, items, content } = parseMessage(subject ?? '', body);
   return {
     version: `${start.series}.${patch}`,
     sha,
@@ -128,6 +109,7 @@ const entries = commits.map((rec, i) => {
     date,
     author: clean(author ?? ''),
     title,
+    content,
     items,
     release: patch === 0,
     url: `${repo}/commit/${sha}`
