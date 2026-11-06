@@ -1017,14 +1017,19 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
       {activeTab === 'forecast' && (
         <div className="space-y-6">
           {/* Card Meteo Principale con UI che cambia colore e atmosfera rispetto a condizione e temperatura */}
-          <div data-keep-style="" className="relative border-y border-slate-800/80 py-7 overflow-hidden">
+          <div data-keep-style="" className="relative border-y border-slate-800/80 py-7 px-6 xl:px-10 overflow-hidden isolate" style={{ backgroundColor: weatherData ? SKY_COLOR[currentTheme] : undefined }}>
             {weatherData && (
               <WeatherScene
                 code={weatherData.current.weatherCode}
                 isDay={weatherData.current.isDay === 1}
                 precipitationMm={weatherData.current.precipitationMm}
                 windKmH={weatherData.current.windSpeedKmH}
+                compact
+                className="-z-20"
               />
+            )}
+            {weatherData && (
+              <div aria-hidden className="absolute inset-0 -z-10" style={{ background: 'linear-gradient(to bottom, rgba(8,13,24,0) 0%, rgba(8,13,24,0.25) 55%, rgba(8,13,24,0.85) 100%)' }} />
             )}
 
             <div className="relative z-10 space-y-6">
