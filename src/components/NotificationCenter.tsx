@@ -110,7 +110,9 @@ const Switch: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: str
   </button>
 );
 
-const Panel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+type HeroOpt = { heroEnabled?: boolean; onToggleHero?: () => void };
+
+const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabled, onToggleHero }) => {
   const { user, slot, home } = useMyContext();
   const g = useGroupLive();
   const prefs = usePrefs();
@@ -219,6 +221,19 @@ const Panel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             )}
           </section>
 
+          {onToggleHero && (
+            <section>
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Aspetto</h3>
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-white font-semibold">Video animato in Oggi</p>
+                  <p className="text-[11px] text-slate-500 leading-snug">Spegnilo per mostrare un solo fotogramma e risparmiare batteria.</p>
+                </div>
+                <Switch on={!!heroEnabled} onChange={() => onToggleHero()} label="Video animato in Oggi" testId="hero-animation-toggle" />
+              </div>
+            </section>
+          )}
+
           <section>
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Cosa vuoi ricevere</h3>
             <ul className="space-y-3">
@@ -256,7 +271,7 @@ const Panel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-export const NotificationBell: React.FC = () => {
+export const NotificationBell: React.FC<HeroOpt> = ({ heroEnabled, onToggleHero }) => {
   const [open, setOpen] = useState(false);
   const { unread } = useFeed();
   const { slot } = useMyContext();
@@ -267,7 +282,7 @@ export const NotificationBell: React.FC = () => {
         <Bell className="w-4.5 h-4.5" />
         {unread > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center" data-testid="notify-unread">{unread}</span>}
       </button>
-      {open && <Panel onClose={() => setOpen(false)} />}
+      {open && <Panel onClose={() => setOpen(false)} heroEnabled={heroEnabled} onToggleHero={onToggleHero} />}
     </>
   );
 };

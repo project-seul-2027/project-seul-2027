@@ -57,11 +57,12 @@ const TEXT: Record<StatusKind, string> = {
   none: 'text-app-muted'
 };
 
-const Person: React.FC<{ name: string; url?: string; color?: string; size?: string; dot?: StatusKind; ring?: boolean }> = ({ name, url, color, size = 'w-11 h-11', dot, ring }) => (
+// Avatar senza colore associato: foto profilo, con fondo neutro se manca.
+const Person: React.FC<{ name: string; url?: string; color?: string; size?: string; dot?: StatusKind; ring?: boolean }> = ({ name, url, size = 'w-11 h-11', dot, ring }) => (
   <span className={`relative shrink-0 ${size}`}>
     <span
       className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center text-[13px] font-bold text-white ${ring ? 'ring-2 ring-app-accent ring-offset-2 ring-offset-app-surface' : ''}`}
-      style={{ backgroundColor: color ?? '#475569' }}
+      style={{ backgroundColor: '#334155' }}
     >
       {url ? <img src={url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : name.slice(0, 2)}
     </span>

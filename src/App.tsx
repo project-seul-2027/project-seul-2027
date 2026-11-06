@@ -263,7 +263,7 @@ function TripPortal() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] lg:bg-[#080D18] lg:pl-[232px] text-slate-100 flex flex-col font-sans pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+    <div className="ms-page min-h-screen bg-[#090d16] lg:bg-[#080D18] lg:pl-[232px] text-slate-100 flex flex-col font-sans pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0">
       {/* Desktop: barra laterale al posto di quella in alto */}
       <DesktopSidebar
         activeTab={activeTab}
@@ -281,28 +281,27 @@ function TripPortal() {
       <div
         ref={stickyRef}
         data-app-sticky
-        className={`sticky top-0 z-50 lg:hidden bg-[#090d16]/95 backdrop-blur-md shadow-lg shadow-black/20 pt-[env(safe-area-inset-top)] ${
+        className={`sticky top-0 z-50 lg:hidden ms-sticky pt-[env(safe-area-inset-top)] ${activeTab === 'today' ? 'ms-over' : ''} ${
           // Mappa su telefono: via la barra in alto (resta solo l'area sicura sotto l'orologio) per dare spazio alla mappa
-          activeTab === 'map' ? 'max-lg:shadow-none max-lg:[&>*]:hidden' : ''
+          activeTab === 'map' ? 'max-lg:shadow-none max-lg:[&>*]:hidden ms-hide' : ''
         }`}
       >
         {/* Top Bar */}
-        <header className="border-b border-slate-800/80 px-4 sm:px-8 py-2.5 lg:py-3 flex items-center justify-between gap-4 2xl:gap-6">
+        <header className="ms-top gap-4">
           {/* Zone 1: Brand Wordmark */}
           <button
           onClick={() => { setActiveTab(isDesktop ? 'cover' : 'today'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex items-center gap-2.5 text-left group shrink-0"
           aria-label={isDesktop ? undefined : `${sectionById(activeTab)?.title ?? 'Seul 2027'}: torna a Oggi`}
         >
-          <BrandIcon className="w-8 h-8 lg:w-10 lg:h-10" />
+          <BrandIcon className="hidden" />
           <div className="whitespace-nowrap">
             <span className="hidden lg:inline font-display font-extrabold text-base tracking-tight text-white group-hover:text-cyan-400 transition-colors">
               SEUL 2027
             </span>
             {/* Telefono: titolo della sezione aperta */}
-            <span className="lg:hidden block leading-tight" data-testid="mobile-title">
-              <span className="block font-display font-extrabold text-[19px] tracking-tight text-app-text">{sectionById(activeTab)?.title ?? 'Seul 2027'}</span>
-              <span className="block text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-app-muted">Seul 2027</span>
+            <span className="lg:hidden block" data-testid="mobile-title">
+              <span className="ms-title">{sectionById(activeTab)?.title ?? 'Seul 2027'}</span>
             </span>
           </div>
         </button>
@@ -474,16 +473,16 @@ function TripPortal() {
         </nav>
 
         {/* Zone 3: Group Status & Actions (No login/accounts) */}
-        <div className="flex items-center gap-3 shrink-0">
-          <NotificationBell />
+        <div className="ms-tools shrink-0">
+          <div className="ms-bell"><NotificationBell heroEnabled={heroAnim.enabled} onToggleHero={heroAnim.toggle} /></div>
           <div className="relative">
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               aria-haspopup="menu"
               aria-expanded={isUserMenuOpen}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-500/50 transition-all text-xs"
+              className="ms-avbtn" aria-label={`Profilo: ${currentUser.firstName}`}
             >
-              <div className="w-7 h-7 rounded-full bg-cyan-600 text-white font-bold flex items-center justify-center text-[10px] overflow-hidden shrink-0">
+              <div className="ms-av">
                 {currentUser.avatarUrl ? (
                   <img src={currentUser.avatarUrl} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 ) : (
@@ -493,22 +492,21 @@ function TripPortal() {
                   </>
                 )}
               </div>
-              <span className="hidden sm:block xl:hidden 2xl:block font-bold text-white max-w-[140px] truncate">
+              <span className="hidden">
                 {currentUser.displayName}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {isUserMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-3 space-y-1 z-50 text-xs"
+                className="absolute right-0 mt-2 w-72 bg-[#0a1119] border border-[#1b2a3b] rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.55)] p-3 space-y-0.5 z-50 text-sm lg:w-64 lg:bg-slate-900 lg:border-slate-700 lg:shadow-2xl lg:space-y-1 lg:text-xs"
               >
                 <div className="border-b border-slate-800 pb-2 mb-1">
                   <div className="font-bold text-white">
                     {currentUser.firstName} {currentUser.lastName}
                   </div>
-                  <div className="text-slate-400 font-mono text-[11px] truncate">{currentUser.email}</div>
+                  <div className="text-slate-400 font-sans lg:font-mono text-[13px] lg:text-[11px] truncate">{currentUser.email}</div>
                   <div className="text-[10px] text-cyan-400 mt-1 flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
                     Account Google · Posto {currentUser.travelerId.slice(1)}
@@ -520,7 +518,7 @@ function TripPortal() {
                     setIsUserMenuOpen(false);
                     setIsProfileOpen(true);
                   }}
-                  className="w-full text-left p-2 rounded-lg hover:bg-slate-800 text-slate-300 flex items-center gap-1.5"
+                  className="w-full text-left p-2 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-slate-800 text-slate-200 lg:text-slate-300 flex items-center gap-2.5 lg:gap-1.5"
                 >
                   <UserCog className="w-3.5 h-3.5" />
                   Il mio profilo viaggiatore
@@ -531,7 +529,7 @@ function TripPortal() {
                     setIsUserMenuOpen(false);
                     setActiveTab('group');
                   }}
-                  className="w-full text-left p-2 rounded-lg hover:bg-slate-800 text-slate-300 flex items-center gap-1.5"
+                  className="w-full text-left p-2 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-slate-800 text-slate-200 lg:text-slate-300 flex items-center gap-2.5 lg:gap-1.5"
                 >
                   <Users className="w-3.5 h-3.5" />
                   Partecipanti ({group.length}/4)
@@ -544,7 +542,7 @@ function TripPortal() {
                       setIsUserMenuOpen(false);
                       handleInstall();
                     }}
-                    className="w-full text-left p-2 rounded-lg hover:bg-slate-800 text-slate-300 flex items-center gap-1.5"
+                    className="w-full text-left p-2 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-slate-800 text-slate-200 lg:text-slate-300 flex items-center gap-2.5 lg:gap-1.5"
                   >
                     <Smartphone className="w-3.5 h-3.5" />
                     Installa l'app sul telefono
@@ -556,7 +554,7 @@ function TripPortal() {
                     setIsUserMenuOpen(false);
                     signOut();
                   }}
-                  className="w-full text-left p-2 rounded-lg hover:bg-red-500/10 text-red-400 flex items-center gap-1.5"
+                  className="w-full text-left p-2 min-h-[44px] lg:min-h-0 rounded-lg hover:bg-red-500/10 text-red-400 flex items-center gap-2.5 lg:gap-1.5"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Esci
@@ -612,7 +610,7 @@ function TripPortal() {
       )}
 
       {/* Main Content Area */}
-      <main key={activeTab === 'pdf' ? 'pdf' : itineraryVersion} ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing'].includes(activeTab) ? 'desk-flat' : ''}`}>
+      <main key={activeTab === 'pdf' ? 'pdf' : itineraryVersion} ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-5 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['today','itinerary','map'].includes(activeTab) ? '' : 'ms-skin'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing'].includes(activeTab) ? 'desk-flat' : ''}`}>
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
         {!isDesktop && !install.standalone && !installBannerHidden && !updateAvailable && !inTripWindow() && (install.canPrompt || install.needsIosInstructions) && (
           <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30">

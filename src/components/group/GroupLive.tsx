@@ -436,9 +436,16 @@ export const GroupLiveCard: React.FC<{ onRoute?: (placeId: string) => void; onSh
           const t = bySlot[s];
           return (
             <li key={s} className={`flex items-center gap-3 min-h-[44px] ${st.lost ? 'border-l-2 border-rose-400 pl-3' : ''}`} data-testid={st.lost ? 'group-row-lost' : 'group-row'}>
-              <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ backgroundColor: t?.color ?? '#475569' }}>
-                {(s === slot ? 'Tu' : t?.name ?? '?').slice(0, 2)}
-              </span>
+              {(() => {
+                const photo = s === slot ? (user as { avatarUrl?: string } | null)?.avatarUrl : (t as { avatarUrl?: string } | undefined)?.avatarUrl;
+                return photo ? (
+                  <img src={photo} alt="" referrerPolicy="no-referrer" className="w-8 h-8 rounded-full object-cover shrink-0" data-testid="group-avatar-photo" />
+                ) : (
+                  <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-slate-200 bg-slate-700 shrink-0" data-testid="group-avatar-initials">
+                    {(s === slot ? 'Tu' : t?.name ?? '?').slice(0, 2)}
+                  </span>
+                );
+              })()}
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-white truncate">{s === slot ? 'Tu' : t?.name ?? s}</p>
                 <p className={`text-[11px] truncate ${st.tone}`}>{st.text}</p>

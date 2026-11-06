@@ -838,10 +838,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
           <span>Carico le foto del gruppo…</span>
         </div>
       ) : loadError && photos.length === 0 ? null : photos.length === 0 ? (
-        <div className="bg-gradient-to-b from-slate-900 via-[#0a101d] to-slate-900 border border-cyan-500/30 rounded-3xl p-8 sm:p-12 text-center shadow-2xl space-y-6 relative overflow-hidden">
-          {/* Sfondo luminoso d'atmosfera */}
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 right-1/4 w-80 h-80 bg-pink-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="border border-slate-800 rounded-3xl p-8 sm:p-12 text-center space-y-6 relative overflow-hidden">
 
           <div className="relative z-10 max-w-xl mx-auto space-y-5">
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-cyan-950 to-blue-900/60 border border-cyan-500/50 flex items-center justify-center mx-auto text-cyan-400 shadow-xl shadow-cyan-500/15">
@@ -910,7 +907,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsUploadOpen(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-xl shadow-cyan-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-sm transition-colors transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
                 <Upload className="w-4 h-4" />
                 <span>Carica la Prima Foto del Viaggio</span>

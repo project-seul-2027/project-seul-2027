@@ -41,44 +41,44 @@ export const NavEditor: React.FC<{ tabs: NavTabInfo[]; current: string[]; onSave
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] bg-black/70 flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Modifica la barra" data-testid="nav-editor">
-      <div className="w-full max-w-xl max-h-[92dvh] flex flex-col rounded-t-3xl bg-slate-900 border border-slate-700 shadow-2xl">
-        <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-800">
-          <p className="flex-1 text-sm font-bold text-white">Modifica la barra in basso</p>
+      <div className="w-full max-w-xl max-h-[92dvh] flex flex-col rounded-t-2xl bg-[#0a1119] shadow-[0_-6px_24px_rgba(0,0,0,0.4)]">
+        <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+          <p className="flex-1 text-xl font-medium text-white font-display">Modifica la barra in basso</p>
           <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-xl text-slate-300 hover:bg-slate-800 flex items-center justify-center" aria-label="Chiudi"><X className="w-5 h-5" /></button>
         </div>
-        <div className="overflow-y-auto px-4 py-4 space-y-4">
+        <div className="overflow-y-auto px-5 py-2 space-y-6">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Preimpostate</p>
+            <p className="text-base font-medium text-white font-display mb-2.5">Preimpostate</p>
             <div className="grid grid-cols-3 gap-2">
               {NAV_PRESETS.map((p) => (
-                <button key={p.id} type="button" onClick={() => { setWarn(''); setDraft(p.tabs.filter((id) => tabs.some((t) => t.id === id))); }} className="rounded-xl bg-slate-800 text-white px-2 py-2.5 text-left" data-testid={`nav-preset-${p.id}`}>
-                  <span className="block text-xs font-bold">{p.label}</span>
-                  <span className="block text-[10px] text-slate-400 leading-tight mt-0.5">{p.hint}</span>
+                <button key={p.id} type="button" onClick={() => { setWarn(''); setDraft(p.tabs.filter((id) => tabs.some((t) => t.id === id))); }} className="rounded-xl bg-[#152231] text-white px-3 py-3 text-left" data-testid={`nav-preset-${p.id}`}>
+                  <span className="block text-[13px] font-semibold">{p.label}</span>
+                  <span className="block text-[11px] text-slate-400 leading-tight mt-1">{p.hint}</span>
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Nella barra ({draft.length}/{NAV_SLOTS})</p>
+            <p className="text-base font-medium text-white font-display mb-2.5">Nella barra ({draft.length}/{NAV_SLOTS})</p>
             <div className="grid grid-cols-3 gap-2" data-testid="nav-draft">
               {Array.from({ length: NAV_SLOTS }).map((_, i) => {
                 const id = draft[i];
                 const t = id ? byId(id) : null;
                 const Icon = t?.icon;
                 return (
-                  <div key={i} className={`rounded-xl border px-1 py-2 flex flex-col items-center gap-1 min-h-[88px] ${t ? 'border-cyan-500/40 bg-cyan-500/10' : 'border-dashed border-slate-700'}`}>
+                  <div key={i} className={`rounded-xl px-1 py-2 flex flex-col items-center gap-1 min-h-[96px] ${t ? 'bg-[#152231] shadow-[inset_0_0_0_1.5px_#52d9e6]' : 'bg-[#152231]/50'}`}>
                     {t && Icon ? (
                       <>
-                        <Icon className={`w-5 h-5 ${t.active}`} />
-                        <span className="text-[10.5px] font-semibold text-white truncate max-w-full">{t.label}</span>
+                        <Icon className="w-5 h-5 text-[#52d9e6]" />
+                        <span className="text-[12px] font-semibold text-white truncate max-w-full">{t.label}</span>
                         <span className="flex gap-1">
-                          <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="w-7 h-7 rounded-lg bg-slate-800 text-slate-200 disabled:opacity-30 flex items-center justify-center" aria-label={`Sposta ${t.label} a sinistra`}><ChevronLeft className="w-4 h-4" /></button>
-                          <button type="button" onClick={() => move(i, 1)} disabled={i === draft.length - 1} className="w-7 h-7 rounded-lg bg-slate-800 text-slate-200 disabled:opacity-30 flex items-center justify-center" aria-label={`Sposta ${t.label} a destra`}><ChevronRight className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="w-9 h-9 rounded-lg text-slate-200 disabled:opacity-30 flex items-center justify-center" aria-label={`Sposta ${t.label} a sinistra`}><ChevronLeft className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => move(i, 1)} disabled={i === draft.length - 1} className="w-9 h-9 rounded-lg text-slate-200 disabled:opacity-30 flex items-center justify-center" aria-label={`Sposta ${t.label} a destra`}><ChevronRight className="w-4 h-4" /></button>
                         </span>
                       </>
                     ) : (
-                      <span className="text-[10px] text-slate-600 mt-4">Libero</span>
+                      <span className="text-[12px] text-slate-500 mt-5">Libero</span>
                     )}
                   </div>
                 );
@@ -89,23 +89,23 @@ export const NavEditor: React.FC<{ tabs: NavTabInfo[]; current: string[]; onSave
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Tutte le sezioni</p>
+            <p className="text-base font-medium text-white font-display mb-2.5">Tutte le sezioni</p>
             <div className="grid grid-cols-3 gap-2">
               {tabs.map((t) => {
                 const on = draft.includes(t.id);
                 const Icon = t.icon;
                 return (
-                  <button key={t.id} type="button" onClick={() => toggle(t.id)} aria-pressed={on} className={`min-h-[64px] rounded-xl border flex flex-col items-center justify-center gap-1 text-[11px] font-semibold ${on ? 'border-cyan-400 bg-cyan-500/15 text-white' : 'border-slate-800 bg-slate-950/60 text-slate-300'}`} data-testid={`nav-pick-${t.id}`}>
-                    <Icon className={`w-5 h-5 ${t.active}`} /> {t.label}
+                  <button key={t.id} type="button" onClick={() => toggle(t.id)} aria-pressed={on} className={`min-h-[68px] rounded-xl flex flex-col items-center justify-center gap-1.5 text-[12px] font-semibold ${on ? 'bg-[#152231] shadow-[inset_0_0_0_1.5px_#52d9e6] text-white' : 'bg-[#152231]/50 text-slate-300'}`} data-testid={`nav-pick-${t.id}`}>
+                    <Icon className={`w-5 h-5 ${on ? "text-[#52d9e6]" : "text-slate-400"}`} /> {t.label}
                   </button>
                 );
               })}
             </div>
           </div>
         </div>
-        <div className="px-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-          <button type="button" onClick={() => { onSave(null); onClose(); }} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 text-sm font-semibold" data-testid="nav-reset">Ripristina standard</button>
-          <button type="button" disabled={!ready} onClick={() => { onSave(JSON.stringify(draft) === JSON.stringify(NAV_DEFAULT) ? null : draft); onClose(); }} className="min-h-[48px] rounded-2xl bg-cyan-400 disabled:opacity-40 text-slate-950 text-sm font-bold" data-testid="nav-save">Salva</button>
+        <div className="px-5 pt-3 grid grid-cols-2 gap-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <button type="button" onClick={() => { onSave(null); onClose(); }} className="min-h-[48px] rounded-xl bg-[#152231] text-slate-100 text-[15px] font-semibold" data-testid="nav-reset">Ripristina standard</button>
+          <button type="button" disabled={!ready} onClick={() => { onSave(JSON.stringify(draft) === JSON.stringify(NAV_DEFAULT) ? null : draft); onClose(); }} className="min-h-[48px] rounded-xl bg-[#52d9e6] disabled:opacity-40 text-[#04242a] text-[15px] font-semibold" data-testid="nav-save">Salva</button>
         </div>
       </div>
     </div>,

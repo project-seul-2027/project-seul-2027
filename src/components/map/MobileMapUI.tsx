@@ -21,7 +21,7 @@ import {
 import { ITINERARY_DAYS, getNaverMapSearchUrl, type MapLocation } from '../../data/tripData';
 import type { MetroLine } from '../../data/seoulMetro';
 import type { MetroRouteResult } from '../../data/metroRouter';
-import { CATEGORY_LABEL, CATEGORY_STYLE } from './categoryStyle';
+import { CATEGORY_LABEL, CATEGORY_STYLE, mobileCategoryColor } from './categoryStyle';
 import { LineBadge } from './MetroPanel';
 import type { LiveGeoState } from './MetroRoutePanel';
 
@@ -64,8 +64,8 @@ export function useIsMobileMap(): boolean {
 const CHIP_CATEGORIES = [
   { id: 'alloggio', label: 'Alloggi', emoji: '' },
   { id: 'cultura', label: 'Cultura', emoji: '' },
-  { id: 'food', label: 'Food', emoji: '' },
-  { id: 'nightlife', label: 'Nightlife', emoji: '' },
+  { id: 'food', label: 'Cibo', emoji: '' },
+  { id: 'nightlife', label: 'Vita notturna', emoji: '' },
   { id: 'natura', label: 'Parchi', emoji: '' },
   { id: 'gita', label: 'Gite', emoji: '' }
 ];
@@ -80,18 +80,21 @@ const dayShort = (id: number): string => {
   return `${n} ${m.slice(0, 3)}`;
 };
 
+// Chip a testo (come le schede): nessuna cornice, voce attiva sottolineata in ciano
 const chipBase =
-  'h-9 px-3.5 rounded-full text-[13px] font-medium whitespace-nowrap border shadow-lg backdrop-blur-md inline-flex items-center gap-1.5 shrink-0 transition-colors active:scale-95';
-const chipOff = 'bg-slate-900/95 border-slate-700/80 text-slate-200';
-const chipOn = 'bg-cyan-500 border-cyan-400 text-slate-950 font-semibold';
+  'h-11 text-[14.5px] whitespace-nowrap inline-flex items-center gap-1.5 shrink-0 text-[#eaf0f6] [text-shadow:0_1px_6px_#0a1119] transition-colors active:opacity-70';
+const chipOff = '';
+const chipOn = 'font-semibold shadow-[inset_0_-2px_0_#52d9e6]';
 
 const fabClass =
-  'w-12 h-12 rounded-full bg-slate-900/95 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center justify-center text-slate-200 active:scale-95 transition-transform pointer-events-auto';
+  'w-12 h-12 rounded-2xl bg-[#152231] shadow-[0_2px_10px_rgba(0,0,0,0.35)] flex items-center justify-center text-[#eaf0f6] active:opacity-70 pointer-events-auto';
 
 const pillPrimary =
-  'h-10 px-4 rounded-full bg-cyan-500 text-slate-950 text-sm font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 transition-transform';
+  'h-11 px-4 rounded-xl bg-[#52d9e6] text-[#04242a] text-[15px] font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:opacity-80';
 const pillSecondary =
-  'h-10 px-4 rounded-full bg-slate-800 border border-slate-700 text-slate-100 text-sm font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 transition-transform';
+  'h-11 px-4 rounded-xl bg-[rgba(96,150,214,0.13)] text-[#eaf0f6] text-[15px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:opacity-80';
+
+const dotColor = mobileCategoryColor;
 
 export interface MobileMapOverlayProps {
   shellH: number;
@@ -174,41 +177,36 @@ const SelectField: React.FC<{
       aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full h-10 appearance-none rounded-xl bg-slate-950 border border-slate-700 pl-3 pr-9 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 truncate"
+      className="w-full h-11 appearance-none rounded-xl bg-[rgba(96,150,214,0.13)] pl-3 pr-9 text-[15px] text-[#eaf0f6] focus:outline-none focus:shadow-[inset_0_0_0_1.5px_#52d9e6] truncate"
     >
       {children}
     </select>
-    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#97a5b9] pointer-events-none" />
   </div>
 );
 
 const PlaceRow: React.FC<{ loc: MapLocation; onPick: () => void }> = ({ loc, onPick }) => {
-  const style = CATEGORY_STYLE[loc.category] ?? CATEGORY_STYLE.logistica;
   return (
     <button
       type="button"
       onClick={onPick}
-      className="w-full flex items-start gap-3 px-4 py-3 text-left border-b border-slate-800/70 active:bg-slate-800/60"
+      className="w-full block px-5 py-3 text-left border-t border-[rgba(234,240,246,.11)] first:border-t-0 active:bg-[rgba(234,240,246,.05)]"
     >
-      <span
-        className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 bg-slate-950"
-        style={{ border: `2px solid ${style.badge}`, boxShadow: `0 0 10px ${style.ring}` }}
-      >
-        <span className="inline-flex" dangerouslySetInnerHTML={{ __html: categoryIconSvg(loc.id === 'valorant_masters_arena' ? 'valorant' : loc.category, 16) }} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-baseline justify-between gap-2">
-          <span className="text-sm font-semibold text-white truncate">{loc.italianName}</span>
-          <span className="text-[11px] text-slate-500 shrink-0 max-w-[40%] truncate">{loc.district}</span>
+      <span className="block min-w-0">
+        <span className="flex items-baseline justify-between gap-3">
+          <span className="font-[Outfit] text-[18px] font-medium tracking-[-0.01em] text-[#eaf0f6] truncate">{loc.italianName}</span>
+          <span className="text-[13px] text-[#97a5b9] shrink-0 max-w-[40%] truncate">{loc.district}</span>
         </span>
-        <span className="block text-[11px] text-slate-400 mt-0.5">
-          {CATEGORY_LABEL[loc.category] ?? loc.category}
+        <span className="block text-[14px] text-[#97a5b9] mt-0.5">
+          <span className="font-semibold" style={{ color: dotColor(loc.category) }}>
+            {CATEGORY_LABEL[loc.category] ?? loc.category}
+          </span>
           {loc.city !== 'Seul' ? ` · ${loc.city}` : ''}
         </span>
-        <span className="block text-xs text-slate-400 line-clamp-2 mt-1">{loc.description}</span>
-        {loc.mustTry && <span className="block text-[11px] text-amber-400 mt-1">{loc.mustTry}</span>}
+        <span className="block text-[14px] text-[#97a5b9] line-clamp-2 mt-1">{loc.description}</span>
+        {loc.mustTry && <span className="block text-[13px] text-[#fbbf24] mt-1">{loc.mustTry}</span>}
         {loc.id === 'valorant_masters_arena' && (
-          <span className="block text-[11px] text-red-400 font-semibold mt-1">Sede non ancora annunciata</span>
+          <span className="block text-[13px] text-[#fbbf24] font-semibold mt-1">Sede non ancora annunciata</span>
         )}
       </span>
     </button>
@@ -307,7 +305,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
   const inRoute = p.mapMode === 'route';
   const dockHidden = p.snap === 'full';
   // I pulsanti seguono il foglio, ma spariscono se non c'è più spazio sotto il pulsante dei livelli
-  const fabStackH = inRoute ? 130 : 146;
+  const fabStackH = inRoute ? 190 : 206;
   // in Esplora i pulsanti ci sono sempre a foglio chiuso; in Percorso solo se resta spazio sotto il pulsante dei livelli
   const fabsFit = !inRoute && p.snap === 'peek' ? true : p.shellH - p.topInset - (inRoute ? 60 : 8) - h >= fabStackH;
 
@@ -318,14 +316,14 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
   if (inRoute) {
     const r = p.route;
     header = (
-      <div className="px-4 pb-3 min-h-[84px]">
+      <div className="px-5 pb-3 min-h-[84px]">
         {!r ? (
-          <div className="text-sm text-slate-300 pt-2">Calcolo del percorso metro…</div>
+          <div className="text-[15px] text-[#97a5b9] pt-2">Calcolo del percorso metro…</div>
         ) : r.reachable ? (
           <>
             <div className="flex items-baseline gap-2.5 flex-wrap">
-              <span className="text-2xl font-bold text-white font-mono tabular-nums">~{r.estimatedTotalMinutes} min</span>
-              <span className="text-sm text-slate-300">
+              <span className="font-[Outfit] text-[28px] font-medium leading-none text-[#eaf0f6] tabular-nums">~{r.estimatedTotalMinutes} min</span>
+              <span className="text-[14px] text-[#97a5b9]">
                 {r.totalStops} {r.totalStops === 1 ? 'fermata' : 'fermate'} ·{' '}
                 {r.totalTransfers === 0 ? 'diretto' : `${r.totalTransfers} ${r.totalTransfers === 1 ? 'cambio' : 'cambi'}`}
               </span>
@@ -333,15 +331,15 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
               {r.segments.map((s, i) => (
                 <React.Fragment key={i}>
-                  {i > 0 && <span className="text-slate-600 text-xs">→</span>}
+                  {i > 0 && <span className="text-[#97a5b9] text-xs">→</span>}
                   <LineBadge line={s.line} />
                 </React.Fragment>
               ))}
-              <span className="text-xs text-slate-400 ml-1">{r.totalWalkMeters} m a piedi</span>
+              <span className="text-[13px] text-[#97a5b9] ml-1">{r.totalWalkMeters} m a piedi</span>
             </div>
           </>
         ) : (
-          <div className="text-sm text-amber-300 pt-2 leading-snug">
+          <div className="text-[15px] text-[#fbbf24] pt-2 leading-snug">
             {r.originOutOfMetroCoverage
               ? 'La tua posizione è fuori dalla metro di Seul: apri il foglio per simulare una posizione a Seul.'
               : 'Nessuna tratta metro disponibile per questa tappa.'}
@@ -349,37 +347,33 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         )}
       </div>
     );
-    body = <div className="flex flex-col flex-1 min-h-0">{p.routePanel}</div>;
+    body = <div className="ms-skin flex flex-col flex-1 min-h-0">{p.routePanel}</div>;
   } else if (p.selected) {
     const loc = p.selected;
-    const style = CATEGORY_STYLE[loc.category] ?? CATEGORY_STYLE.logistica;
     const canRoute = loc.city === 'Seul' || loc.city === 'Dintorni / Gite';
     const days = ITINERARY_DAYS.filter((d) => loc.dayNumbers.includes(d.id));
     header = (
       <div className="pb-3">
-        <div className="px-4 flex items-start gap-3">
-          <span
-            className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0 bg-slate-950"
-            style={{ border: `2px solid ${style.badge}`, boxShadow: `0 0 12px ${style.ring}` }}
-          >
-            <span className="inline-flex" dangerouslySetInnerHTML={{ __html: categoryIconSvg(loc.id === 'valorant_masters_arena' ? 'valorant' : loc.category, 16) }} />
-          </span>
+        <div className="px-5 flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold text-white leading-tight">{loc.italianName}</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {CATEGORY_LABEL[loc.category] ?? loc.category} · {loc.district} · {loc.city}
+            <h2 className="font-[Outfit] text-[21px] font-medium leading-tight tracking-[-0.01em] text-[#eaf0f6]">{loc.italianName}</h2>
+            <p className="text-[14px] text-[#97a5b9] mt-0.5">
+              <span className="font-semibold" style={{ color: mobileCategoryColor(loc.category) }}>
+                {CATEGORY_LABEL[loc.category] ?? loc.category}
+              </span>{' '}
+              · {loc.district} · {loc.city}
             </p>
           </div>
           <button
             type="button"
             onClick={p.onClosePlace}
             aria-label="Chiudi dettagli tappa"
-            className="w-9 h-9 -mr-1 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center shrink-0 active:scale-95"
+            className="w-11 h-11 -mr-3 -mt-1 text-[#97a5b9] flex items-center justify-center shrink-0 active:opacity-70"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <div data-no-drag className="flex gap-2 overflow-x-auto scrollbar-none px-4 mt-3 touch-pan-x">
+        <div data-no-drag className="flex gap-2 overflow-x-auto scrollbar-none px-5 mt-3 touch-pan-x">
           {canRoute && (
             <button type="button" onClick={() => p.onRouteTo(loc)} className={pillPrimary}>
               <Navigation className="w-4 h-4" /> Percorso
@@ -410,82 +404,75 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
       </div>
     );
     body = (
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-6 space-y-4">
         {loc.id === 'valorant_masters_arena' && (
-          <div className="rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs text-red-300 font-semibold">
+          <p className="text-[14px] text-[#fbbf24] font-semibold">
             Sede non ancora annunciata: Riot Games deve ancora comunicare l&apos;arena.
-          </div>
+          </p>
         )}
         {(loc.koreanName || loc.name !== loc.italianName) && (
-          <div className="text-xs text-slate-400">
+          <div className="text-[14px] text-[#97a5b9]">
             {loc.koreanName && <span className="mr-2">{loc.koreanName}</span>}
-            {loc.name !== loc.italianName && <span className="text-slate-500">{loc.name}</span>}
+            {loc.name !== loc.italianName && <span>{loc.name}</span>}
           </div>
         )}
-        <p className="text-sm text-slate-200 leading-relaxed">{loc.description}</p>
+        <p className="text-[15px] text-[#eaf0f6] leading-relaxed">{loc.description}</p>
         {loc.mustTry && (
-          <div className="rounded-xl bg-amber-950/25 border border-amber-500/30 px-3 py-2 text-sm text-amber-200">
-            <span className="font-semibold">Da provare:</span> {loc.mustTry}
-          </div>
+          <p className="text-[15px] text-[#eaf0f6]">
+            <span className="font-semibold text-[#fbbf24]">Da provare</span> · {loc.mustTry}
+          </p>
         )}
         {loc.tips && (
-          <div className="rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-300 leading-relaxed">
-            <span className="font-semibold text-cyan-300">Consiglio · </span>
-            {loc.tips}
-          </div>
+          <p className="text-[14px] text-[#97a5b9] leading-relaxed">
+            <span className="font-semibold text-[#52d9e6]">Consiglio</span> · {loc.tips}
+          </p>
         )}
         {days.length > 0 && days.length <= 8 && (
-          <div className="space-y-2">
-            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Nel programma</div>
-            <div className="flex flex-col gap-1.5">
-              {days.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => {
-                    p.onDay(d.id);
-                    p.onClosePlace();
-                  }}
-                  className="text-left rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 flex items-center gap-2.5 active:bg-slate-800"
-                >
-                  <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-mono text-cyan-300">{dayShort(d.id)}</span>
-                    <span className="block text-xs text-slate-300 truncate">{d.title}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div>
+            <h3 className="font-[Outfit] text-[17px] font-medium text-[#eaf0f6] mb-1">Nel programma</h3>
+            {days.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => {
+                  p.onDay(d.id);
+                  p.onClosePlace();
+                }}
+                className="w-full text-left min-h-[52px] py-2 border-t border-[rgba(234,240,246,.11)] flex items-baseline gap-3 active:opacity-70"
+              >
+                <span className="text-[14px] font-semibold text-[#52d9e6] shrink-0">{dayShort(d.id)}</span>
+                <span className="text-[15px] text-[#eaf0f6] truncate">{d.title}</span>
+              </button>
+            ))}
           </div>
         )}
       </div>
     );
   } else {
     header = (
-      <div className="px-4 pb-2">
-        <div role="tablist" aria-label="Contenuto del pannello" className="grid grid-cols-2 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800" data-no-drag>
+      <div className="px-5">
+        <div role="tablist" aria-label="Contenuto del pannello" className="flex gap-6 border-b border-[rgba(234,240,246,.11)]" data-no-drag>
           <button
             role="tab"
             aria-selected={p.sheetTab === 'places'}
             onClick={() => p.onSheetTab('places')}
-            className={`h-9 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-              p.sheetTab === 'places' ? 'bg-slate-800 text-white' : 'text-slate-400'
+            className={`h-11 text-[15px] ${
+              p.sheetTab === 'places' ? 'text-[#eaf0f6] font-semibold shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
             }`}
           >
-            <MapPin className="w-3.5 h-3.5" /> Tappe
-            <span className="text-[10px] font-mono tabular-nums text-slate-500">{p.places.length}</span>
+            Tappe <span className="font-normal text-[#97a5b9] ml-1">{p.places.length}</span>
           </button>
           <button
             role="tab"
             aria-selected={p.sheetTab === 'metro'}
             onClick={() => p.onSheetTab('metro')}
-            className={`h-9 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-              p.sheetTab === 'metro' ? 'bg-slate-800 text-white' : 'text-slate-400'
+            className={`h-11 text-[15px] ${
+              p.sheetTab === 'metro' ? 'text-[#eaf0f6] font-semibold shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
             }`}
           >
-            <TrainFront className="w-3.5 h-3.5" /> Metro &amp; AREX
+            Metro e AREX
             {p.metroReady && (
-              <span className="text-[10px] font-mono tabular-nums text-slate-500">
+              <span className="font-normal text-[#97a5b9] ml-1">
                 {p.metroVisibleCount}/{p.metroLineCount}
               </span>
             )}
@@ -495,7 +482,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
     );
     body =
       p.sheetTab === 'metro' ? (
-        <div className="flex flex-col flex-1 min-h-0">{p.metroPanel}</div>
+        <div className="ms-skin flex flex-col flex-1 min-h-0">{p.metroPanel}</div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {p.places.map((loc) => (
@@ -523,8 +510,8 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
       <div ref={topRef} className="absolute top-0 inset-x-0 z-[450] px-3 pt-3 pointer-events-none">
         {!inRoute ? (
           <div className="space-y-2">
-            <div className="pointer-events-auto h-12 rounded-full bg-slate-900/95 border border-slate-700/80 shadow-xl backdrop-blur-md flex items-center gap-2 pl-4 pr-1.5">
-              <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="pointer-events-auto h-12 rounded-xl bg-[#152231] flex items-center gap-2.5 pl-3.5 pr-1.5 focus-within:shadow-[inset_0_0_0_1.5px_#52d9e6]">
+              <Search className="w-[22px] h-[22px] text-[#97a5b9] shrink-0" strokeWidth={1.6} />
               <input
                 type="text"
                 inputMode="search"
@@ -539,39 +526,28 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                 }}
                 placeholder="Cerca tappe, quartieri, cibo…"
                 aria-label="Cerca tra le tappe"
-                className="flex-1 min-w-0 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                className="flex-1 min-w-0 bg-transparent text-[15px] text-[#eaf0f6] placeholder:text-[#97a5b9] focus:outline-none"
               />
               {searching && (
                 <button
                   type="button"
                   onClick={() => p.onSearchQuery('')}
                   aria-label="Cancella ricerca"
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 active:bg-slate-800"
+                  className="w-11 h-11 flex items-center justify-center text-[#97a5b9] active:opacity-70"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setLayersOpen((v) => !v)}
-                aria-label="Livelli e stile della mappa"
-                aria-expanded={layersOpen}
-                className={`w-9 h-9 rounded-full border flex items-center justify-center active:scale-95 ${
-                  layersOpen ? 'bg-cyan-500 border-cyan-400 text-slate-950' : 'bg-slate-800 border-slate-700 text-slate-200'
-                }`}
-              >
-                <Layers className="w-4 h-4" />
-              </button>
             </div>
 
             {!isShortShell(p.shellH) && (
-            <div data-chips className="pointer-events-auto flex gap-2 overflow-x-auto scrollbar-none -mx-3 px-3 pb-1 touch-pan-x">
+            <div data-chips className="pointer-events-auto flex gap-5 overflow-x-auto scrollbar-none px-4 rounded-xl bg-[#0a1119]/90 touch-pan-x">
               <button
                 type="button"
                 onClick={p.onStartRoute}
-                className={`${chipBase} bg-cyan-950/90 border-cyan-400/60 text-cyan-200`}
+                className={`${chipBase} font-semibold !text-[#52d9e6]`}
               >
-                <Navigation className="w-3.5 h-3.5" /> Percorso
+                Percorso
               </button>
               <button
                 type="button"
@@ -580,7 +556,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                 disabled={!p.metroReady}
                 className={`${chipBase} ${p.metroVisibleCount > 0 ? chipOn : chipOff} disabled:opacity-60`}
               >
-                <TrainFront className="w-3.5 h-3.5" /> Metro
+                Metro
               </button>
               {p.addedCount > 0 && (
                 <>
@@ -603,11 +579,11 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                   aria-pressed={p.activeCategory === c.id}
                   className={`${chipBase} ${p.activeCategory === c.id ? chipOn : chipOff}`}
                 >
-                  <span aria-hidden="true" className="inline-flex align-middle" dangerouslySetInnerHTML={{ __html: categoryIconSvg(c.id, 14) }} /> {c.label}
+                  <i aria-hidden="true" className="inline-block w-2 h-2 rounded-full" style={{ background: dotColor(c.id) }} />
+                  {c.label}
                 </button>
               ))}
               <label className={`${chipBase} relative ${p.activeDay !== 'all' ? chipOn : chipOff}`}>
-                <Calendar className="w-3.5 h-3.5" />
                 {p.activeDay === 'all' ? 'Giorno' : dayShort(p.activeDay)}
                 <ChevronDown className="w-3 h-3 opacity-70" />
                 <select
@@ -628,19 +604,19 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             )}
           </div>
         ) : (
-          <div className="pointer-events-auto rounded-3xl bg-slate-900/95 border border-slate-700/80 shadow-xl backdrop-blur-md p-2.5 flex items-stretch gap-2">
+          <div className="pointer-events-auto rounded-xl bg-[#152231] shadow-[0_2px_10px_rgba(0,0,0,0.35)] p-2 flex items-stretch gap-2">
             <button
               type="button"
               onClick={p.onExitRoute}
               aria-label="Esci dal percorso"
-              className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-slate-200 active:bg-slate-800"
+              className="w-11 h-11 shrink-0 flex items-center justify-center text-[#eaf0f6] active:opacity-70"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex flex-col items-center py-3 gap-1 shrink-0" aria-hidden="true">
-              <span className="w-3 h-3 rounded-full border-[3px] border-cyan-400" />
-              <span className="flex-1 border-l-2 border-dotted border-slate-600" />
-              <MapPin className="w-4 h-4 text-emerald-400" />
+            <div className="flex flex-col items-center py-4 gap-1 shrink-0" aria-hidden="true">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#52d9e6]" />
+              <span className="flex-1 border-l border-dotted border-[rgba(234,240,246,.24)]" />
+              <span className="w-2.5 h-2.5 rounded-full border-2 border-[#f472b6]" />
             </div>
             <div className="flex-1 min-w-0 space-y-1.5">
               <SelectField label="Punto di partenza" value={p.originId} onChange={p.onOrigin}>
@@ -684,20 +660,16 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                 onClick={p.onToggleAvoidArex}
                 aria-pressed={p.avoidArex}
                 data-testid="avoid-arex"
-                className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold active:scale-[0.98] transition-colors ${
-                  p.avoidArex
-                    ? 'bg-cyan-500/15 border-cyan-400/60 text-cyan-200'
-                    : 'bg-slate-950/70 border-slate-700 text-slate-300'
-                }`}
+                className="flex items-center gap-2 min-h-[44px] px-1 text-[14px] font-semibold text-[#eaf0f6] active:opacity-70"
               >
                 <span
                   aria-hidden="true"
-                  className={`relative shrink-0 inline-flex h-4 w-7 rounded-full transition-colors ${p.avoidArex ? 'bg-cyan-500' : 'bg-slate-700'}`}
+                  className={`relative shrink-0 inline-flex h-4 w-7 rounded-full transition-colors ${p.avoidArex ? 'bg-[#52d9e6]' : 'bg-[rgba(234,240,246,.24)]'}`}
                 >
                   <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${p.avoidArex ? 'left-[0.875rem]' : 'left-0.5'}`} />
                 </span>
                 Senza AREX
-                <span className="font-normal text-[11px] text-slate-400">solo metro e piedi</span>
+                <span className="font-normal text-[13px] text-[#97a5b9]">solo metro e piedi</span>
               </button>
             </div>
           </div>
@@ -743,17 +715,6 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             </div>
           )}
         </div>
-        {inRoute && (
-          <button
-            type="button"
-            onClick={() => setLayersOpen((v) => !v)}
-            aria-label="Livelli e stile della mappa"
-            aria-expanded={layersOpen}
-            className={`${fabClass} shrink-0 ${layersOpen ? 'border-cyan-400 text-cyan-300' : ''}`}
-          >
-            <Layers className="w-5 h-5" />
-          </button>
-        )}
       </div>
 
       {layersOpen && (
@@ -761,47 +722,44 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
           <button
             type="button"
             aria-label="Chiudi menu livelli"
-            className="absolute inset-0 z-[510] cursor-default"
+            className="absolute inset-0 z-[510] cursor-default bg-black/40"
             onClick={() => setLayersOpen(false)}
           />
           <div
             role="dialog"
             aria-label="Livelli della mappa"
-            className="absolute right-3 z-[520] w-[17.5rem] rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-3.5 space-y-3.5 animate-in fade-in duration-150"
-            style={{ top: inRoute ? p.topInset + 4 + 52 : 68 }}
+            className="absolute inset-x-0 bottom-0 z-[520] rounded-t-2xl bg-[#0a1119] px-5 pb-5 pt-2 shadow-[0_-6px_24px_rgba(0,0,0,0.4)]"
           >
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Stile mappa</div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => p.onMapTheme('dark')}
-                  aria-pressed={p.mapTheme === 'dark'}
-                  className={`h-11 rounded-xl border text-sm font-semibold flex items-center justify-center gap-1.5 ${
-                    p.mapTheme === 'dark'
-                      ? 'bg-cyan-500 border-cyan-400 text-slate-950'
-                      : 'bg-slate-950 border-slate-700 text-slate-300'
-                  }`}
-                >
-                  <Moon className="w-4 h-4" /> Notte
-                </button>
-                <button
-                  type="button"
-                  onClick={() => p.onMapTheme('light')}
-                  aria-pressed={p.mapTheme === 'light'}
-                  className={`h-11 rounded-xl border text-sm font-semibold flex items-center justify-center gap-1.5 ${
-                    p.mapTheme === 'light'
-                      ? 'bg-amber-400 border-amber-300 text-slate-950'
-                      : 'bg-slate-950 border-slate-700 text-slate-300'
-                  }`}
-                >
-                  <Sun className="w-4 h-4" /> Chiara
-                </button>
-              </div>
+            <div className="w-9 h-1 rounded-full bg-[rgba(234,240,246,.24)] mx-auto mb-1" aria-hidden="true" />
+            <div className="flex items-center justify-between">
+              <h2 className="font-[Outfit] text-[21px] font-medium tracking-[-0.01em] text-[#eaf0f6]">Mappa</h2>
+              <button
+                type="button"
+                onClick={() => setLayersOpen(false)}
+                aria-label="Chiudi"
+                className="w-11 h-11 -mr-3 flex items-center justify-center text-[#97a5b9] active:opacity-70"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="space-y-1">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Livelli</div>
+            <div role="group" aria-label="Stile mappa" className="flex gap-6 border-b border-[rgba(234,240,246,.11)]">
+              {(['dark', 'light'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => p.onMapTheme(t)}
+                  aria-pressed={p.mapTheme === t}
+                  className={`h-11 text-[15px] ${
+                    p.mapTheme === t ? 'text-[#eaf0f6] font-semibold shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
+                  }`}
+                >
+                  {t === 'dark' ? 'Notte' : 'Chiara'}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-1">
               {!inRoute && (
                 <ToggleRow
                   label="Linee metro"
@@ -825,9 +783,9 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
                 setLayersOpen(false);
                 p.onOpenRealData();
               }}
-              className="w-full h-11 rounded-xl bg-slate-950 border border-emerald-500/40 text-emerald-300 text-sm font-semibold flex items-center justify-center gap-2 active:bg-slate-800"
+              className="mt-1 h-11 text-[15px] font-semibold text-[#52d9e6] active:opacity-70"
             >
-              <BookOpen className="w-4 h-4" /> Dati reali Metro Seul
+              Dati reali Metro Seul
             </button>
           </div>
         </>
@@ -851,6 +809,15 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
           className="flex flex-col gap-2.5 shrink-0 transition-opacity duration-150"
           style={{ opacity: fabsFit ? 1 : 0, visibility: fabsFit ? 'visible' : 'hidden' }}
         >
+          <button
+            type="button"
+            onClick={() => setLayersOpen((v) => !v)}
+            aria-label="Livelli e stile della mappa"
+            aria-expanded={layersOpen}
+            className={`${fabClass} ${layersOpen ? '!bg-[#52d9e6] !text-[#04242a]' : ''}`}
+          >
+            <Layers className="w-5 h-5" />
+          </button>
           {inRoute ? (
             <button type="button" onClick={p.onFitRoute} aria-label="Inquadra tutta la tratta" className={fabClass}>
               <Crosshair className="w-5 h-5 text-cyan-400" />
@@ -871,7 +838,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               type="button"
               onClick={p.onStartRoute}
               aria-label="Calcola un percorso in metro"
-              className="w-14 h-14 rounded-full bg-cyan-500 text-slate-950 shadow-xl shadow-cyan-500/30 flex items-center justify-center active:scale-95 transition-transform pointer-events-auto"
+              className="w-14 h-14 rounded-2xl bg-[#52d9e6] text-[#04242a] flex items-center justify-center active:opacity-80 pointer-events-auto"
             >
               <Navigation className="w-6 h-6" />
             </button>
@@ -884,7 +851,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         ref={sheetRef}
         role="region"
         aria-label={inRoute ? 'Percorso metro' : p.selected ? p.selected.italianName : 'Tappe e metro'}
-        className="absolute bottom-0 inset-x-0 z-[500] rounded-t-3xl bg-slate-900 border-t border-slate-700/80 shadow-[0_-14px_36px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+        className="absolute bottom-0 inset-x-0 z-[500] rounded-t-2xl bg-[#0a1119] shadow-[0_-6px_24px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden"
         style={{ height: h, transition: SHEET_TRANSITION }}
       >
         <div
@@ -893,11 +860,11 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
           onPointerDown={onPointerDown}
         >
           <div data-handle className="h-6 flex items-center justify-center cursor-grab" aria-hidden="true">
-            <span className="w-10 h-1.5 rounded-full bg-slate-600" />
+            <span className="w-9 h-1 rounded-full bg-[rgba(234,240,246,.24)]" />
           </div>
           {header}
         </div>
-        <div className="flex flex-col flex-1 min-h-0 border-t border-slate-800/80">{body}</div>
+        <div className="flex flex-col flex-1 min-h-0">{body}</div>
       </div>
     </>
   );
@@ -916,14 +883,14 @@ const ToggleRow: React.FC<{
     aria-checked={on}
     disabled={disabled}
     onClick={onToggle}
-    className="w-full flex items-center justify-between gap-3 py-2 text-left disabled:opacity-60"
+    className="w-full flex items-center justify-between gap-3 py-3 min-h-[56px] text-left border-b border-[rgba(234,240,246,.11)] disabled:opacity-60"
   >
     <span className="min-w-0">
-      <span className="block text-sm font-medium text-slate-100">{label}</span>
-      <span className="block text-[11px] text-slate-500 truncate">{hint}</span>
+      <span className="block text-[15px] font-medium text-[#eaf0f6]">{label}</span>
+      <span className="block text-[13px] text-[#97a5b9] truncate">{hint}</span>
     </span>
     <span
-      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${on ? 'bg-cyan-500' : 'bg-slate-700'}`}
+      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${on ? 'bg-[#52d9e6]' : 'bg-[rgba(234,240,246,.24)]'}`}
       aria-hidden="true"
     >
       <span

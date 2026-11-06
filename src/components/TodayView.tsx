@@ -16,6 +16,7 @@ import { useMediaQuery } from '../pwa';
 import { WorldClockBar } from './WorldClockBar';
 import { DesktopOggiHero } from './desktop/DesktopOggiHero';
 import { PhoneCountdown } from './mobile/PhoneCountdown';
+import { MobileOggi } from './mobile/MobileOggi';
 import {
   TIMED_DAYS, locateNow, formatCountdown, formatInZone, msFromDayAndClock, zoneLabel, zoneOfDay
 } from '../utils/tripClock';
@@ -562,70 +563,65 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
   if (!isDesktop) {
     return (
       <div className="space-y-4 -mt-1" data-testid="today-view">
-        <header className="space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-mono font-bold uppercase tracking-[0.14em] text-app-muted" data-testid="today-daycount">
-                {before ? (firstName ? `Ciao ${firstName}` : 'Prima della partenza') : after ? 'Dopo il viaggio' : day.id === 0 ? 'Giorno della partenza' : `Giorno ${day.id} di ${TIMED_DAYS[TIMED_DAYS.length - 1].day.id}`}
-              </p>
-              <h2 className="text-[22px] font-extrabold font-display text-app-text capitalize leading-tight">{phoneDate}</h2>
+
+        <MobileOggi
+          simBanner={sim !== null ? (
+            <div className="flex items-center justify-between gap-3" data-testid="sim-banner">
+              <span className="ms-sm" style={{ color: '#dbe5ef' }}>Anteprima del viaggio</span>
+              <button type="button" onClick={() => setSim(null)} className="ms-link" style={{ padding: 0, minHeight: 44, flex: 'none' }}>Esci</button>
             </div>
-            <button
-              type="button"
-              onClick={() => setPreviewOpen((v) => !v)}
-              className="min-h-[40px] px-3 rounded-xl bg-app-surface border border-app-control text-xs font-semibold text-slate-200 flex items-center gap-1.5 shrink-0"
-              aria-expanded={previewOpen}
-              data-testid="preview-toggle"
-            >
-              <Eye className="w-3.5 h-3.5" /> Anteprima
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() => setClocksOpen((v) => !v)}
-            aria-expanded={clocksOpen}
-            data-testid="today-clocks"
-            className="w-full min-h-[40px] flex items-center gap-4 rounded-xl px-3 bg-app-surface border border-app-line text-xs text-app-muted"
-          >
-            <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-app-accent" /> Ora qui <b className="text-app-text font-mono">{phoneTime}</b></span>
-            <span className="font-mono text-app-muted">{phoneZone}</span>
-            <span className="ml-auto flex items-center gap-1 font-semibold text-app-accent">Fusi <ChevronDown className={`w-3.5 h-3.5 transition-transform ${clocksOpen ? 'rotate-180' : ''}`} /></span>
-          </button>
-          {clocksOpen && <div className="-mx-4"><WorldClockBar /></div>}
-        </header>
-
-        {previewOpen && (
-          <div className="rounded-2xl border border-app-control bg-app-surface p-4 grid grid-cols-[1fr_auto] items-end gap-3" data-testid="preview-panel">
-            <label className="col-span-2 flex flex-col gap-1 text-[11px] text-app-muted">
-              Giorno
-              <select value={pvDay} onChange={(e) => setPvDay(Number(e.target.value))} className="bg-app-bg border border-app-control rounded-lg px-3 py-2.5 text-sm text-app-text">
-                {ITINERARY_DAYS.map((d) => <option key={d.id} value={d.id}>{d.dateStr.split(' ')[0]} marzo · {d.title}</option>)}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-[11px] text-app-muted">
-              Ora (del posto)
-              <input type="time" value={pvTime} onChange={(e) => setPvTime(e.target.value)} className="bg-app-bg border border-app-control rounded-lg px-3 py-2.5 text-sm text-app-text" />
-            </label>
-            <button type="button" onClick={applyPreview} className="min-h-[44px] px-4 rounded-xl bg-app-accent text-app-on-accent text-sm font-bold">Mostra</button>
-          </div>
-        )}
-
-        {sim !== null && (
-          <div className="rounded-2xl border border-fam-weather/40 bg-fam-weather/10 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-amber-200" data-testid="sim-banner">
-            <span>Anteprima: {formatInZone(sim, 'Asia/Seoul', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} (ora di Seul), non l’ora reale.</span>
-            <button type="button" onClick={() => setSim(null)} className="min-h-[40px] shrink-0 flex items-center gap-1 font-bold"><X className="w-3.5 h-3.5" /> Esci</button>
-          </div>
-        )}
-
-        {phoneHero}
-        <WalletShortcut onOpen={() => onGoTo('wallet')} nowMs={now} />
-        <GroupLiveCard onRoute={onRoute} onShowMap={() => onGoTo('map')} />
-        {weatherCard}
-        {timelineCard}
-        {stopsCard}
-        {showKoreanCard}
-        {remindersCard}
-        <OfflineCard />
+          ) : null}
+          previewPanel={previewOpen ? (
+            <div className="grid grid-cols-[1fr_auto] items-end gap-3 ms-pv" data-testid="preview-panel">
+              <label className="col-span-2 flex flex-col gap-1 text-[13px] text-app-muted">
+                Giorno
+                <select value={pvDay} onChange={(e) => setPvDay(Number(e.target.value))} className="px-3 py-2.5 text-sm text-app-text">
+                  {ITINERARY_DAYS.map((d) => <option key={d.id} value={d.id}>{d.dateStr.split(' ')[0]} marzo · {d.title}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-[13px] text-app-muted">
+                Ora (del posto)
+                <input type="time" value={pvTime} onChange={(e) => setPvTime(e.target.value)} className="px-3 py-2.5 text-sm text-app-text" />
+              </label>
+              <button type="button" onClick={applyPreview} className="ms-btn">Mostra</button>
+            </div>
+          ) : null}
+          now={now}
+          simulated={sim !== null}
+          after={after}
+          dateLine={phoneDate}
+          dayTitle={day.title}
+          dayN={day.id + 1}
+          dayTotal={TIMED_DAYS.length}
+          seoulTime={seoulTime}
+          current={current ? { clock: current.clock, label: briefOf(current.item), zone: current.zone } : null}
+          next={next ? { clock: next.clock, label: briefOf(next.item), zone: next.zone, inText: nextIn } : null}
+          following={items
+            .slice(Math.max(where.nextIndex, where.currentIndex) + 1)
+            .slice(0, 2)
+            .map((t) => ({ clock: t.clock, label: briefOf(t.item), zone: t.zone, inText: formatCountdown(t.ts - now) }))}
+          done={done}
+          free={free}
+          metro={metro}
+          stop={stop ? { id: stop.id, name: stop.italianName } : null}
+          homeId={home.id}
+          heroEnabled={heroEnabled}
+          onToggleHero={onToggleHero}
+          onRoute={onRoute}
+          onGoTo={onGoTo}
+          onTryTrip={() => setSim(msFromDayAndClock(3, '14:30', 'KR'))}
+          onPreview={() => setPreviewOpen((v) => !v)}
+        />
+        <div className="ms-flat">
+          <WalletShortcut onOpen={() => onGoTo('wallet')} nowMs={now} />
+          <GroupLiveCard onRoute={onRoute} onShowMap={() => onGoTo('map')} />
+          {weatherCard}
+          {timelineCard}
+          {stopsCard}
+          {showKoreanCard}
+          {remindersCard}
+          <OfflineCard />
+        </div>
       </div>
     );
   }
@@ -823,7 +819,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
         onOpenItinerary={() => onGoTo('itinerary')}
         simNow={sim}
         program={items.slice(0, 4).map((t) => ({ time: t.clock || timeLabel(t.item.time), title: briefOf(t.item), sub: zoneLabel(t.zone) }))}
-        greeting={`Ciao ${firstName}`}
+        greeting={`${firstName ? `Ciao ${firstName}` : 'Oggi'} · Seul ${seoulTime} · Italia ${romeTime}`}
         shortcuts={dQuick}
       />
       <div className="px-10 pb-12" style={{ borderTop: RULE }}>

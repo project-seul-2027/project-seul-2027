@@ -47,6 +47,19 @@ interface WeatherViewProps {
   onNavigateToItinerary?: () => void;
 }
 
+/** Colore piatto dello sfondo della scheda "adesso", per tema: la scena animata ci sta sopra */
+const SKY_COLOR: Record<WeatherTheme, string> = {
+  sunny: '#1b2230',
+  clearNight: '#0f1730',
+  partlyCloudyNight: '#131b2e',
+  partlyCloudy: '#14202f',
+  cloudy: '#151c27',
+  rainy: '#11222a',
+  snowy: '#172035',
+  stormy: '#1a1830',
+  foggy: '#18202a'
+};
+
 /**
  * Mappatura tema meteo -> stili grafici, gradienti e accenti di colore
  */
@@ -449,15 +462,15 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <div className="flex items-center bg-slate-900 p-0.5 rounded-xl border border-slate-800">
+            <div className="flex items-center gap-3 mr-1">
               {(['C', 'F'] as const).map((u) => (
                 <button
                   key={u}
                   type="button"
                   onClick={() => setUnit(u)}
                   aria-pressed={unit === u}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    unit === u ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
+                  className={`h-11 text-[15px] ${
+                    unit === u ? 'font-semibold text-[#eaf0f6] shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
                   }`}
                 >
                   °{u}
@@ -469,7 +482,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               onClick={() => loadWeather(selectedLocation)}
               disabled={isLoading}
               aria-label="Aggiorna meteo"
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-50"
+              className="w-11 h-11 flex items-center justify-center text-[#eaf0f6] active:opacity-70 disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
             </button>
@@ -478,8 +491,8 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               onClick={() => setIsNoteOpen((v) => !v)}
               aria-label="Informazioni sulle previsioni"
               aria-expanded={isNoteOpen}
-              className={`w-9 h-9 flex items-center justify-center rounded-xl border ${
-                isNoteOpen ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-300' : 'bg-slate-900 border-slate-800 text-slate-300'
+              className={`w-11 h-11 -mr-2 flex items-center justify-center active:opacity-70 ${
+                isNoteOpen ? 'text-[#52d9e6]' : 'text-[#eaf0f6]'
               }`}
             >
               <Info className="w-4 h-4" />
@@ -498,7 +511,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
 
         {/* Tappe: una sola riga scorrevole */}
         <div
-          className="-mx-4 px-4 flex gap-2 overflow-x-auto snap-x scroll-pl-4 [&::-webkit-scrollbar]:hidden"
+          className="-mx-4 px-4 flex gap-5 overflow-x-auto snap-x scroll-pl-4 border-b border-[rgba(234,240,246,.11)] [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none' }}
           role="group"
           aria-label="Località"
@@ -515,13 +528,10 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   setSelectedDayIndex(0);
                   setSelectedHourIdx(0);
                 }}
-                className={`snap-start shrink-0 h-10 pl-2.5 pr-3.5 rounded-full border flex items-center gap-1.5 text-xs font-bold transition-all ${
-                  isSelected
-                    ? 'bg-slate-900 border-cyan-400 text-cyan-300 ring-1 ring-cyan-500/40'
-                    : 'bg-slate-950/70 border-slate-800 text-slate-200'
+                className={`snap-start shrink-0 h-11 text-[15px] ${
+                  isSelected ? 'font-semibold text-[#eaf0f6] shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
                 }`}
               >
-                <span className="text-base leading-none">{loc.flag}</span>
                 <span className="whitespace-nowrap">{loc.shortName}</span>
               </button>
             );
@@ -544,15 +554,11 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
           </div>
         )}
 
-        {/* Meteo adesso, compatto */}
+        {/* Meteo adesso: sfondo piatto, animazione sfumata verso il basso, dati in una riga */}
         <div
-          className={`relative rounded-3xl border ${themeStyle.cardBorder} bg-gradient-to-br ${themeStyle.bgGradient} p-3.5 overflow-hidden`}
-          style={{ boxShadow: `0 12px 32px -12px ${themeStyle.ambientGlow}` }}
+          className="relative rounded-2xl overflow-hidden px-5 pt-4 pb-3"
+          style={{ backgroundColor: SKY_COLOR[currentTheme] }}
         >
-          <div
-            className="absolute -right-8 -top-10 w-44 h-44 rounded-full blur-3xl pointer-events-none opacity-40"
-            style={{ backgroundColor: themeStyle.ambientGlow }}
-          />
           {current && (
             <WeatherScene
               code={current.weatherCode}
@@ -560,56 +566,42 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               precipitationMm={current.precipitationMm}
               windKmH={current.windSpeedKmH}
               compact
+              className="[mask-image:linear-gradient(to_bottom,#000_50%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_50%,transparent_92%)]"
             />
           )}
-          <div className="relative z-10 space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-bold text-white truncate">{selectedLocation.name.split(' (')[0]}</div>
-              <span
-                className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold border flex items-center gap-1 ${themeStyle.accentBadge}`}
-              >
-                <Sparkles className="w-3 h-3" />
-                {current?.condition.labelIt ?? '…'}
-              </span>
-            </div>
+          <div className="relative z-10">
+            <p className="text-[15px] font-medium text-[#eaf0f6] truncate">{selectedLocation.name.split(' (')[0]}</p>
+            <p className="text-[14px] text-[#97a5b9]">{current?.condition.labelIt ?? '…'}</p>
 
-            <div className="flex items-center gap-3">
-              <div className="text-5xl font-extrabold font-display tracking-tight text-white font-mono tabular-nums leading-none">
-                {current ? formatTemp(current.temperatureC) : '--'}
-              </div>
-              <div className="flex-1 min-w-0 space-y-0.5 text-[11px] font-mono tabular-nums text-slate-300">
-                <div>
-                  Percepita{' '}
-                  <strong className={getTemperatureColorClass(current?.apparentTemperatureC ?? 10)}>
-                    {current ? formatTemp(current.apparentTemperatureC) : '--'}
-                  </strong>
-                </div>
-                <div>
-                  Oggi{' '}
-                  <strong className="text-white">
-                    {today ? `${formatTemp(today.tempMinC)} / ${formatTemp(today.tempMaxC)}` : '--'}
-                  </strong>
-                </div>
-              </div>
+            <div className="mt-3 font-[Outfit] text-[76px] font-light leading-[0.95] tracking-[-0.03em] tabular-nums text-white">
+              {current ? formatTemp(current.temperatureC) : '--'}
             </div>
+            <p className="mt-2 text-[14px] text-[#97a5b9] tabular-nums">
+              Percepita{' '}
+              <strong className={`font-semibold ${getTemperatureColorClass(current?.apparentTemperatureC ?? 10)}`}>
+                {current ? formatTemp(current.apparentTemperatureC) : '--'}
+              </strong>
+              {' · '}Oggi{' '}
+              <strong className="font-semibold text-[#eaf0f6]">
+                {today ? `${formatTemp(today.tempMinC)} / ${formatTemp(today.tempMaxC)}` : '--'}
+              </strong>
+            </p>
 
-            <div className="grid grid-cols-3 gap-2 font-mono tabular-nums">
-              <div className="px-2 py-1.5 rounded-xl bg-slate-950/50 border border-slate-800/70 flex items-center gap-1.5">
-                <Wind className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="text-xs font-bold text-white">{current?.windSpeedKmH ?? '--'}</span>
-                <span className="text-[10px] text-slate-500">km/h</span>
-              </div>
-              <div className="px-2 py-1.5 rounded-xl bg-slate-950/50 border border-slate-800/70 flex items-center gap-1.5">
-                <Droplets className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="text-xs font-bold text-white">{current?.relativeHumidity ?? '--'}%</span>
-                <span className="text-[10px] text-slate-500">umid.</span>
-              </div>
-              <div className="px-2 py-1.5 rounded-xl bg-slate-950/50 border border-slate-800/70 flex items-center gap-1.5">
-                <Umbrella className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="text-xs font-bold text-white">{today?.precipitationProbability ?? 0}%</span>
-                <span className="text-[10px] text-slate-500">pioggia</span>
-              </div>
-            </div>
+            <dl className="mt-4 grid grid-cols-3 border-t border-[rgba(234,240,246,.11)] pt-3 tabular-nums">
+              {[
+                { v: `${current?.windSpeedKmH ?? '--'}`, u: ' km/h', l: 'Vento' },
+                { v: `${current?.relativeHumidity ?? '--'}`, u: '%', l: 'Umidità' },
+                { v: `${today?.precipitationProbability ?? 0}`, u: '%', l: 'Pioggia' }
+              ].map((m, i) => (
+                <div key={m.l} className={i > 0 ? 'pl-4 border-l border-[rgba(234,240,246,.11)]' : ''}>
+                  <dd className="font-[Outfit] text-[22px] font-medium leading-none text-[#eaf0f6]">
+                    {m.v}
+                    <span className="text-[13px] font-normal text-[#97a5b9]">{m.u}</span>
+                  </dd>
+                  <dt className="mt-1 text-[13px] text-[#97a5b9]">{m.l}</dt>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
 
@@ -643,7 +635,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   {selectedLocation.id === 'beijing' ? 'UTC+8' : 'UTC+9'}
                 </span>
               </span>
-              <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+              <div className="flex items-center gap-4 text-[14px]">
                 {(['1h', '3h'] as const).map((iv) => (
                   <button
                     key={iv}
@@ -653,8 +645,8 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                       setHourlyInterval(iv);
                       setSelectedHourIdx(0);
                     }}
-                    className={`px-2.5 py-1 rounded-md font-semibold ${
-                      hourlyInterval === iv ? 'bg-cyan-500 text-slate-950' : 'text-slate-400'
+                    className={`h-11 ${
+                      hourlyInterval === iv ? 'font-semibold text-[#eaf0f6] shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
                     }`}
                   >
                     {iv === '1h' ? 'Ogni ora' : 'Ogni 3 ore'}
