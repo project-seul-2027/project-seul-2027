@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useMediaQuery } from '../pwa';
 import { PRE_TRIP_CHECKLIST } from '../data/tripData';
 import { 
   CheckSquare, Square, Smartphone, ShieldAlert, 
@@ -7,6 +8,7 @@ import {
 
 export const PracticalGuideView: React.FC = () => {
   // Checklist checked items stored in localStorage
+  const desk = useMediaQuery('(min-width: 1024px)');
   const [checkedIds, setCheckedIds] = useState<{ [id: string]: boolean }>(() => {
     const saved = localStorage.getItem('seoul2027_checklist');
     return saved ? JSON.parse(saved) : {};
@@ -30,7 +32,7 @@ export const PracticalGuideView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner / Progress Indicator */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div className={desk ? 'space-y-6' : 'bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4'}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -46,7 +48,7 @@ export const PracticalGuideView: React.FC = () => {
             <span className="text-xs font-mono text-cyan-300 font-bold">
               {completedCount} / {totalItems} completati ({progressPercent}%)
             </span>
-            <div className="w-28 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+            <div className={desk ? 'w-48 h-1.5 bg-white/10 rounded-full overflow-hidden' : 'w-28 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700'}>
               <div
                 className="h-full bg-cyan-500 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -56,14 +58,18 @@ export const PracticalGuideView: React.FC = () => {
         </div>
 
         {/* Interactive Checklist Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+        <div className={desk ? 'grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2' : 'grid grid-cols-1 md:grid-cols-2 gap-3 pt-2'}>
           {PRE_TRIP_CHECKLIST.map((item) => {
             const isChecked = !!checkedIds[item.id];
             return (
               <div
                 key={item.id}
                 onClick={() => toggleCheck(item.id)}
-                className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 select-none ${
+                className={desk
+                  ? `p-4 rounded-2xl cursor-pointer transition-colors flex items-start gap-3 select-none ${
+                      isChecked ? 'bg-white/[0.02] text-slate-500' : 'bg-white/[0.05] hover:bg-white/[0.08] text-slate-200'
+                    }`
+                  : `p-3.5 rounded-xl border cursor-pointer transition-all flex items-start gap-3 select-none ${
                   isChecked
                     ? 'bg-slate-900/40 border-cyan-500/30 text-slate-400'
                     : 'bg-slate-950/70 border-slate-800 hover:border-slate-700 text-slate-200'
@@ -99,15 +105,15 @@ export const PracticalGuideView: React.FC = () => {
       </div>
 
       {/* Crucial Survival Guidelines Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className={desk ? 'grid grid-cols-1 lg:grid-cols-3 gap-x-10 gap-y-6' : 'grid grid-cols-1 lg:grid-cols-3 gap-5'}>
         {/* App & Navigazione */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl">
-          <div className="flex items-center gap-2 text-white font-bold text-sm border-b border-slate-800 pb-2">
+        <div className={desk ? 'space-y-4' : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl'}>
+          <div className={desk ? 'flex items-center gap-2 text-white font-bold text-base pb-1' : 'flex items-center gap-2 text-white font-bold text-sm border-b border-slate-800 pb-2'}>
             <Smartphone className="w-4 h-4 text-emerald-400" />
             <span>App Indispensabili sul Telefono</span>
           </div>
           <div className="space-y-3 text-xs text-slate-300">
-            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+            <div className={desk ? 'p-4 rounded-2xl bg-white/[0.04]' : 'p-2.5 rounded-lg bg-slate-950 border border-slate-800/80'}>
               <div className="font-bold text-emerald-400 flex items-center justify-between">
                 <span>Naver Map (네이버지도)</span>
                 <span className="text-[10px] bg-emerald-500/10 text-emerald-300 px-1.5 py-0.5 rounded">FONDAMENTALE</span>
@@ -117,14 +123,14 @@ export const PracticalGuideView: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+            <div className={desk ? 'p-4 rounded-2xl bg-white/[0.04]' : 'p-2.5 rounded-lg bg-slate-950 border border-slate-800/80'}>
               <div className="font-bold text-cyan-400">Papago (Traduttore Naver)</div>
               <p className="text-slate-400 text-[11px] mt-1">
                 Il miglior traduttore per il coreano, con riconoscimento fotografico istantaneo di cartelli e menu dei ristoranti.
               </p>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+            <div className={desk ? 'p-4 rounded-2xl bg-white/[0.04]' : 'p-2.5 rounded-lg bg-slate-950 border border-slate-800/80'}>
               <div className="font-bold text-amber-400">Alipay & WeChat Pay</div>
               <p className="text-slate-400 text-[11px] mt-1">
                 Per lo scalo a Pechino. In Cina i contanti sono quasi spariti e le carte estere non sono accettate nei piccoli negozi. Attivare l'Alipay Tour Pass.
@@ -134,20 +140,20 @@ export const PracticalGuideView: React.FC = () => {
         </div>
 
         {/* Regole Power Bank & Firewall Cina */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl">
-          <div className="flex items-center gap-2 text-white font-bold text-sm border-b border-slate-800 pb-2">
+        <div className={desk ? 'space-y-4' : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl'}>
+          <div className={desk ? 'flex items-center gap-2 text-white font-bold text-base pb-1' : 'flex items-center gap-2 text-white font-bold text-sm border-b border-slate-800 pb-2'}>
             <BatteryCharging className="w-4 h-4 text-amber-400" />
             <span>Power Bank 3C & Great Firewall</span>
           </div>
           <div className="space-y-3 text-xs text-slate-300">
-            <div className="p-2.5 rounded-lg bg-amber-950/20 border border-amber-500/30">
+            <div className={desk ? 'p-4 rounded-2xl bg-amber-500/10' : 'p-2.5 rounded-lg bg-amber-950/20 border border-amber-500/30'}>
               <div className="font-bold text-amber-300">Power Bank: Marchio 3C</div>
               <p className="text-amber-200/80 text-[11px] mt-1">
                 In Cina le batterie esterne sono severamente controllate: devono riportare la marcatura stampata (Wh o mAh leggibili). Se privi di specifiche, vengono sequestrati immediatamente ai controlli di sicurezza.
               </p>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+            <div className={desk ? 'p-4 rounded-2xl bg-white/[0.04]' : 'p-2.5 rounded-lg bg-slate-950 border border-slate-800/80'}>
               <div className="font-bold text-cyan-400">Firewall Cinese a Pechino</div>
               <p className="text-slate-400 text-[11px] mt-1">
                 WhatsApp, Instagram, Google Maps e Gmail sono censurati. Soluzione: usare una eSIM abilitata al roaming internazionale o passare dalla connessione dati della SIM italiana (il traffico in roaming non è sottoposto al blocco!).
@@ -157,8 +163,8 @@ export const PracticalGuideView: React.FC = () => {
         </div>
 
         {/* Check-out alloggio Enko Stay */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl">
-          <div className="flex items-center gap-2 text-white font-bold text-sm border-b border-slate-800 pb-2">
+        <div className={desk ? 'space-y-4' : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl'}>
+          <div className={desk ? 'flex items-center gap-2 text-white font-bold text-base pb-1' : 'flex items-center gap-2 text-white font-bold text-sm border-b border-slate-800 pb-2'}>
             <Home className="w-4 h-4 text-purple-400" />
             <span>Check-out Alloggio (Istruzioni Enko)</span>
           </div>

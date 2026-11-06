@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMediaQuery } from '../pwa';
 import {
   Plane, TrainFront, Ticket, FileText, Plus, Lock, LockOpen, Copy, Check, X, Maximize2, Pencil, Trash2,
   QrCode, Download, Upload, ExternalLink, Pin, ChevronRight, Info, Smartphone, ShieldCheck, Delete, WalletCards, Share2
@@ -569,6 +570,7 @@ const AddPicker: React.FC<{ onPick: (kind: WalletKind, preset?: Preset) => void;
 type Sheet = { type: 'picker' } | { type: 'form'; kind: WalletKind; presetId?: string; item?: WalletItem; draft?: WalletDraft } | { type: 'detail'; id: string } | { type: 'settings' } | null;
 
 export const WalletView: React.FC = () => {
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const { user } = useAuth();
   const ownerId = user!.id;
   const [items, setItems] = useState<WalletItem[] | null>(null);
@@ -667,9 +669,9 @@ export const WalletView: React.FC = () => {
   const missingLegs = FLIGHT_LEGS.filter((l) => !items?.some((i) => i.legId === l.id));
 
   return (
-    <div className="max-w-5xl mx-auto" data-testid="wallet-view">
+    <div className="max-w-5xl mx-auto lg:max-w-none lg:mx-0" data-testid="wallet-view">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shrink-0"><WalletCards className="w-6 h-6 text-white" /></div>
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shrink-0 lg:hidden"><WalletCards className="w-6 h-6 text-white" /></div>
         <div className="flex-1 min-w-0">
           <h2 className="text-lg sm:text-2xl font-bold text-white font-display leading-tight truncate">Wallet del viaggio</h2>
           <p className="text-xs text-slate-400 hidden sm:block">Biglietti, tessere e abbonamenti sul tuo telefono, anche senza rete.</p>
@@ -694,7 +696,7 @@ export const WalletView: React.FC = () => {
       )}
 
       {items && items.length === 0 && (
-        <div className="rounded-3xl border border-dashed border-slate-700 p-6 text-center" data-testid="wallet-empty">
+        <div className={isDesktop ? 'rounded-3xl bg-white/[0.03] p-8 text-center' : 'rounded-3xl border border-dashed border-slate-700 p-6 text-center'} data-testid="wallet-empty">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center"><WalletCards className="w-7 h-7 text-cyan-400" /></div>
           <h3 className="mt-3 text-base font-bold text-white font-display">Il Wallet è vuoto</h3>
           <p className="mt-1 text-sm text-slate-400 max-w-sm mx-auto">Salva qui carte d’imbarco, eSIM, voucher e prenotazioni: li trovi con un tocco, anche in aereo o in metro senza segnale.</p>
@@ -727,7 +729,7 @@ export const WalletView: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-6 rounded-2xl bg-slate-900/70 border border-slate-800">
+      <div className={isDesktop ? 'mt-6 rounded-3xl bg-white/[0.03]' : 'mt-6 rounded-2xl bg-slate-900/70 border border-slate-800'}>
         <button type="button" onClick={() => setShowInfo((v) => !v)} className="w-full min-h-[48px] px-4 flex items-center gap-2 text-left" aria-expanded={showInfo} data-testid="wallet-info-toggle">
           <Info className="w-4 h-4 text-cyan-400" />
           <span className="flex-1 text-sm font-semibold text-white">Cosa può fare il Wallet (e cosa no)</span>

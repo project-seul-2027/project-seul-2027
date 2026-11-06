@@ -67,7 +67,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-amber-500/30',
     accentBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
     textAccent: 'text-amber-400',
-    particleIcon: '☀️'
+    particleIcon: ''
   },
   clearNight: {
     bgGradient: 'from-indigo-950/70 via-slate-950 to-slate-950',
@@ -75,7 +75,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-indigo-400/30',
     accentBadge: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/40',
     textAccent: 'text-indigo-300',
-    particleIcon: '🌙'
+    particleIcon: ''
   },
   partlyCloudyNight: {
     bgGradient: 'from-slate-900 via-indigo-950/40 to-slate-950',
@@ -83,7 +83,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-indigo-400/25',
     accentBadge: 'bg-slate-800/80 text-indigo-200 border-indigo-400/30',
     textAccent: 'text-indigo-300',
-    particleIcon: '☁️'
+    particleIcon: ''
   },
   partlyCloudy: {
     bgGradient: 'from-sky-950/40 via-slate-900 to-slate-950',
@@ -91,7 +91,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-sky-500/30',
     accentBadge: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
     textAccent: 'text-sky-400',
-    particleIcon: '⛅'
+    particleIcon: ''
   },
   cloudy: {
     bgGradient: 'from-slate-900 via-slate-950 to-[#070b12]',
@@ -99,7 +99,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-slate-700/60',
     accentBadge: 'bg-slate-800 text-slate-300 border-slate-700',
     textAccent: 'text-slate-300',
-    particleIcon: '☁️'
+    particleIcon: ''
   },
   rainy: {
     bgGradient: 'from-teal-950/45 via-cyan-950/25 to-slate-950',
@@ -107,7 +107,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-teal-500/35',
     accentBadge: 'bg-teal-500/20 text-teal-300 border-teal-500/40',
     textAccent: 'text-teal-400',
-    particleIcon: '🌧️'
+    particleIcon: ''
   },
   snowy: {
     bgGradient: 'from-indigo-950/45 via-blue-950/30 to-slate-950',
@@ -115,7 +115,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-indigo-400/40',
     accentBadge: 'bg-indigo-500/20 text-indigo-300 border-indigo-400/40',
     textAccent: 'text-indigo-300',
-    particleIcon: '❄️'
+    particleIcon: ''
   },
   stormy: {
     bgGradient: 'from-purple-950/50 via-indigo-950/30 to-slate-950',
@@ -123,7 +123,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-purple-500/40',
     accentBadge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
     textAccent: 'text-purple-400',
-    particleIcon: '⚡'
+    particleIcon: ''
   },
   foggy: {
     bgGradient: 'from-slate-900/60 via-slate-950 to-slate-950',
@@ -131,7 +131,7 @@ const THEME_STYLES: Record<
     cardBorder: 'border-slate-700/50',
     accentBadge: 'bg-slate-800/80 text-slate-300 border-slate-600/50',
     textAccent: 'text-slate-300',
-    particleIcon: '🌫️'
+    particleIcon: ''
   }
 };
 
@@ -241,7 +241,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
   const selectedDay = weatherData?.daily[selectedDayIndex] ?? null;
 
   const climateSection = (
-    <div className="space-y-6">
+    <div className="space-y-6 desk-clean-clima">
       {/* Card Panoramica Clima Marzo a Seul */}
       <div className="p-4 sm:p-8 rounded-3xl border border-blue-500/30 bg-gradient-to-br from-blue-950/30 via-slate-900 to-slate-950 shadow-2xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -263,7 +263,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
         </p>
 
         {/* Metriche Clima Storico */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono tabular-nums">
+        <div className="desk-clima-metrics grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono tabular-nums">
           <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-center">
             <span className="text-[10px] text-slate-400 font-sans block uppercase">Media Massime</span>
             <span className="text-lg font-bold text-emerald-300 mt-1 block">
@@ -317,7 +317,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
       {/* Il Fenomeno "Kkot-saem-chu-wi" */}
       <div className="p-5 rounded-2xl border border-amber-500/30 bg-amber-950/15 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🌸</span>
+          <span className="text-lg"></span>
           <h4 className="text-sm font-bold text-amber-200">
             {SEOUL_MARCH_CLIMATE.phenomenonTitleIt} ({SEOUL_MARCH_CLIMATE.phenomenonKorean})
           </h4>
@@ -343,6 +343,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
           {SEOUL_MARCH_CLIMATE.packingChecklist.map((pack, idx) => (
             <div
               key={idx}
+              data-imp={pack.importance}
               className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-start gap-3"
             >
               <CheckCircle2
@@ -916,7 +917,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
       </div>
 
       {/* Selettore Tappe del Viaggio (Seul, Incheon, Suwon, Pechino) - Griglia reattiva senza tagli di testo */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="flex flex-wrap gap-x-8 gap-y-2 border-b border-slate-800/80">
         {WEATHER_LOCATIONS.map((loc) => {
           const isSelected = selectedLocation.id === loc.id;
           return (
@@ -927,10 +928,8 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                 setSelectedLocation(loc);
                 setSelectedDayIndex(0);
               }}
-              className={`p-3 sm:p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-                isSelected
-                  ? 'bg-slate-900 border-cyan-400 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-500/40'
-                  : 'bg-slate-950/70 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
+              className={`pb-3 -mb-px border-b-2 text-left transition-colors ${
+                isSelected ? 'border-cyan-400' : 'border-transparent hover:border-slate-600'
               }`}
             >
               <div className="flex items-center justify-between gap-1.5 mb-1.5">
@@ -956,7 +955,11 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
       </div>
 
       {/* Banner Informativo sulla distanza temporale del viaggio */}
-      <div className="p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+      <div
+        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
+          isDesktop ? 'py-3 border-y border-slate-800/80' : 'p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60'
+        }`}
+      >
         <div className="flex items-start gap-2.5">
           <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
           <p className="text-slate-300 leading-relaxed">
@@ -965,12 +968,12 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 shrink-0">
+        <div className="flex items-center gap-6 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('forecast')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
-              activeTab === 'forecast' ? 'bg-slate-800 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+            className={`py-1 text-xs font-semibold transition-colors whitespace-nowrap ${
+              activeTab === 'forecast' ? 'text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
             Previsioni 7 Giorni
@@ -978,8 +981,8 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
           <button
             type="button"
             onClick={() => setActiveTab('climate')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1 ${
-              activeTab === 'climate' ? 'bg-slate-800 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
+            className={`py-1 text-xs font-semibold transition-colors whitespace-nowrap flex items-center gap-1 ${
+              activeTab === 'climate' ? 'text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -990,7 +993,11 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
 
       {/* Errore eventuale di rete */}
       {error && (
-        <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/40 text-xs text-red-200 flex items-center justify-between gap-3">
+        <div
+          className={`text-xs text-red-200 flex items-center justify-between gap-3 ${
+            isDesktop ? 'py-2 pl-3 border-l-2 border-red-500/70' : 'p-4 rounded-2xl bg-red-950/40 border border-red-500/40'
+          }`}
+        >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
             <span>{error}</span>
@@ -1009,17 +1016,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
       {activeTab === 'forecast' && (
         <div className="space-y-6">
           {/* Card Meteo Principale con UI che cambia colore e atmosfera rispetto a condizione e temperatura */}
-          <div
-            className={`relative rounded-3xl border ${themeStyle.cardBorder} bg-gradient-to-br ${themeStyle.bgGradient} p-6 sm:p-8 shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-300`}
-            style={{
-              boxShadow: `0 20px 50px -10px ${themeStyle.ambientGlow}`
-            }}
-          >
-            {/* Elemento d'atmosfera decorativo nello sfondo */}
-            <div
-              className="absolute -right-8 -top-8 w-64 h-64 rounded-full blur-3xl pointer-events-none opacity-40 transition-all duration-500"
-              style={{ backgroundColor: themeStyle.ambientGlow }}
-            />
+          <div data-keep-style="" className="relative border-y border-slate-800/80 py-7 overflow-hidden">
             {weatherData && (
               <WeatherScene
                 code={weatherData.current.weatherCode}
@@ -1033,10 +1030,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               {/* Riga superiore: Luogo, Tag e Timestamp */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-slate-950/60 border border-slate-700/80 flex items-center justify-center text-lg">
-                    {themeStyle.particleIcon}
-                  </div>
-                  <div>
+                    <div>
                     <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                       <span>{selectedLocation.name}</span>
                       {selectedLocation.koreanName && (
@@ -1052,7 +1046,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                 </div>
 
                 <div
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 shadow-sm ${themeStyle.accentBadge}`}
+                  className="text-xs font-semibold flex items-center gap-1.5 text-cyan-300"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>{weatherData?.current.condition.labelIt ?? 'Caricamento…'}</span>
@@ -1078,7 +1072,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   </div>
                 </div>
 
-                <div className="lg:col-span-6 p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 backdrop-blur-md space-y-1.5">
+                <div className="lg:col-span-6 pl-4 border-l border-slate-700 space-y-1.5">
                   <div className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Shirt className="w-4 h-4 text-cyan-400" />
                     <span>Consiglio per i viaggiatori oggi:</span>
@@ -1091,8 +1085,8 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               </div>
 
               {/* Metriche Rapide (Vento, Umidità, Pioggia, Min/Max Oggi) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800/60 font-mono tabular-nums">
-                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/70">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 pt-5 border-t border-slate-800/80 font-mono tabular-nums">
+                <div className="py-3 px-4 first:pl-0 border-l first:border-l-0 border-slate-800/80">
                   <div className="text-[10px] text-slate-400 uppercase font-sans flex items-center gap-1">
                     <Wind className="w-3 h-3 text-cyan-400" /> Vento
                   </div>
@@ -1101,7 +1095,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/70">
+                <div className="py-3 px-4 first:pl-0 border-l first:border-l-0 border-slate-800/80">
                   <div className="text-[10px] text-slate-400 uppercase font-sans flex items-center gap-1">
                     <Droplets className="w-3 h-3 text-cyan-400" /> Umidità
                   </div>
@@ -1110,7 +1104,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/70">
+                <div className="py-3 px-4 first:pl-0 border-l first:border-l-0 border-slate-800/80">
                   <div className="text-[10px] text-slate-400 uppercase font-sans flex items-center gap-1">
                     <Umbrella className="w-3 h-3 text-cyan-400" /> Precipitazioni
                   </div>
@@ -1119,7 +1113,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/70">
+                <div className="py-3 px-4 first:pl-0 border-l first:border-l-0 border-slate-800/80">
                   <div className="text-[10px] text-slate-400 uppercase font-sans flex items-center gap-1">
                     <Thermometer className="w-3 h-3 text-cyan-400" /> Min / Max Oggi
                   </div>
@@ -1145,7 +1139,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               <span className="text-xs text-slate-500">Clicca su un giorno per vedere i dettagli</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-0 border-y border-slate-800/80">
               {weatherData?.daily.map((day, idx) => {
                 const isSelected = selectedDayIndex === idx;
                 return (
@@ -1153,10 +1147,8 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                     key={day.date}
                     type="button"
                     onClick={() => setSelectedDayIndex(idx)}
-                    className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all ${
-                      isSelected
-                        ? 'bg-slate-800 border-cyan-400 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-500/40'
-                        : 'bg-slate-950/80 border-slate-800 hover:bg-slate-900/90 hover:border-slate-700'
+                    className={`p-4 border-l first:border-l-0 border-slate-800/80 border-b-2 text-left flex flex-col justify-between gap-3 transition-colors ${
+                      isSelected ? 'border-b-cyan-400 bg-white/[0.03]' : 'border-b-transparent hover:bg-white/[0.02]'
                     }`}
                   >
                     <div>
@@ -1190,7 +1182,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
 
             {/* Dettaglio del giorno selezionato */}
             {selectedDay && (
-              <div className="p-4 sm:p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-3">
+              <div className="py-5 border-b border-slate-800/80 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     {renderWeatherIcon(selectedDay.condition.iconName, 'w-7 h-7')}
@@ -1204,16 +1196,16 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   </div>
 
                   <div className="flex items-center gap-2 text-xs font-mono tabular-nums">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-emerald-300">
+                    <span className="text-emerald-300">
                       Max: {formatTemp(selectedDay.tempMaxC)} (percepita {formatTemp(selectedDay.apparentTempMaxC)})
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-cyan-300">
+                    <span className="text-cyan-300">
                       Min: {formatTemp(selectedDay.tempMinC)} (percepita {formatTemp(selectedDay.apparentTempMinC)})
                     </span>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/80 flex items-start gap-2.5 text-xs text-slate-300">
+                <div className="flex items-start gap-2.5 text-xs text-slate-300">
                   <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <p>
                     <strong className="text-white">Attività raccomandata con questo meteo:</strong>{' '}
@@ -1222,19 +1214,19 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono tabular-nums text-xs">
-                  <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
+                  <div className="py-2 px-2 border-l first:border-l-0 border-slate-800/80 text-center">
                     <span className="text-[10px] text-slate-500 font-sans block">Probabilità Pioggia</span>
                     <span className="font-bold text-white">{selectedDay.precipitationProbability}%</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
+                  <div className="py-2 px-2 border-l first:border-l-0 border-slate-800/80 text-center">
                     <span className="text-[10px] text-slate-500 font-sans block">Accumulo Previsto</span>
                     <span className="font-bold text-white">{selectedDay.precipitationMm} mm</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
+                  <div className="py-2 px-2 border-l first:border-l-0 border-slate-800/80 text-center">
                     <span className="text-[10px] text-slate-500 font-sans block">Vento Massimo</span>
                     <span className="font-bold text-white">{selectedDay.windSpeedMaxKmH} km/h</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
+                  <div className="py-2 px-2 border-l first:border-l-0 border-slate-800/80 text-center">
                     <span className="text-[10px] text-slate-500 font-sans block">Indice UV Max</span>
                     <span className="font-bold text-white">{selectedDay.uvIndexMax} / 11</span>
                   </div>
@@ -1245,7 +1237,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
 
           {/* Previsioni Orarie: Lista verticale di righe orizzontali (da adesso in poi) */}
           {weatherData && weatherData.hourly.length > 0 && (
-            <div className="p-4 sm:p-5 rounded-2xl border border-slate-800 bg-slate-950/90 space-y-3.5">
+            <div className="py-5 border-t border-slate-800/80 space-y-3.5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                   <div className="flex items-center gap-2">
@@ -1266,13 +1258,13 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
 
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                   {/* Selettore intervallo: Ogni 1h (tutte le 24 ore) oppure Ogni 3h (condensato) */}
-                  <div className="flex items-center bg-slate-900 p-0.5 rounded-xl border border-slate-800 text-xs">
+                  <div className="flex items-center gap-4 text-xs">
                     <button
                       type="button"
                       onClick={() => setHourlyInterval('1h')}
-                      className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                      className={`py-1 font-medium transition-colors ${
                         hourlyInterval === '1h'
-                          ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                          ? 'text-cyan-300 font-bold'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1281,9 +1273,9 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                     <button
                       type="button"
                       onClick={() => setHourlyInterval('3h')}
-                      className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                      className={`py-1 font-medium transition-colors ${
                         hourlyInterval === '3h'
-                          ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                          ? 'text-cyan-300 font-bold'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1295,7 +1287,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   <button
                     type="button"
                     onClick={() => setIsHourlyExpanded(!isHourlyExpanded)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white hover:border-slate-700 transition-colors"
+                    className="flex items-center gap-1 py-1 text-xs text-slate-300 hover:text-white transition-colors"
                   >
                     <span>{isHourlyExpanded ? 'Compatto' : 'Espandi tutto'}</span>
                     {isHourlyExpanded ? (
@@ -1345,10 +1337,10 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                   return (
                     <div
                       key={h.time}
-                      className={`p-2.5 sm:px-3 sm:py-2.5 rounded-xl border transition-all ${
+                      className={`p-2.5 sm:py-2.5 border-b border-slate-800/60 transition-colors ${
                         isCurrentHour
-                          ? 'bg-slate-800/90 border-cyan-500/50 shadow-sm shadow-cyan-500/10'
-                          : 'bg-slate-900/60 border-slate-800/70 hover:bg-slate-900 hover:border-slate-700/80'
+                          ? 'bg-white/[0.03]'
+                          : 'hover:bg-white/[0.02]'
                       }`}
                     >
                       {/* Layout a Griglia su Desktop / Flex su Mobile */}
@@ -1356,7 +1348,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                         {/* Colonna Orario: 2 colonne */}
                         <div className="col-span-4 sm:col-span-2 flex items-center gap-2">
                           {isCurrentHour ? (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-mono text-[11px] font-bold border border-cyan-500/30">
+                            <span className="inline-flex items-center gap-1.5 text-cyan-300 font-mono text-[11px] font-bold">
                               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                               Adesso
                             </span>
@@ -1366,7 +1358,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                                 {h.hourStr}
                               </span>
                               {isTomorrow && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60">
+                                <span className="text-[10px] font-mono text-slate-400">
                                   +1gg
                                 </span>
                               )}
@@ -1387,7 +1379,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
                         {/* Colonna Pioggia: 2 colonne */}
                         <div className="hidden sm:flex col-span-2 items-center justify-center">
                           {h.precipitationProbability > 0 ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-950/80 text-teal-300 border border-teal-500/30 text-[11px] font-mono font-semibold">
+                            <span className="inline-flex items-center gap-1 text-teal-300 text-[11px] font-mono font-semibold">
                               <Droplets className="w-3 h-3 text-teal-400 shrink-0" />
                               {h.precipitationProbability}%
                             </span>

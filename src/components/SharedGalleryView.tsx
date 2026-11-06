@@ -67,11 +67,11 @@ function settleWithin<T>(promise: Promise<T>, ms: number): Promise<T | typeof SL
 }
 
 const LOCATION_GROUPS: { label: string; categories: MapLocation['category'][] }[] = [
-  { label: '🏠 Alloggi', categories: ['alloggio'] },
-  { label: '🏯 Cultura & Natura', categories: ['cultura', 'natura'] },
-  { label: '🔥 Cibo, Shopping & Movida', categories: ['food', 'nightlife'] },
-  { label: '🚆 Gite fuori porta', categories: ['gita'] },
-  { label: '✈️ Aeroporti & Scali', categories: ['logistica'] }
+  { label: 'Alloggi', categories: ['alloggio'] },
+  { label: 'Cultura & Natura', categories: ['cultura', 'natura'] },
+  { label: 'Cibo, Shopping & Movida', categories: ['food', 'nightlife'] },
+  { label: 'Gite fuori porta', categories: ['gita'] },
+  { label: 'Aeroporti & Scali', categories: ['logistica'] }
 ];
 
 interface SharedGalleryViewProps {
@@ -620,10 +620,9 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             return (
               <span
                 key={index}
-                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 mx-0.5 rounded-md bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-semibold text-xs hover:bg-cyan-900/90 transition-colors"
+                className="text-cyan-300 font-semibold"
                 title={`Partecipante taggato: ${name}`}
               >
-                <User className="w-2.5 h-2.5 text-cyan-400" />
                 @{name}
               </span>
             );
@@ -746,25 +745,18 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
       {isPhone && (
         <PhoneGalleryHeader onUpload={() => setIsUploadOpen(true)} onCamera={openCamera} stats={stats} totalDays={ITINERARY_DAYS.length} loaded={photosLoaded} />
       )}
-      <div className={`bg-gradient-to-r from-slate-900 via-[#0d1424] to-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden ${isPhone ? 'hidden' : ''}`}>
-        {/* Glow di sfondo */}
-        <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-12 w-64 h-64 bg-pink-500/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-2 text-xs font-mono text-cyan-400">
-              <Camera className="w-4 h-4 text-cyan-400" />
-              <span className="uppercase tracking-wider font-semibold">Bacheca Foto 4 Partecipanti</span>
-              <span className="text-slate-600">·</span>
-              <span className="text-slate-400">Sincronizzata in tempo reale</span>
-            </div>
-
-            <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-white tracking-tight">
+      {/* Intestazione Bacheca: senza riquadri, dati in linea (il telefono usa PhoneGalleryHeader) */}
+      <div className={`relative ${isPhone ? 'hidden' : ''}`}>
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-white tracking-tight lg:hidden">
               Galleria Condivisa del Viaggio
             </h2>
-
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.18em] text-cyan-300/90">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Sincronizzata in tempo reale
+            </p>
+            <p className="text-sm text-slate-300 leading-relaxed">
               Tutte le foto scattate da ciascuno durante il viaggio a Seul e nello scalo a Pechino,
               collegate alla cronologia dell'itinerario (giorni 1–19) e alla mappa dei luoghi.
               Le foto sono visibili a tutto il gruppo in tempo reale e vengono ottimizzate in automatico (max 1600 px).
@@ -775,7 +767,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             <button
               type="button"
               onClick={() => setIsUploadOpen(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-sm transition-colors cursor-pointer"
             >
               <Upload className="w-4 h-4" />
               <span>Carica Nuova Foto</span>
@@ -785,49 +777,45 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             <button
               type="button"
               onClick={openCamera}
-              className="md:hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 font-bold text-xs shadow-lg shadow-black/20 transition-all active:scale-[0.98] cursor-pointer"
+              className="md:hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/[0.06] text-cyan-300 font-bold text-xs transition-all active:scale-[0.98] cursor-pointer"
             >
               <Camera className="w-4 h-4" />
               <span>Scatta Foto</span>
             </button>
-
           </div>
         </div>
 
-        {/* Barra Statistiche Bacheca */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-800/80">
-          <div className="p-3 bg-slate-950/70 border border-slate-800/80 rounded-2xl">
-            <span className="text-[10px] text-slate-400 uppercase font-mono block">Foto Pubblicate</span>
-            <div className="text-lg sm:text-xl font-bold font-display text-white mt-0.5 flex items-center gap-1.5">
-              <Camera className="w-4 h-4 text-cyan-400" />
+        {/* Statistiche in linea, senza riquadri */}
+        <dl className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-6">
+          <div>
+            <dt className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">Foto pubblicate</dt>
+            <dd className="mt-1 flex items-center gap-2 text-3xl font-bold font-display text-white">
+              <Camera className="w-5 h-5 text-cyan-400" />
               <span>{stats.totalPhotos}</span>
-            </div>
+            </dd>
           </div>
-
-          <div className="p-3 bg-slate-950/70 border border-slate-800/80 rounded-2xl">
-            <span className="text-[10px] text-slate-400 uppercase font-mono block">Luoghi Immortalati</span>
-            <div className="text-lg sm:text-xl font-bold font-display text-emerald-400 mt-0.5 flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-emerald-400" />
+          <div>
+            <dt className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">Luoghi immortalati</dt>
+            <dd className="mt-1 flex items-center gap-2 text-3xl font-bold font-display text-emerald-400">
+              <MapPin className="w-5 h-5" />
               <span>{stats.uniquePlaces}</span>
-            </div>
+            </dd>
           </div>
-
-          <div className="p-3 bg-slate-950/70 border border-slate-800/80 rounded-2xl">
-            <span className="text-[10px] text-slate-400 uppercase font-mono block">Mi Piace Totali</span>
-            <div className="text-lg sm:text-xl font-bold font-display text-pink-400 mt-0.5 flex items-center gap-1.5">
-              <Heart className="w-4 h-4 text-pink-400 fill-pink-400" />
+          <div>
+            <dt className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">Mi piace</dt>
+            <dd className="mt-1 flex items-center gap-2 text-3xl font-bold font-display text-pink-400">
+              <Heart className="w-5 h-5 fill-pink-400" />
               <span>{stats.totalLikes}</span>
-            </div>
+            </dd>
           </div>
-
-          <div className="p-3 bg-slate-950/70 border border-slate-800/80 rounded-2xl">
-            <span className="text-[10px] text-slate-400 uppercase font-mono block">Giorni Coperti</span>
-            <div className="text-lg sm:text-xl font-bold font-display text-amber-400 mt-0.5 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-amber-400" />
-              <span>{stats.coveredDays} / {ITINERARY_DAYS.length}</span>
-            </div>
+          <div>
+            <dt className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">Giorni coperti</dt>
+            <dd className="mt-1 flex items-center gap-2 text-3xl font-bold font-display text-amber-400">
+              <Calendar className="w-5 h-5" />
+              <span>{stats.coveredDays} <span className="text-base text-slate-500">/ {ITINERARY_DAYS.length}</span></span>
+            </dd>
           </div>
-        </div>
+        </dl>
       </div>
 
       {/* Errore di lettura (es. regole Firestore non ancora pubblicate) */}
@@ -903,7 +891,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                   <span>Like, Commenti & @Tag</span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Menziona i compagni con @nome nella didascalia, scambia commenti e lascia cuoricini ❤️.
+                  Menziona i compagni con @nome nella didascalia, scambia commenti e lascia cuoricini .
                 </p>
               </div>
 
@@ -944,7 +932,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             />
           )}
           {/* Toolbar Filtri, Ricerca e Ordinamento (visibile quando ci sono foto nella bacheca) */}
-          <div className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 ${isPhone && !filtersOpen ? 'hidden' : ''}`}>
+          <div className={`${isPhone ? 'bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3' : 'space-y-4'} ${isPhone && !filtersOpen ? 'hidden' : ''}`}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               {/* Cerca */}
               <div className="relative flex-1 max-w-md">
@@ -954,7 +942,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cerca per luogo, didascalia, @tag o autore..."
-                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors lg:bg-white/[0.05] lg:border-0 lg:rounded-full lg:py-2.5 lg:focus:bg-white/[0.08]"
                 />
                 {searchQuery && (
                   <button
@@ -974,19 +962,19 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer lg:bg-white/[0.05] lg:border-0 lg:rounded-full"
                 >
                   <option value="recent">Più recenti</option>
-                  <option value="popular">Più popolari (Like ❤️)</option>
+                  <option value="popular">Più popolari (Like )</option>
                   <option value="chronological">Itinerario (per giorno)</option>
                 </select>
               </div>
             </div>
 
             {/* Riga Filtri Specializzati: Luogo, Chi l'ha scattata, Giorno */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-800/80">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-800/80 lg:border-0 lg:pt-0">
               {/* Filtro Luogo */}
-              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs">
+              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs lg:border-0 lg:bg-white/[0.05] lg:rounded-full lg:px-3.5 lg:py-2">
                 <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span className="text-slate-400 shrink-0">Luogo:</span>
                 <select
@@ -1004,7 +992,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
               </div>
 
               {/* Filtro Chi l'ha scattata */}
-              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs">
+              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs lg:border-0 lg:bg-white/[0.05] lg:rounded-full lg:px-3.5 lg:py-2">
                 <User className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <span className="text-slate-400 shrink-0">Scattata da:</span>
                 <select
@@ -1022,7 +1010,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
               </div>
 
               {/* Filtro Giorno Itinerario */}
-              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs">
+              <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs lg:border-0 lg:bg-white/[0.05] lg:rounded-full lg:px-3.5 lg:py-2">
                 <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span className="text-slate-400 shrink-0">Giorno:</span>
                 <select
@@ -1100,7 +1088,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
           ) : isPhone ? (
             <PhoneGalleryGrid photos={filteredPhotos} currentUserId={currentUserId} isMine={isPhotoPublisher} onOpen={(p) => setSelectedPhotoId(p.id)} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:block lg:columns-3 2xl:columns-4 gap-6 lg:[column-gap:1.25rem]">
               {filteredPhotos.map((photo) => {
                 const isLikedByMe = photo.likes.includes(currentUserId);
                 const isPublisher = isPhotoPublisher(photo);
@@ -1108,10 +1096,10 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                 return (
                   <div
                     key={photo.id}
-                    className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-3xl overflow-hidden shadow-lg flex flex-col transition-all group"
+                    className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-3xl overflow-hidden shadow-lg flex flex-col transition-all group lg:mb-6 lg:break-inside-avoid lg:bg-slate-900/40 lg:border-0 lg:shadow-none lg:hover:bg-slate-900/70 lg:rounded-[28px] lg:p-2"
                   >
                     {/* Header Card: Autore & Data & Tasto Elimina SOLO per l'autore */}
-                    <div className="p-3.5 sm:p-4 border-b border-slate-800 flex items-center justify-between gap-3">
+                    <div className="p-3.5 sm:p-4 border-b border-slate-800 flex items-center justify-between gap-3 lg:border-0 lg:px-3 lg:pt-3 lg:pb-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden shadow-sm">
                           {photo.uploaderAvatar ? (
@@ -1156,13 +1144,13 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                     {/* Immagine con badge sovrapposti e click per visualizzare a schermo intero */}
                     <div
                       onClick={() => setSelectedPhoto(photo)}
-                      className="relative aspect-4/3 sm:aspect-16/10 bg-slate-950 overflow-hidden cursor-pointer group/img"
+                      className="relative aspect-4/3 sm:aspect-16/10 lg:aspect-auto bg-slate-950 lg:bg-black overflow-hidden cursor-pointer group/img lg:rounded-[22px]"
                     >
                       <img
                         src={photo.thumbUrl}
                         alt={photo.caption || photo.locationName}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                        className="w-full h-full lg:h-auto lg:max-h-[78vh] object-cover lg:object-contain group-hover/img:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md text-white text-xs font-medium flex items-center gap-1.5 shadow-lg">
@@ -1222,16 +1210,16 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                       </div>
 
                       {/* Footer Card: Likes, Commenti e Interazioni */}
-                      <div className="pt-3 border-t border-slate-800/80 space-y-2">
+                      <div className="pt-3 border-t border-slate-800/80 space-y-2 lg:border-0 lg:px-3 lg:pt-3">
                         <div className="flex items-center justify-between text-xs">
                           {/* Tasto Mi Piace */}
                           <button
                             type="button"
                             onClick={() => handleToggleLike(photo.id)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                               isLikedByMe
-                                ? 'bg-pink-500/20 text-pink-400 border border-pink-500/40'
-                                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                                ? 'bg-pink-500/15 text-pink-300'
+                                : 'text-slate-400 hover:bg-pink-500/15 hover:text-pink-300'
                             }`}
                           >
                             <Heart
@@ -1252,18 +1240,22 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                                 setActiveCommentPhotoId(photo.id);
                               }
                             }}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950 text-slate-400 hover:text-white border border-slate-800 transition-colors cursor-pointer"
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                              activeCommentPhotoId === photo.id
+                                ? 'bg-cyan-500/15 text-cyan-300'
+                                : 'text-slate-400 hover:bg-cyan-500/15 hover:text-cyan-300'
+                            }`}
                           >
-                            <MessageCircle className="w-4 h-4 text-cyan-400" />
+                            <MessageCircle className="w-4 h-4" />
                             <span className="font-bold">{photo.comments.length}</span>
-                            <span className="text-[11px] text-slate-400">commenti</span>
+                            <span className="text-[11px]">commenti</span>
                           </button>
                         </div>
 
                         {/* Nomi di chi ha messo like */}
                         {photo.likes.length > 0 && (
                           <p className="text-[10px] text-slate-400 font-mono truncate">
-                            ❤️ Piace a <strong>{photo.likeNames.join(', ')}</strong>
+                            Piace a <strong>{photo.likeNames.join(', ')}</strong>
                           </p>
                         )}
 
@@ -1386,279 +1378,274 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
         );
       })()}
 
-      {/* Modal Ingrandimento Foto & Discussione Completa (Portaled to document.body) */}
+      {/* Modal Ingrandimento Foto (desktop): foto intera in grande, dettagli a destra (Portaled to document.body) */}
       {selectedPhoto && !isPhone && typeof document !== 'undefined' && createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setSelectedPhoto(null)}
-          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md p-3 sm:p-6 flex items-center justify-center overflow-y-auto animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-cyan-500/40 rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col md:flex-row my-auto max-h-[92vh]"
-          >
-            {/* Sinistra: Immagine ad alta risoluzione */}
-            <div className="md:w-3/5 bg-black flex items-center justify-center relative p-2 min-h-[300px]">
-              <img
-                src={fullImageUrl ?? selectedPhoto.thumbUrl}
-                alt={selectedPhoto.caption || selectedPhoto.locationName}
-                className={`max-h-[80vh] w-auto max-w-full object-contain rounded-xl transition-[filter] duration-300 ${
-                  fullImageUrl ? '' : 'blur-[2px]'
-                }`}
-              />
-
-              {!fullImageUrl && !fullImageFailed && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <Loader2 className="w-8 h-8 animate-spin text-white/80" />
-                </div>
-              )}
-              {fullImageFailed && (
-                <div className="absolute bottom-3 left-3 right-3 px-3 py-2 rounded-xl bg-black/70 text-amber-300 text-[11px] text-center">
-                  Impossibile caricare la foto a piena qualità: ti mostro l'anteprima.
-                </div>
-              )}
-              {fullImageUrl && (
-                <a
-                  href={fullImageUrl}
-                  download={`seul2027-${selectedPhoto.id}.jpg`}
-                  title={`Scarica (${selectedPhoto.dimensions.width}×${selectedPhoto.dimensions.height}, ${selectedPhoto.compressedSizeKb} KB)`}
-                  className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white text-[11px] font-medium backdrop-blur-md"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Scarica</span>
-                </a>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setSelectedPhoto(null)}
-                className="md:hidden absolute top-4 right-4 p-2 rounded-xl bg-black/60 text-white backdrop-blur-md hover:bg-black/80"
+        (() => {
+          const o = phoneOrder(filteredPhotos);
+          const i = o.findIndex((x) => x.id === selectedPhoto.id);
+          const p = i > 0 ? o[i - 1] : null;
+          const n = i >= 0 && i < o.length - 1 ? o[i + 1] : null;
+          const liked = selectedPhoto.likes.includes(currentUserId);
+          return (
+            <div
+              role="dialog"
+              aria-modal="true"
+              tabIndex={-1}
+              autoFocus
+              onClick={() => setSelectedPhoto(null)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSelectedPhoto(null);
+                if (e.key === 'ArrowLeft' && p) setSelectedPhotoId(p.id);
+                if (e.key === 'ArrowRight' && n) setSelectedPhotoId(n.id);
+              }}
+              className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md p-3 lg:p-6 flex items-center justify-center animate-viewer-in"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full h-full max-w-[1680px] max-h-[94vh] bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row"
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Destra: Dettagli, Luogo, Itinerario, Like & Commenti */}
-            <div className="md:w-2/5 p-5 sm:p-6 flex flex-col justify-between overflow-y-auto space-y-4 border-t md:border-t-0 md:border-l border-slate-800">
-              {/* Header con Autore e tasto chiudi */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold text-xs">
-                    {selectedPhoto.uploaderAvatar ? (
-                      <img src={selectedPhoto.uploaderAvatar} alt="" className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      selectedPhoto.uploaderName.slice(0, 2).toUpperCase()
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-bold text-sm text-white block">
-                      {selectedPhoto.uploaderName}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {new Date(selectedPhoto.createdAt).toLocaleString('it-IT', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {isPhotoPublisher(selectedPhoto) && (
-                    <button
-                      type="button"
-                      onClick={(e) => onRequestDeletePhoto(selectedPhoto, e)}
-                      title="Elimina definitivamente la tua foto dalla bacheca"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-500/40 text-red-300 text-xs font-semibold transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                      <span>Elimina foto</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPhoto(null)}
-                    className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
-                    title="Chiudi"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Informazioni Luogo e Itinerario con link interattivi */}
-              <div className="space-y-2">
-                {/* Luogo */}
-                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <div className="min-w-0">
-                      <span className="text-[10px] text-slate-400 uppercase font-mono block">Luogo Scatto</span>
-                      <strong className="text-xs text-white truncate block">
-                        {selectedPhoto.locationName}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {selectedPhoto.locationId && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const locId = selectedPhoto.locationId!;
-                        const dayNum = selectedPhoto.dayNumber;
-                        setSelectedPhoto(null);
-                        onNavigateToMap(locId, dayNum);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold font-mono transition-colors shrink-0 flex items-center gap-1"
-                    >
-                      <span>Vedi Mappa</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Giorno dell'itinerario */}
-                {selectedPhoto.dayNumber !== undefined && (
-                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
-                      <div className="min-w-0">
-                        <span className="text-[10px] text-slate-400 uppercase font-mono block">Cronologia Itinerario</span>
-                        <strong className="text-xs text-amber-300 truncate block">
-                          {selectedPhoto.dayLabel || `Giorno ${selectedPhoto.dayNumber}`}
-                        </strong>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const dayNum = selectedPhoto.dayNumber!;
-                        setSelectedPhoto(null);
-                        onNavigateToDay(dayNum);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold font-mono transition-colors shrink-0 flex items-center gap-1"
-                    >
-                      <span>Itinerario</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Didascalia */}
-              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-200">
-                {renderFormattedCaption(selectedPhoto.caption)}
-              </div>
-
-              {/* Sezione Like */}
-              <div className="flex items-center justify-between p-2.5 bg-slate-950 rounded-xl border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => handleToggleLike(selectedPhoto.id)}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-xs transition-colors ${
-                    selectedPhoto.likes.includes(currentUserId)
-                      ? 'bg-pink-500/20 text-pink-400 border border-pink-500/40'
-                      : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-700'
-                  }`}
-                >
-                  <Heart
-                    className={`w-4 h-4 ${
-                      selectedPhoto.likes.includes(currentUserId) ? 'fill-pink-400 text-pink-400' : ''
+                {/* Foto: riempie tutto lo spazio disponibile senza ritagli, qualunque sia la proporzione */}
+                <div className="relative flex-1 min-h-[45vh] lg:min-h-0 min-w-0 bg-black">
+                  <img
+                    src={fullImageUrl ?? selectedPhoto.thumbUrl}
+                    alt={selectedPhoto.caption || selectedPhoto.locationName}
+                    className={`absolute inset-0 w-full h-full object-contain p-4 transition-[filter] duration-300 ${
+                      fullImageUrl ? '' : 'blur-[2px]'
                     }`}
                   />
-                  <span>
-                    {selectedPhoto.likes.includes(currentUserId) ? 'Ti piace' : 'Metti Mi Piace'}
+
+                  <span className="hidden lg:block absolute top-4 left-4 px-2.5 py-1 rounded-lg bg-black/60 text-white text-[11px] font-mono backdrop-blur-md">
+                    {i + 1} / {o.length}
                   </span>
-                </button>
 
-                <div className="text-right text-[11px] text-slate-400 font-mono">
-                  {selectedPhoto.likes.length === 0 ? (
-                    'Nessun like'
-                  ) : (
-                    <span>
-                      ❤️ {selectedPhoto.likeNames.join(', ')}
-                    </span>
+                  <div className="hidden lg:flex absolute inset-x-4 top-1/2 -translate-y-1/2 justify-between pointer-events-none">
+                    <button type="button" disabled={!p} onClick={() => p && setSelectedPhotoId(p.id)} aria-label="Foto precedente" className="pointer-events-auto p-3 rounded-full bg-black/60 hover:bg-black/80 text-white disabled:opacity-25 disabled:pointer-events-none backdrop-blur-md">
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button type="button" disabled={!n} onClick={() => n && setSelectedPhotoId(n.id)} aria-label="Foto successiva" className="pointer-events-auto p-3 rounded-full bg-black/60 hover:bg-black/80 text-white disabled:opacity-25 disabled:pointer-events-none backdrop-blur-md">
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {!fullImageUrl && !fullImageFailed && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <Loader2 className="w-8 h-8 animate-spin text-white/80" />
+                    </div>
+                  )}
+                  {fullImageFailed && (
+                    <div className="absolute bottom-3 left-3 right-3 px-3 py-2 rounded-xl bg-black/70 text-amber-300 text-[11px] text-center">
+                      Impossibile caricare la foto a piena qualità: ti mostro l'anteprima.
+                    </div>
+                  )}
+                  {fullImageUrl && (
+                    <a
+                      href={fullImageUrl}
+                      download={`seul2027-${selectedPhoto.id}.jpg`}
+                      title={`Scarica (${selectedPhoto.dimensions.width}×${selectedPhoto.dimensions.height}, ${selectedPhoto.compressedSizeKb} KB)`}
+                      className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white text-[11px] font-medium backdrop-blur-md"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Scarica</span>
+                    </a>
                   )}
                 </div>
-              </div>
 
-              {/* Discussione Commenti */}
-              <div className="space-y-2 flex-1 flex flex-col min-h-[140px]">
-                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                  <MessageCircle className="w-3.5 h-3.5 text-cyan-400" />
-                  Commenti del gruppo ({selectedPhoto.comments.length})
-                </span>
-
-                <div className="flex-1 overflow-y-auto space-y-2 max-h-44 pr-1 text-xs">
-                  {selectedPhoto.comments.length === 0 ? (
-                    <p className="text-slate-400 italic text-xs py-4 text-center">
-                      Nessun commento per questa foto. Sii il primo a scriverne uno!
-                    </p>
-                  ) : (
-                    selectedPhoto.comments.map((comm) => (
-                      <div
-                        key={comm.id}
-                        className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-[11px]">
-                          <strong className="text-cyan-400 inline-flex items-center gap-1.5">
-                            {comm.authorName}
-                            {canDeleteComment(selectedPhoto, comm) && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteComment(comm.id)}
-                                title="Elimina commento"
-                                className="text-slate-500 hover:text-red-400 cursor-pointer"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            )}
-                          </strong>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {new Date(comm.createdAt).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-slate-200 text-xs">{comm.text}</p>
+                {/* Dettagli: intestazione fissa, contenuto che scorre, invio commento in fondo */}
+                <aside className="w-full lg:w-[400px] shrink-0 flex flex-col min-h-0 lg:h-full border-t lg:border-t-0 lg:border-l border-slate-800">
+                  <header className="flex items-center justify-between gap-3 p-5 border-b border-slate-800">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
+                        {selectedPhoto.uploaderAvatar ? (
+                          <img src={selectedPhoto.uploaderAvatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          selectedPhoto.uploaderName.slice(0, 2).toUpperCase()
+                        )}
                       </div>
-                    ))
-                  )}
-                </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-sm text-white block truncate">{selectedPhoto.uploaderName}</span>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {new Date(selectedPhoto.createdAt).toLocaleString('it-IT', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
 
-                {/* Modulo invio commento */}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleAddComment(selectedPhoto.id, inlineCommentText);
-                  }}
-                  className="flex items-center gap-2 pt-2 border-t border-slate-800"
-                >
-                  <input
-                    type="text"
-                    value={inlineCommentText}
-                    onChange={(e) => setInlineCommentText(e.target.value)}
-                    placeholder={`Scrivi un commento come ${currentUserName}...`}
-                    maxLength={COMMENT_MAX_LENGTH}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inlineCommentText.trim()}
-                    className="px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold text-xs transition-colors shrink-0 flex items-center gap-1"
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isPhotoPublisher(selectedPhoto) && (
+                        <button
+                          type="button"
+                          onClick={(e) => onRequestDeletePhoto(selectedPhoto, e)}
+                          title="Elimina definitivamente la tua foto dalla bacheca"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-500/40 text-red-300 text-xs font-semibold transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                          <span>Elimina</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPhoto(null)}
+                        className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+                        title="Chiudi (Esc)"
+                        aria-label="Chiudi"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </header>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-[10px] text-slate-400 uppercase font-mono block">Luogo</span>
+                            <strong className="text-sm text-white truncate block">{selectedPhoto.locationName}</strong>
+                          </div>
+                        </div>
+                        {selectedPhoto.locationId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const locId = selectedPhoto.locationId!;
+                              const dayNum = selectedPhoto.dayNumber;
+                              setSelectedPhoto(null);
+                              onNavigateToMap(locId, dayNum);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold font-mono transition-colors shrink-0 flex items-center gap-1"
+                          >
+                            <span>Mappa</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      {selectedPhoto.dayNumber !== undefined && (
+                        <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="text-[10px] text-slate-400 uppercase font-mono block">Itinerario</span>
+                              <strong className="text-sm text-amber-300 truncate block">
+                                {selectedPhoto.dayLabel || `Giorno ${selectedPhoto.dayNumber}`}
+                              </strong>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const dayNum = selectedPhoto.dayNumber!;
+                              setSelectedPhoto(null);
+                              onNavigateToDay(dayNum);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold font-mono transition-colors shrink-0 flex items-center gap-1"
+                          >
+                            <span>Giorno</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedPhoto.caption && (
+                      <p className="text-sm text-slate-200 leading-relaxed">
+                        {renderFormattedCaption(selectedPhoto.caption)}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between gap-3 py-3 border-y border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleLike(selectedPhoto.id)}
+                        className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-md font-bold text-xs transition-colors ${
+                          liked
+                            ? 'bg-pink-500/15 text-pink-300'
+                            : 'text-slate-300 hover:bg-pink-500/15 hover:text-pink-300'
+                        }`}
+                      >
+                        <Heart className={`w-4 h-4 ${liked ? 'fill-pink-400 text-pink-400' : ''}`} />
+                        <span>{liked ? 'Ti piace' : 'Mi piace'}</span>
+                      </button>
+                      <span className="text-[11px] text-slate-400 font-mono text-right truncate">
+                        {selectedPhoto.likes.length === 0 ? 'Nessun like' : `${selectedPhoto.likeNames.join(', ')}`}
+                      </span>
+                    </div>
+
+                    <section className="space-y-3">
+                      <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                        <MessageCircle className="w-3.5 h-3.5 text-cyan-400" />
+                        Commenti del gruppo ({selectedPhoto.comments.length})
+                      </h4>
+
+                      {selectedPhoto.comments.length === 0 ? (
+                        <p className="text-slate-400 italic text-xs py-4 text-center">
+                          Nessun commento per questa foto. Sii il primo a scriverne uno!
+                        </p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {selectedPhoto.comments.map((comm) => (
+                            <li key={comm.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-[11px]">
+                                <strong className="text-cyan-400 inline-flex items-center gap-1.5">
+                                  {comm.authorName}
+                                  {canDeleteComment(selectedPhoto, comm) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteComment(comm.id)}
+                                      title="Elimina commento"
+                                      className="text-slate-500 hover:text-red-400 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </strong>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {new Date(comm.createdAt).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="text-slate-200 text-xs leading-relaxed">{comm.text}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleAddComment(selectedPhoto.id, inlineCommentText);
+                    }}
+                    className="flex items-center gap-2 p-4 border-t border-slate-800 bg-slate-900"
                   >
-                    <span>Invia</span>
-                    <Send className="w-3 h-3" />
-                  </button>
-                </form>
+                    <input
+                      type="text"
+                      value={inlineCommentText}
+                      onChange={(e) => setInlineCommentText(e.target.value)}
+                      placeholder={`Scrivi un commento come ${currentUserName}...`}
+                      maxLength={COMMENT_MAX_LENGTH}
+                      className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inlineCommentText.trim()}
+                      className="px-3.5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold text-xs transition-colors shrink-0 flex items-center gap-1.5"
+                    >
+                      <span>Invia</span>
+                      <Send className="w-3 h-3" />
+                    </button>
+                  </form>
+                </aside>
               </div>
             </div>
-          </div>
-        </div>,
+          );
+        })(),
         document.body
       )}
 
@@ -1701,7 +1688,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
 
             {uploadError && (
               <div className="p-3 rounded-xl bg-red-950/50 border border-red-500/40 text-red-300 text-xs">
-                ⚠️ {uploadError}
+                {uploadError}
               </div>
             )}
 
@@ -1830,8 +1817,8 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                   </optgroup>
                 ))}
 
-                <optgroup label="✍️ Altro Luogo non in elenco">
-                  <option value="__custom__">✍️ Scrivi un luogo personalizzato...</option>
+                <optgroup label="Altro Luogo non in elenco">
+                  <option value="__custom__">Scrivi un luogo personalizzato...</option>
                 </optgroup>
               </select>
 

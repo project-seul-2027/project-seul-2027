@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { categoryIconSvg } from './map/categoryIcons';
 import L from 'leaflet';
 import { MAP_LOCATIONS, MapLocation, ITINERARY_DAYS, getNaverMapSearchUrl } from '../data/tripData';
 import {
@@ -101,7 +102,7 @@ function makeMarkerIcon(
   routeRole?: 'origin' | 'destination' | 'dimmed' | null,
   touch = false
 ): L.DivIcon {
-  const style = CATEGORY_STYLE[loc.category] ?? { badge: '#06b6d4', ring: 'rgba(6, 182, 212, 0.4)', letter: '📍' };
+  const style = CATEGORY_STYLE[loc.category] ?? { badge: '#06b6d4', ring: 'rgba(6, 182, 212, 0.4)', icon: '' };
   const isAccommodation = loc.category === 'alloggio';
   const isRouteActiveNode = routeRole === 'origin' || routeRole === 'destination';
   const size = (isRouteActiveNode ? 42 : isSelected ? 38 : isAccommodation ? 34 : 30) + (touch ? 6 : 0);
@@ -132,7 +133,7 @@ function makeMarkerIcon(
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         cursor: pointer;
       ">
-        <span>${style.letter}</span>
+        <span style="display:flex">${categoryIconSvg(loc.category, isRouteActiveNode ? 20 : isSelected ? 18 : 16)}</span>
       </div>
     `,
     iconSize: [size, size],
@@ -172,7 +173,7 @@ function poiTooltipHtml(
 ): string {
   const warn =
     loc.id === 'valorant_masters_arena'
-      ? '<div class="poi-tip-warn">⚠️ Sede non ancora annunciata</div>'
+      ? '<div class="poi-tip-warn">Sede non ancora annunciata</div>'
       : '';
   const hint =
     mode === 'route'
@@ -902,7 +903,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         className: '',
         iconSize: [40, 40],
         iconAnchor: [20, 38],
-        html: `<div style="display:flex;flex-direction:column;align-items:center"><div style="background:#fbbf24;color:#0f172a;font:800 11px system-ui;padding:3px 7px;border-radius:9999px;box-shadow:0 4px 12px #0008;white-space:nowrap">📍 ${seoulClock(m.at)}</div><div style="width:3px;height:14px;background:#fbbf24"></div></div>`
+        html: `<div style="display:flex;flex-direction:column;align-items:center"><div style="background:#fbbf24;color:#0f172a;font:800 11px system-ui;padding:3px 7px;border-radius:9999px;box-shadow:0 4px 12px #0008;white-space:nowrap">${seoulClock(m.at)}</div><div style="width:3px;height:14px;background:#fbbf24"></div></div>`
       });
       L.marker([m.lat, m.lng], { icon, zIndexOffset: 950 })
         .bindTooltip(`Ritrovo: ${esc(m.label)}`, { direction: 'top', offset: [0, -36] })
@@ -945,7 +946,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         className: '',
         iconSize: [30, 30],
         iconAnchor: [15, 15],
-        html: `<div style="width:30px;height:30px;border-radius:9px;background:${p.visited ? '#475569' : '#7c3aed'};border:${role ? 3.5 : 2.5}px solid ${ring};box-shadow:0 3px 10px #0009${role ? ',0 0 0 4px ' + ring + '55' : ''};display:flex;align-items:center;justify-content:center;font-size:15px;opacity:${p.visited ? 0.7 : 1}">${c.emoji}</div>`
+        html: `<div style="width:30px;height:30px;border-radius:9px;background:${p.visited ? '#475569' : '#7c3aed'};border:${role ? 3.5 : 2.5}px solid ${ring};box-shadow:0 3px 10px #0009${role ? ',0 0 0 4px ' + ring + '55' : ''};display:flex;align-items:center;justify-content:center;font-size:15px;opacity:${p.visited ? 0.7 : 1}">${categoryIconSvg(c.id, 16)}</div>`
       });
       const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: role ? 900 : 700 })
         .bindTooltip(esc(p.name) + (p.address ? `<div style="font-size:11px;opacity:.75">${esc(p.address)}</div>` : ''), { direction: 'top', offset: [0, -14] })
@@ -1431,7 +1432,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   );
 
   return (
-    <div className={isMobile ? undefined : 'space-y-3'}>
+    <div className={isMobile ? undefined : 'space-y-3 desk-map'}>
       {/* BARRA ESTERNA SOPRA LA MAPPA: MENU DATI REALI A TENDINA A SINISTRA + SWITCH MODALITÀ */}
       {!isMobile && (
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-2xl border border-slate-800 bg-slate-900/95">
@@ -1649,7 +1650,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                   className="px-2.5 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 transition-colors font-bold flex items-center gap-1 shadow-sm whitespace-nowrap"
                   title="Vola direttamente alla Piazza Tiananmen"
                 >
-                  <span>🇨🇳 Piazza Tiananmen</span>
+                  <span>Piazza Tiananmen</span>
                 </button>
               </div>
             )}
@@ -1701,7 +1702,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                     <div className="p-3.5 border-b border-slate-800 space-y-2" data-testid="map-places-filter">
                       <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cosa mostrare ({sharedPlaces.places.length} luoghi aggiunti):</div>
                       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Cosa mostrare sulla mappa">
-                        {([['all', 'Tappe e aggiunti'], ['stops', 'Solo tappe'], ['added', '📍 Solo aggiunti'], ['todo', '⭐ Da visitare']] as const).map(([id, label]) => (
+                        {([['all', 'Tappe e aggiunti'], ['stops', 'Solo tappe'], ['added', 'Solo aggiunti'], ['todo', 'Da visitare']] as const).map(([id, label]) => (
                           <button
                             key={id}
                             type="button"
@@ -1752,7 +1753,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                             : 'bg-blue-950/40 text-blue-300 border border-blue-500/30 hover:bg-blue-900/50'
                         }`}
                       >
-                        🏠 Alloggi ({MAP_LOCATIONS.filter((l) => l.category === 'alloggio').length})
+                        Alloggi ({MAP_LOCATIONS.filter((l) => l.category === 'alloggio').length})
                       </button>
 
                       <button
@@ -1763,7 +1764,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                             : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800'
                         }`}
                       >
-                        🏯 Cultura
+                        Cultura
                       </button>
                       <button
                         onClick={() => setActiveCategory('nightlife')}
@@ -1773,7 +1774,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                             : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800'
                         }`}
                       >
-                        🍸 Nightlife
+                        Nightlife
                       </button>
                       <button
                         onClick={() => setActiveCategory('food')}
@@ -1783,7 +1784,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                             : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800'
                         }`}
                       >
-                        🍜 Food & Mercati
+                        Food & Mercati
                       </button>
                       <button
                         onClick={() => setActiveCategory('natura')}
@@ -1793,7 +1794,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                             : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800'
                         }`}
                       >
-                        🌲 Parchi & Hike
+                        Parchi & Hike
                       </button>
                       <button
                         onClick={() => setActiveCategory('gita')}
@@ -1803,7 +1804,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                             : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800'
                         }`}
                       >
-                        🚆 Gite Esterne
+                        Gite Esterne
                       </button>
                     </div>
 
@@ -1852,13 +1853,13 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                           <div className="flex items-center justify-between gap-2.5 min-w-0">
                             <div className="font-semibold text-xs text-slate-100 flex items-center gap-2 min-w-0 flex-1">
                               <span className="shrink-0 text-sm">
-                                {loc.category === 'alloggio' && '🏠'}
-                                {loc.category === 'cultura' && (isValorant ? '🎮' : '🏯')}
-                                {loc.category === 'nightlife' && '🍸'}
-                                {loc.category === 'food' && '🍜'}
-                                {loc.category === 'natura' && '🌲'}
-                                {loc.category === 'gita' && '🚆'}
-                                {loc.category === 'logistica' && '✈️'}
+                                {loc.category === 'alloggio' && ''}
+                                {loc.category === 'cultura' && (isValorant ? '' : '')}
+                                {loc.category === 'nightlife' && ''}
+                                {loc.category === 'food' && ''}
+                                {loc.category === 'natura' && ''}
+                                {loc.category === 'gita' && ''}
+                                {loc.category === 'logistica' && ''}
                               </span>
                               <span className="truncate">{loc.italianName}</span>
                             </div>
@@ -1873,13 +1874,13 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
                           {isValorant && (
                             <div className="mt-1 pl-6 text-[10px] text-red-400 font-bold flex items-center gap-1">
-                              <span>⚠️ Sede TBD: Riot Games deve ancora annunciare l&apos;arena</span>
+                              <span>Sede TBD: Riot Games deve ancora annunciare l&apos;arena</span>
                             </div>
                           )}
 
                           {loc.mustTry && (
                             <div className="mt-1 pl-6 text-[10px] text-amber-400 font-semibold">
-                              ⭐ Da provare: {loc.mustTry}
+                              Da provare: {loc.mustTry}
                             </div>
                           )}
                         </button>
@@ -2047,7 +2048,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                   </p>
                   {currentSelectedLoc.mustTry && (
                     <div className="text-xs text-amber-300 mt-1.5 font-medium">
-                      💡 Specialità: {currentSelectedLoc.mustTry}
+                      Specialità: {currentSelectedLoc.mustTry}
                     </div>
                   )}
                   {(currentSelectedLoc.city === 'Seul' ||

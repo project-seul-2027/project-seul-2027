@@ -100,6 +100,20 @@ service cloud.firestore {
         && request.resource.data.updatedAt is number;
     }
 
+    // Prezzi degli alloggi: li legge tutto il gruppo, li modifica solo chi occupa il Posto 1 (slots/t1)
+    match /accommodationPrices/{accId} {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && accId in accommodations()
+        && get(/databases/$(database)/documents/slots/t1).data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['totalEur17Nights', 'updatedAt'])
+        && request.resource.data.totalEur17Nights is number
+        && request.resource.data.totalEur17Nights > 0
+        && request.resource.data.totalEur17Nights <= 20000
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
     // Dati condivisi con il gruppo
     match /members/{uid} {
       allow read: if isParticipant();

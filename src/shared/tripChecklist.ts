@@ -3,7 +3,7 @@
  * Ognuno segna le proprie caselle, tutto il gruppo le vede in tempo reale.
  * Niente voci "dell'ultimo minuto" (valigia, check-in...): nessuno aprirebbe l'app per segnarle.
  *
- * ⚠️ Le stesse chiavi sono elencate anche in firestore.rules (collezione `statuses`):
+ * Le stesse chiavi sono elencate anche in firestore.rules (collezione `statuses`):
  * se ne aggiungi una qui, aggiungila anche lì.
  */
 export const CHECKLIST_ITEMS = [

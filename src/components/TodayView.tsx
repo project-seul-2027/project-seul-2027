@@ -14,6 +14,7 @@ import { lastMetroStatus } from '../utils/lastMetro';
 import { useAuth } from '../auth/AuthContext';
 import { useMediaQuery } from '../pwa';
 import { WorldClockBar } from './WorldClockBar';
+import { DesktopOggiHero } from './desktop/DesktopOggiHero';
 import { PhoneCountdown } from './mobile/PhoneCountdown';
 import {
   TIMED_DAYS, locateNow, formatCountdown, formatInZone, msFromDayAndClock, zoneLabel, zoneOfDay
@@ -22,12 +23,31 @@ import {
   TRIP_REMINDERS, REMINDER_AUDIENCE_LABEL, buildIcs, reminderApplies, saveIcsFile
 } from '../utils/tripReminders';
 
+/** Riassunto breve di una tappa: il campo `summary`, o la prima frase del testo come ripiego. */
+const briefOf = (item: { summary?: string; activity: string }) =>
+  item.summary ?? (item.activity.split(/(?<=[.!?])\s/)[0] ?? item.activity).slice(0, 90);
+
+/** Etichetta oraria di una tappa: l'orario se c'è, altrimenti la parte del giorno scritta nel PDF, altrimenti le prime parole del luogo. */
+const timeLabel = (t: string): string => {
+  const dalle = t.match(/^Dalle\s+(\d{1,2}[:.]\d{2})/i);
+  if (dalle) return `Dalle ${dalle[1]}`;
+  const clock = t.match(/\d{1,2}[:.]\d{2}(?:\s*-\s*\d{1,2}[:.]\d{2})?/);
+  if (clock) return clock[0].replace(/\s+/g, ' ');
+  const part = t.match(/^(Mattina presto|Mattina|Pomeriggio|Sera|Giorno|Prima|Poi|Online|Dopo il match|Pranzo)/i);
+  if (part) return part[0];
+  return t.split(' ').slice(0, 2).join(' ');
+};
+
+
 export type TodayTarget = 'wallet' | 'places' | 'sos' | 'map' | 'show' | 'weather' | 'expenses' | 'flights' | 'itinerary' | 'pdf';
 
 interface TodayViewProps {
   /** Apre la mappa già in modalità percorso: dalla posizione GPS verso la destinazione */
   onRoute: (destinationId: string) => void;
   onGoTo: (tab: TodayTarget) => void;
+  /** Animazione del video di sfondo (solo intestazione desktop) */
+  heroEnabled: boolean;
+  onToggleHero: () => void;
 }
 
 function WeatherIcon({ name, className }: { name: string; className?: string }) {
@@ -71,7 +91,7 @@ function simFromUrl(): number | null {
 
 const isSeoulStop = (l: MapLocation) => l.city === 'Seul' || l.city === 'Dintorni / Gite';
 
-export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
+export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabled, onToggleHero }) => {
   const { user } = useAuth();
   const [sim, setSim] = useState<number | null>(simFromUrl);
   const now = useNow(sim);
@@ -170,9 +190,9 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
     : after
       ? { label: 'Viaggio concluso', tone: 'text-app-muted', title: 'Bentornati! Spero sia stato bellissimo.' }
       : current
-        ? { label: 'In corso', tone: 'text-app-accent', title: current.item.activity, time: `${current.clock || current.item.time} · ${zoneLabel(current.zone)}` }
+        ? { label: 'In corso', tone: 'text-app-accent', title: briefOf(current.item), time: `${current.clock || current.item.time} · ${zoneLabel(current.zone)}` }
         : next
-          ? { label: 'Prossima', tone: 'text-fam-weather', title: next.item.activity, time: `alle ${next.clock || next.item.time} · tra ${nextIn}` }
+          ? { label: 'Prossima', tone: 'text-fam-weather', title: briefOf(next.item), time: `alle ${next.clock || next.item.time} · tra ${nextIn}` }
           : done
             ? { label: 'Giornata conclusa', tone: 'text-app-muted', title: 'Le attività di oggi sono finite.', hint: 'Se siete ancora fuori, controllate l’ultima metro e la strada per l’alloggio.' }
             : { label: 'Nessuna attività programmata', tone: 'text-app-muted', title: day.title, hint: 'Giornata libera: scegliete tra i luoghi salvati dal gruppo.' };
@@ -212,7 +232,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
                 <div className="text-base font-bold font-mono text-fam-weather">{next.clock || next.item.time}</div>
                 <div className="text-[10px] text-app-muted">tra {nextIn}</div>
               </div>
-              <p className="text-sm text-slate-200 leading-snug min-w-0">{next.item.activity}</p>
+              <p className="text-sm text-slate-200 leading-snug min-w-0">{briefOf(next.item)}</p>
             </div>
           )}
           {metro.level !== 'none' && (
@@ -305,7 +325,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
             )}
           </div>
           <h2 className="mt-2 text-lg sm:text-xl font-bold text-white leading-snug" data-testid="today-now">
-            {current ? current.item.activity : `Inizia la giornata: ${day.title}`}
+            {current ? briefOf(current.item) : `Inizia la giornata: ${day.title}`}
           </h2>
           {next && (
             <div className="mt-4 flex items-start gap-3 rounded-2xl bg-slate-950/60 border border-slate-800 p-3.5">
@@ -314,7 +334,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
                 <div className="text-base font-bold font-mono text-amber-300">{next.clock || next.item.time}</div>
                 <div className="text-[10px] text-slate-500">tra {nextIn}</div>
               </div>
-              <p className="text-sm text-slate-200 leading-snug min-w-0">{next.item.activity}</p>
+              <p className="text-sm text-slate-200 leading-snug min-w-0">{briefOf(next.item)}</p>
             </div>
           )}
           {metro.level !== 'none' && (
@@ -502,11 +522,11 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
               }`} />
               <div className={`${past ? 'opacity-50' : ''}`}>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-mono font-bold ${isNow ? 'text-cyan-300' : isNext ? 'text-amber-300' : 'text-slate-400'}`}>{it.item.time}</span>
+                  <span className={`text-xs font-mono font-bold ${isNow ? 'text-cyan-300' : isNext ? 'text-amber-300' : 'text-slate-400'}`}>{timeLabel(it.item.time)}</span>
                   {isNow && <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-950 bg-cyan-400 rounded px-1.5 py-0.5">ora</span>}
                   {isNext && <span className="text-[9px] font-bold uppercase tracking-wider text-amber-950 bg-amber-400 rounded px-1.5 py-0.5">poi</span>}
                 </div>
-                <p className={`text-[13px] leading-snug ${isNow ? 'text-white font-semibold' : 'text-slate-300'}`}>{it.item.activity}</p>
+                <div className={`text-[13px] leading-snug ${isNow ? 'text-white font-semibold' : 'text-slate-300'}`}>{briefOf(it.item)}{it.item.summary && it.item.summary !== it.item.activity && (<details className="mt-1 text-[12px] text-slate-400"><summary className="cursor-pointer select-none text-cyan-300/90">Dettagli</summary><p className="mt-1 leading-relaxed">{it.item.activity}</p></details>)}</div>
               </div>
             </li>
           );
@@ -610,70 +630,253 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo }) => {
     );
   }
 
-  return (
-    <div className="space-y-4 animate-in fade-in duration-200" data-testid="today-view">
-      {/* Intestazione: saluto, orologi, anteprima */}
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-xl sm:text-2xl font-black font-display text-white">
-            {firstName ? `Ciao ${firstName}` : 'Oggi'}
-            <span className="text-slate-500 font-semibold">  ·  </span>
-            <span className="capitalize text-slate-300 font-semibold text-base sm:text-lg">{seoulDate}</span>
-          </h2>
-          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
-            <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-cyan-400" /> Seul <b className="text-slate-100 font-mono">{seoulTime}</b></span>
-            <span className="flex items-center gap-1.5">Italia <b className="text-slate-300 font-mono">{romeTime}</b></span>
+  /* ---------- Desktop: stesso linguaggio dell'intestazione (fondo unico, filetti, mono + Outfit) ---------- */
+  const MONO: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '.08em', color: '#94A3B8', textTransform: 'uppercase' };
+  const DISP: React.CSSProperties = { fontFamily: "'Outfit', sans-serif", fontWeight: 800, letterSpacing: '-.03em' };
+  const RULE = '1px solid #1E2B40';
+  const ghostBtn = 'min-h-[40px] px-3.5 rounded-xl border border-[#1E2B40] hover:border-[#60718C] text-[14px] font-semibold text-app-text inline-flex items-center gap-2 transition-colors';
+  const cyanBtn = 'min-h-[40px] px-4 rounded-xl bg-app-accent text-app-on-accent text-[14px] font-bold inline-flex items-center gap-2';
+
+  const Head: React.FC<{ label: string; color?: string; title?: string; action?: { text: string; onClick: () => void } }> = ({ label, color, title, action }) => (
+    <div className="flex items-end justify-between gap-4">
+      <div className="min-w-0">
+        <p style={{ ...MONO, color: color ?? '#94A3B8', margin: 0 }}>{label}</p>
+        {title && <h3 style={{ ...DISP, fontSize: 26, margin: '6px 0 0' }}>{title}</h3>}
+      </div>
+      {action && <button type="button" onClick={action.onClick} className="shrink-0 text-[13px] font-semibold text-app-accent hover:underline pb-0.5">{action.text} →</button>}
+    </div>
+  );
+
+  const tzOf = (at: string) => (at.endsWith('+01:00') ? 'Europe/Rome' : at.endsWith('+08:00') ? 'Asia/Shanghai' : 'Asia/Seoul');
+
+  // Durante il viaggio: "Adesso" prende il posto del conto alla rovescia
+  const dNow = !before && (
+    <section data-testid="today-hero" data-state={after ? 'after' : current ? 'now' : next ? 'next' : done ? 'done' : 'free'}>
+      <Head label={after ? 'Viaggio concluso' : current ? `Adesso · ${current.clock || 'in corso'} · ${zoneLabel(current.zone)}` : next ? 'Prossima' : 'Oggi'} color="#00C5E8" />
+      <h2 data-testid="today-now" style={{ ...DISP, fontSize: 40, lineHeight: 1.05, margin: '10px 0 0' }}>
+        {after ? 'Bentornati! Spero sia stato bellissimo.' : current ? briefOf(current.item) : next ? briefOf(next.item) : done ? 'Le attività di oggi sono finite.' : day.title}
+      </h2>
+      {after && <p className="mt-2 text-[15px] text-app-muted">La galleria e le spese restano qui per ripensarci con calma.</p>}
+      {!current && next && !after && <p className="mt-2 text-[15px] text-app-muted">alle {next.clock || next.item.time} · tra {nextIn}</p>}
+      {current && next && (
+        <div className="mt-5 flex items-baseline gap-5" style={{ borderTop: RULE, paddingTop: 16 }}>
+          <span style={{ ...DISP, fontSize: 22, color: '#FBBF24', fontVariantNumeric: 'tabular-nums' }}>{next.clock || next.item.time}</span>
+          <div className="min-w-0"><p style={{ ...MONO, margin: 0 }}>Dopo · tra {nextIn}</p><p className="mt-1 text-[16px] font-semibold">{briefOf(next.item)}</p></div>
+        </div>
+      )}
+      {metro.level !== 'none' && (
+        <div role="status" data-testid="last-metro" className="mt-5 flex gap-3" style={{ borderTop: RULE, paddingTop: 16 }}>
+          {metro.level === 'closed' ? <MoonIcon className="w-5 h-5 text-fam-sos shrink-0 mt-0.5" /> : <TrainFront className="w-5 h-5 text-fam-weather shrink-0 mt-0.5" />}
+          <div><p className={`text-[15px] font-bold ${metro.level === 'closed' ? 'text-fam-sos' : 'text-fam-weather'}`}>{metro.title}</p><p className="mt-0.5 text-[14px] text-app-muted">{metro.text}</p></div>
+        </div>
+      )}
+      {!after && (
+        <div className="mt-5 flex flex-wrap gap-2.5">
+          {stop && !done && <button type="button" onClick={() => onRoute(stop.id)} className={cyanBtn} data-testid="route-to-stop"><Navigation className="w-4 h-4" /> Portami a {stop.italianName}</button>}
+          {free && <button type="button" onClick={() => onGoTo('places')} className={cyanBtn} data-testid="free-day-places"><Bookmark className="w-4 h-4" /> Apri i luoghi salvati</button>}
+          <button type="button" onClick={() => onRoute(home.id)} className={metro.level !== 'none' || done ? cyanBtn : ghostBtn} data-testid="route-home"><Home className="w-4 h-4" /> Torna all’alloggio</button>
+        </div>
+      )}
+    </section>
+  );
+
+  const dTimeline = items.length > 0 && (
+    <section>
+      <Head label={`${day.dayOfWeek} ${day.dateStr.replace(' 2027', '')}`} title={day.title} action={{ text: 'Giorno completo', onClick: () => onGoTo('itinerary') }} />
+      {where.currentIndex > 0 && !showPast && (
+        <button type="button" onClick={() => setShowPast(true)} className="mt-3 text-[13px] text-app-muted hover:text-app-text flex items-center gap-1"><ChevronDown className="w-3.5 h-3.5" /> {where.currentIndex} già {where.currentIndex === 1 ? 'fatta' : 'fatte'}</button>
+      )}
+      <ol className="mt-4" style={{ borderBottom: RULE }}>
+        {items.map((it, i) => {
+          const past = i < where.currentIndex;
+          if (past && !showPast) return null;
+          const isNow = i === where.currentIndex;
+          const isNext = i === where.nextIndex;
+          return (
+            <li key={i} data-testid={isNow ? 'timeline-now' : undefined} className="grid items-start gap-5" style={{ gridTemplateColumns: '84px minmax(0,1fr) auto', borderTop: RULE, padding: '16px 0', opacity: past ? 0.5 : 1 }}>
+              <span style={{ ...DISP, fontSize: 20, fontVariantNumeric: 'tabular-nums', color: isNow ? '#00C5E8' : isNext ? '#FBBF24' : '#60A5FA' }}>{timeLabel(it.item.time)}</span>
+              <div className={`text-[16px] leading-snug ${isNow ? 'font-bold' : 'font-medium text-slate-200'}`}>{briefOf(it.item)}{it.item.summary && it.item.summary !== it.item.activity && (<details className="mt-1.5 text-[14px] text-app-muted"><summary className="cursor-pointer select-none text-app-accent">Dettagli</summary><p className="mt-1.5 leading-relaxed">{it.item.activity}</p></details>)}</div>
+              {(isNow || isNext) && <span style={{ ...MONO, color: isNow ? '#00C5E8' : '#FBBF24' }}>{isNow ? 'ora' : 'poi'}</span>}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+
+  const dKorean = (
+    <button type="button" onClick={() => onGoTo('show')} data-testid="open-show-korean" className="w-full text-left flex items-center gap-5 group" style={{ borderTop: RULE, borderBottom: RULE, padding: '20px 0' }}>
+      <span style={{ ...DISP, fontSize: 34, color: '#FB923C' }} aria-hidden>한</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-bold">Mostra in coreano</span>
+        <span className="block mt-0.5 text-[14px] text-app-muted">Destinazione per il tassista, dieta e allergie, frasi utili, emergenze.</span>
+      </span>
+      <ChevronRight className="w-5 h-5 text-app-muted group-hover:text-app-text shrink-0" />
+    </button>
+  );
+
+  const dWeather = (
+    <section>
+      <Head label="Meteo" color="#FBBF24" title="Seul adesso" action={{ text: 'Dettagli', onClick: () => onGoTo('weather') }} />
+      {weather ? (
+        <div className="mt-4 flex items-center gap-5">
+          <WeatherIcon name={weather.current.condition.iconName} className="w-12 h-12" />
+          <div>
+            <div style={{ ...DISP, fontSize: 56, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{Math.round(weather.current.temperatureC)}°</div>
+            <div className="mt-1 text-[14px] text-app-muted">{weather.current.condition.labelIt}</div>
+          </div>
+          <div className="ml-auto text-right text-[13px] text-app-muted space-y-1.5">
+            <div>{Math.round(weather.daily[0].tempMinC)}° / {Math.round(weather.daily[0].tempMaxC)}°</div>
+            <div className="flex items-center justify-end gap-1.5"><Droplets className="w-3.5 h-3.5 text-sky-400" />{weather.daily[0].precipitationProbability}%</div>
+            <div className="flex items-center justify-end gap-1.5"><Wind className="w-3.5 h-3.5" />{Math.round(weather.current.windSpeedKmH)} km/h</div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setPreviewOpen((v) => !v)}
-          className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1.5"
-          aria-expanded={previewOpen}
-          data-testid="preview-toggle"
-        >
-          <Eye className="w-3.5 h-3.5" /> Anteprima
-        </button>
-      </header>
-
-      {previewOpen && (
-        <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 flex flex-wrap items-end gap-3" data-testid="preview-panel">
-          <label className="flex flex-col gap-1 text-[11px] text-slate-400 min-w-[10rem] flex-1">
-            Giorno
-            <select value={pvDay} onChange={(e) => setPvDay(Number(e.target.value))} className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white">
-              {ITINERARY_DAYS.map((d) => <option key={d.id} value={d.id}>{d.dateStr.split(' ')[0]} marzo · {d.title}</option>)}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-[11px] text-slate-400">
-            Ora (del posto)
-            <input type="time" value={pvTime} onChange={(e) => setPvTime(e.target.value)} className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white" />
-          </label>
-          <button type="button" onClick={applyPreview} className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold">Mostra</button>
+      ) : (
+        <p className="mt-4 text-[14px] text-app-muted">{weatherFailed ? 'Meteo non disponibile senza connessione.' : 'Carico il meteo…'}</p>
+      )}
+      {air && (
+        <div className="mt-4 flex items-center gap-2.5 text-[13px]" style={{ borderTop: RULE, paddingTop: 14 }} data-testid="air-quality">
+          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${['bg-emerald-400', 'bg-yellow-400', 'bg-orange-400', 'bg-red-500', 'bg-purple-500'][air.level]}`} />
+          <span className="font-semibold">Aria: {air.labelIt}</span>
+          <span className="ml-auto text-app-muted tabular-nums">PM2,5 {air.pm25} · PM10 {air.pm10}</span>
         </div>
       )}
-
-      {sim !== null && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-amber-200" data-testid="sim-banner">
-          <span>Anteprima: stai vedendo il {formatInZone(sim, 'Asia/Seoul', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} (ora di Seul), non l’ora reale.</span>
-          <button type="button" onClick={() => setSim(null)} className="shrink-0 flex items-center gap-1 font-bold hover:text-white"><X className="w-3.5 h-3.5" /> Esci</button>
-        </div>
+      {air && air.adviceIt && <p className="mt-2 text-[13px] text-orange-200 leading-snug flex gap-2" data-testid="air-advice"><AlertTriangle className="w-4 h-4 shrink-0 text-orange-300" />{air.adviceIt}</p>}
+      {weather && weather.daily[0].precipitationProbability >= 60 && (
+        <p className="mt-2 text-[13px] text-sky-200 leading-snug flex gap-2" data-testid="rain-advice"><Droplets className="w-4 h-4 shrink-0 text-sky-300" />Pioggia probabile oggi ({weather.daily[0].precipitationProbability}%): porta l’ombrello e punta su musei, COEX e mercati coperti invece di Namsan o Bukhansan.</p>
       )}
+      {weather && <p className="mt-3 text-[14px] text-slate-300 leading-snug" style={{ borderTop: RULE, paddingTop: 14 }}>{weather.current.condition.activityTipIt}</p>}
+    </section>
+  );
 
-      {/* Telefono: una colonna in ordine d'uso. PC: due colonne. */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
-        <div className="lg:col-span-3 space-y-4">
-          <WalletShortcut onOpen={() => onGoTo('wallet')} nowMs={now} />
-          {heroCard}
-          <GroupLiveCard onRoute={onRoute} onShowMap={() => onGoTo('map')} />
-          {showKoreanCard}
-          <div className="lg:hidden space-y-4">{stopsCard}{weatherCard}</div>
-          {timelineCard}
+  const dStops = stops.length > 0 && (
+    <section>
+      <Head label="Luoghi" color="#A78BFA" title="Tappe di oggi" />
+      <ul className="mt-3" style={{ borderBottom: RULE }}>
+        {stops.map((s) => (
+          <li key={s.id} style={{ borderTop: RULE }}>
+            <button type="button" onClick={() => setPickedStop(s.id)} aria-pressed={stop?.id === s.id} className="w-full text-left flex items-center gap-3 py-3.5 min-h-[56px]" style={stop?.id === s.id ? { boxShadow: 'inset 2px 0 0 #00C5E8', paddingLeft: 12, background: '#101A2D' } : undefined}>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold truncate">{s.italianName}</span>
+                <span className="block text-[13px] text-app-muted truncate">{s.district}</span>
+              </span>
+              {s.koreanName && /[가-힣]/.test(s.koreanName) && <span className="text-[15px] text-slate-300 shrink-0">{s.koreanName}</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+
+  const dReminders = (
+    <section data-testid="reminders-card">
+      <Head label="Calendario" color="#FBBF24" title="Promemoria" />
+      <ul className="mt-3" style={{ borderBottom: RULE }}>
+        {upcoming.map((r) => {
+          const tz = tzOf(r.at);
+          const t = r.title.replace(/^Seul: /, '');
+          return (
+            <li key={r.id} className="grid items-center gap-4" style={{ gridTemplateColumns: '64px minmax(0,1fr)', borderTop: RULE, padding: '14px 0' }}>
+              <span style={{ ...DISP, fontSize: 20, color: '#FBBF24' }}>{new Date(r.at).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', timeZone: tz })}</span>
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold leading-snug">{t.charAt(0).toUpperCase() + t.slice(1)}</p>
+                <p className="text-[13px] text-app-muted">{r.at.slice(11, 16)} · {REMINDER_AUDIENCE_LABEL[r.audience]}</p>
+              </div>
+            </li>
+          );
+        })}
+        {upcoming.length === 0 && <li style={{ borderTop: RULE, padding: '14px 0' }} className="text-[14px] text-app-muted">Nessun promemoria in programma.</li>}
+      </ul>
+      <button type="button" onClick={exportIcs} data-testid="export-ics" className={`${ghostBtn} mt-4`}>
+        {icsState === 'done' ? <><Check className="w-4 h-4" /> Pronto: aprilo per aggiungerli</> : <><CalendarPlus className="w-4 h-4" /> Aggiungi tutti al calendario</>}
+      </button>
+      <p className="mt-2 text-[13px] text-app-muted leading-snug">{myReminders.length} promemoria con sveglia, validi anche senza connessione.</p>
+    </section>
+  );
+
+  const dQuick = (
+    <section data-testid="today-quicklinks">
+      <p style={{ ...MONO, margin: 0 }}>Scorciatoie</p>
+      <div className="mt-3 grid grid-cols-3" style={{ borderTop: RULE, borderLeft: RULE }}>
+        {[
+          { id: 'wallet' as const, label: 'Wallet', icon: WalletCards, tint: '#34D399' },
+          { id: 'expenses' as const, label: 'Spese', icon: Wallet, tint: '#34D399' },
+          { id: 'places' as const, label: 'Luoghi', icon: Bookmark, tint: '#A78BFA' },
+          { id: 'flights' as const, label: 'Voli', icon: Plane, tint: '#818CF8' },
+          { id: 'pdf' as const, label: 'PDF', icon: FileText, tint: '#FB923C' },
+          { id: 'sos' as const, label: 'SOS', icon: ShieldAlert, tint: '#F87171' }
+        ].map((q) => (
+          <button key={q.id} type="button" onClick={() => onGoTo(q.id)} data-testid={`quick-${q.id}`} className="min-h-[76px] flex flex-col items-center justify-center gap-1.5 text-[13px] font-semibold hover:bg-[#101A2D] transition-colors" style={{ borderRight: RULE, borderBottom: RULE }}>
+            <q.icon className="w-5 h-5" style={{ color: q.tint }} />
+            {q.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="animate-in fade-in duration-200" data-testid="today-view">
+      <DesktopOggiHero
+        heroEnabled={heroEnabled}
+        onToggleHero={onToggleHero}
+        onOpenItinerary={() => onGoTo('itinerary')}
+        simNow={sim}
+        program={items.slice(0, 4).map((t) => ({ time: t.clock || timeLabel(t.item.time), title: briefOf(t.item), sub: zoneLabel(t.zone) }))}
+        greeting={`Ciao ${firstName}`}
+        shortcuts={dQuick}
+      />
+      <div className="px-10 pb-12" style={{ borderTop: RULE }}>
+        {/* Barra di stato: saluto + modalità anteprima, nella stessa grammatica dell'intestazione */}
+        <div className="flex flex-wrap items-center justify-end gap-3 py-5">
+          <div className="flex gap-2.5">
+            {before && (
+              <button type="button" onClick={() => setSim(msFromDayAndClock(3, '14:30', 'KR'))} className={cyanBtn} data-testid="try-trip-mode"><Eye className="w-4 h-4" /> Prova la modalità viaggio</button>
+            )}
+            <button type="button" onClick={() => setPreviewOpen((v) => !v)} className={ghostBtn} aria-expanded={previewOpen} data-testid="preview-toggle">
+              <Eye className="w-4 h-4" /> Anteprima
+            </button>
+          </div>
         </div>
-        <div className="lg:col-span-2 space-y-4">
-          <div className="hidden lg:block space-y-4">{stopsCard}{weatherCard}</div>
-          {remindersCard}
-          <OfflineCard />
-          {quickLinks}
+
+        {previewOpen && (
+          <div className="mb-6 flex flex-wrap items-end gap-3 py-4" style={{ borderTop: RULE, borderBottom: RULE }} data-testid="preview-panel">
+            <label className="flex flex-col gap-1.5 min-w-[12rem] flex-1" style={MONO}>
+              Giorno
+              <select value={pvDay} onChange={(e) => setPvDay(Number(e.target.value))} className="bg-app-bg border border-[#1E2B40] rounded-xl px-3 py-2.5 text-[14px] text-app-text normal-case" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: 0 }}>
+                {ITINERARY_DAYS.map((d) => <option key={d.id} value={d.id}>{d.dateStr.split(' ')[0]} marzo · {d.title}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1.5" style={MONO}>
+              Ora (del posto)
+              <input type="time" value={pvTime} onChange={(e) => setPvTime(e.target.value)} className="bg-app-bg border border-[#1E2B40] rounded-xl px-3 py-2.5 text-[14px] text-app-text" />
+            </label>
+            <button type="button" onClick={applyPreview} className={cyanBtn}>Mostra</button>
+          </div>
+        )}
+
+        {sim !== null && (
+          <div className="mb-6 flex items-center justify-between gap-3 py-3 text-[14px] text-amber-200" style={{ borderTop: '1px solid rgba(251,191,36,.4)', borderBottom: '1px solid rgba(251,191,36,.4)' }} data-testid="sim-banner">
+            <span>Anteprima: stai vedendo il {formatInZone(sim, 'Asia/Seoul', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} (ora di Seul), non l’ora reale.</span>
+            <button type="button" onClick={() => setSim(null)} className="shrink-0 flex items-center gap-1 font-bold hover:text-white"><X className="w-3.5 h-3.5" /> Esci</button>
+          </div>
+        )}
+
+        {/* Stessa griglia dell'intestazione: 1.5fr / 1fr, gap 40 */}
+        <div className="grid items-start gap-10" style={{ gridTemplateColumns: 'minmax(0,1.5fr) minmax(0,1fr)' }}>
+          <div className="space-y-10 min-w-0 oggi-flat">
+            {dNow}
+            <WalletShortcut onOpen={() => onGoTo('wallet')} nowMs={now} />
+            <GroupLiveCard onRoute={onRoute} onShowMap={() => onGoTo('map')} />
+            {dTimeline}
+            {dKorean}
+          </div>
+          <div className="space-y-10 min-w-0 oggi-flat">
+            {dWeather}
+            {dStops}
+            {dReminders}
+            <OfflineCard />
+          </div>
         </div>
       </div>
     </div>

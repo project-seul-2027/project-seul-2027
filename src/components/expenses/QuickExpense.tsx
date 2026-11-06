@@ -22,14 +22,14 @@ export interface QuickPreset {
 }
 
 export const QUICK_PRESETS: QuickPreset[] = [
-  { id: 'taxi', label: 'Taxi', emoji: '🚕', category: 'transport' },
-  { id: 'metro', label: 'Ricarica T-money', emoji: '🚇', category: 'transport' },
-  { id: 'cafe', label: 'Caffè', emoji: '☕', category: 'food' },
-  { id: 'lunch', label: 'Pranzo', emoji: '🍜', category: 'food' },
-  { id: 'dinner', label: 'Cena', emoji: '🍖', category: 'food' },
-  { id: 'store', label: 'Minimarket', emoji: '🏪', category: 'food' },
-  { id: 'tickets', label: 'Ingressi', emoji: '🎟️', category: 'activity' },
-  { id: 'shop', label: 'Shopping', emoji: '🛍️', category: 'shopping' }
+  { id: 'taxi', label: 'Taxi', emoji: '', category: 'transport' },
+  { id: 'metro', label: 'Ricarica T-money', emoji: '', category: 'transport' },
+  { id: 'cafe', label: 'Caffè', emoji: '', category: 'food' },
+  { id: 'lunch', label: 'Pranzo', emoji: '', category: 'food' },
+  { id: 'dinner', label: 'Cena', emoji: '', category: 'food' },
+  { id: 'store', label: 'Minimarket', emoji: '', category: 'food' },
+  { id: 'tickets', label: 'Ingressi', emoji: '', category: 'activity' },
+  { id: 'shop', label: 'Shopping', emoji: '', category: 'shopping' }
 ];
 
 export function parseAmountText(raw: string): number {

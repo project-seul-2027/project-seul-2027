@@ -115,8 +115,8 @@ export const BudgetTrackerView: React.FC = () => {
       {/* Tab 1: Preventivo (PDF) */}
       {activeTab === 'estimates' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
-            <div>
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-x-8 lg:gap-y-5 lg:space-y-0 lg:items-start">
+            <div className="lg:col-span-2">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Calculator className="w-4 h-4 text-purple-400" />
                 Preventivo Ufficiale dal PDF (Seul 2027)
@@ -127,7 +127,7 @@ export const BudgetTrackerView: React.FC = () => {
             </div>
 
             {/* Ripartizione Affitto Alloggi Enko Stay */}
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-3 lg:col-span-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
                 <div className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
                   <PiggyBank className="w-4 h-4 text-cyan-400" />
@@ -189,7 +189,7 @@ export const BudgetTrackerView: React.FC = () => {
               </div>
             </div>
 
-            <div className="divide-y divide-slate-800 text-xs">
+            <div className="divide-y divide-slate-800 text-xs lg:min-w-0">
               {PDF_BUDGET_ESTIMATES.map((item, idx) => (
                 <div key={idx} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1">
@@ -205,7 +205,7 @@ export const BudgetTrackerView: React.FC = () => {
             </div>
 
             {/* Total summary banner */}
-            <div className="mt-4 p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="mt-4 p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs lg:mt-0 lg:sticky lg:top-24 lg:flex-col lg:items-stretch lg:p-6">
               <div>
                 <span className="font-bold text-emerald-300 text-sm block">
                   Budget Medio Conservativo Stimato a Persona:

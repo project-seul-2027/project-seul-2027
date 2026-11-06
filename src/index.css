@@ -441,3 +441,349 @@ body {
     opacity: 0;
   }
 }
+
+/* Oggi desktop: le schede condivise (gruppo, wallet, offline) perdono il riquadro e
+   seguono il linguaggio del resto della pagina: fondo unico, filetti sottili, titoli Outfit. */
+@media (min-width: 1024px) {
+  .oggi-flat section.rounded-3xl {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .oggi-flat section.rounded-3xl h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+    color: #F7F9FC;
+    text-transform: none;
+  }
+  .oggi-flat section.rounded-3xl h3 svg { display: none; }
+  .oggi-flat .bg-slate-800 { background-color: #16233A; }
+  .oggi-flat .border-slate-800 { border-color: #1E2B40; }
+  .oggi-flat .border-slate-700 { border-color: #1E2B40; }
+  .oggi-flat .bg-slate-950\/60 { background-color: #0B1322; }
+  .oggi-flat .bg-slate-700 { background-color: #60718C; }
+}
+
+/* Pagine desktop (non Oggi): stessa palette e stessi filetti dei mockup, senza sfumature né ombre sulle schede. */
+@media (min-width: 1024px) {
+  .page-skin .bg-slate-700:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(30 43 64 / 1)}
+  .page-skin .bg-slate-700\/60:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(30 43 64 / 0.6)}
+  .page-skin .bg-slate-800:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(22 35 58 / 1)}
+  .page-skin .bg-slate-800\/30:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(22 35 58 / 0.3)}
+  .page-skin .bg-slate-800\/40:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(22 35 58 / 0.4)}
+  .page-skin .bg-slate-800\/60:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(22 35 58 / 0.6)}
+  .page-skin .bg-slate-800\/70:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(22 35 58 / 0.7)}
+  .page-skin .bg-slate-800\/80:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(22 35 58 / 0.8)}
+  .page-skin .bg-slate-800\/90:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(22 35 58 / 0.9)}
+  .page-skin .bg-slate-900:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(16 26 45 / 1)}
+  .page-skin .bg-slate-900\/40:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(16 26 45 / 0.4)}
+  .page-skin .bg-slate-900\/60:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(16 26 45 / 0.6)}
+  .page-skin .bg-slate-900\/70:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(16 26 45 / 0.7)}
+  .page-skin .bg-slate-900\/80:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(16 26 45 / 0.8)}
+  .page-skin .bg-slate-900\/90:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(16 26 45 / 0.9)}
+  .page-skin .bg-slate-900\/95:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(16 26 45 / 0.95)}
+  .page-skin .bg-slate-950:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 1)}
+  .page-skin .bg-slate-950\/20:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.2)}
+  .page-skin .bg-slate-950\/30:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.3)}
+  .page-skin .bg-slate-950\/40:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.4)}
+  .page-skin .bg-slate-950\/50:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.5)}
+  .page-skin .bg-slate-950\/60:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.6)}
+  .page-skin .bg-slate-950\/70:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.7)}
+  .page-skin .bg-slate-950\/80:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.8)}
+  .page-skin .bg-slate-950\/90:not(:is([data-keep-style],[data-keep-style] *)) {background-color:rgb(11 19 34 / 0.9)}
+  .page-skin .border-slate-700:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(42 58 85 / 1)}
+  .page-skin .border-slate-700\/50:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(42 58 85 / 0.5)}
+  .page-skin .border-slate-700\/60:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(42 58 85 / 0.6)}
+  .page-skin .border-slate-700\/80:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(42 58 85 / 0.8)}
+  .page-skin .border-slate-800:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(30 43 64 / 1)}
+  .page-skin .border-slate-800\/40:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(30 43 64 / 0.4)}
+  .page-skin .border-slate-800\/50:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(30 43 64 / 0.5)}
+  .page-skin .border-slate-800\/60:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(30 43 64 / 0.6)}
+  .page-skin .border-slate-800\/70:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(30 43 64 / 0.7)}
+  .page-skin .border-slate-800\/80:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(30 43 64 / 0.8)}
+  .page-skin .border-slate-950:not(:is([data-keep-style],[data-keep-style] *)) {border-color:rgb(30 43 64 / 1)}
+  .page-skin .rounded-3xl:not([class*="max-w-"]):not(:is([data-keep-style],[data-keep-style] *)) { border-radius: 20px; }
+  .page-skin .rounded-3xl[class*="shadow-"]:not([class*="max-w-"]):not(:is([data-keep-style],[data-keep-style] *)),
+  .page-skin .rounded-2xl[class*="shadow-"]:not([class*="max-w-"]):not(:is([data-keep-style],[data-keep-style] *)) { box-shadow: none; }
+  .page-skin .rounded-3xl[class*="bg-gradient-to"]:not([class*="max-w-"]):not([class*="border-dashed"]):not(:is([data-keep-style],[data-keep-style] *)) {
+    background-image: none;
+    background-color: #101A2D;
+    border-color: #1E2B40;
+  }
+}
+
+/* ── Animazioni ───────────────────────────────────────────────────────────
+   Cambio pagina: dalla copertina la pagina sale; tra sezioni dello stesso gruppo scorre
+   nella direzione della barra; altrove sfuma. Non c'è fill-mode: a fine animazione
+   il contenitore torna senza trasformazioni (così i pannelli fixed continuano a funzionare). */
+@keyframes page-rise {
+  from { opacity: 0; transform: translateY(24px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes page-slide-from-right {
+  from { opacity: 0; transform: translateX(36px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes page-slide-from-left {
+  from { opacity: 0; transform: translateX(-36px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes page-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.page-anim-rise { animation: page-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.page-anim-slide-right { animation: page-slide-from-right 320ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.page-anim-slide-left { animation: page-slide-from-left 320ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.page-anim-fade { animation: page-fade 240ms ease-out; }
+
+/* Foto aperta dalla galleria: il visualizzatore compare ingrandendosi */
+@keyframes viewer-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+.animate-viewer-in { animation: viewer-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Pulsanti: leggero feedback alla pressione (solo se non è attivo il riduci movimento) */
+@layer base {
+  @media (prefers-reduced-motion: no-preference) {
+    button:not(:disabled) {
+      transition: scale 140ms ease-out, background-color 180ms ease-out, color 180ms ease-out, border-color 180ms ease-out, opacity 180ms ease-out;
+    }
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled):active {
+    scale: 0.97;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-anim-rise,
+  .page-anim-slide-right,
+  .page-anim-slide-left,
+  .page-anim-fade,
+  .animate-viewer-in {
+    animation: none;
+  }
+}
+
+/* Meteo/Clima desktop (>=1024px): stile piatto, senza cornici né stondature. Il telefono non è toccato. */
+@media (min-width: 1024px) {
+  .desk-clean-clima :is(.rounded-3xl, .rounded-2xl, .rounded-xl, .rounded-lg, .rounded-full) {
+    border-radius: 0 !important;
+  }
+  .desk-clean-clima .rounded-full { border: 0 !important; }
+  .desk-clean-clima .shadow-2xl { box-shadow: none !important; }
+  .desk-clean-clima [class*="bg-gradient"] { background-image: none !important; }
+  .desk-clean-clima :is(.bg-slate-950, .bg-slate-900\/80, .bg-amber-950\/15, .bg-cyan-950\/60, .bg-cyan-950, .bg-emerald-950, .bg-blue-950\/30) {
+    background-color: transparent !important;
+  }
+  .desk-clean-clima :is(.border-blue-500\/30, .border-amber-500\/30, .border-slate-800, .border-cyan-400, .border-cyan-500\/40, .border-emerald-500\/40) {
+    border-width: 1px 0 0 0 !important;
+    border-color: rgb(30 43 64 / 0.8) !important;
+  }
+  .desk-clean-clima .rounded-full { border: 0 !important; }
+  .desk-clean-clima > div {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .desk-clean-clima .p-3\.5 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+/* Clima desktop: metriche con filetti continui; checklist con colore per importanza */
+@media (min-width: 1024px) {
+  .desk-clean-clima .desk-clima-metrics { gap: 0 !important; }
+  .desk-clean-clima .desk-clima-metrics > div {
+    border: 0 !important;
+    border-left: 1px solid rgb(30 43 64 / 0.8) !important;
+    border-top: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .desk-clean-clima .desk-clima-metrics > div:first-child { border-left: 0 !important; }
+  .desk-clean-clima [data-imp="essenziale"] {
+    border-left: 2px solid rgb(34 211 238) !important;
+    padding-left: 14px !important;
+  }
+  .desk-clean-clima [data-imp="consigliato"] {
+    border-left: 2px solid rgb(52 211 153) !important;
+    padding-left: 14px !important;
+  }
+  .desk-clean-clima [data-imp] > div > div > span:last-child {
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+}
+
+/* Clima desktop: etichette di importanza allineate a destra in ogni scheda */
+@media (min-width: 1024px) {
+  .desk-clean-clima [data-imp] { padding-right: 12px !important; }
+  .desk-clean-clima [data-imp] > div:last-child { flex: 1 1 auto; min-width: 0; }
+  .desk-clean-clima [data-imp] > div:last-child > div:first-child { width: 100%; }
+  .desk-clean-clima [data-imp] span.font-mono {
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+}
+
+/* Clima desktop: rientro laterale della sezione, così il testo non tocca il bordo */
+@media (min-width: 1024px) {
+  .desk-clean-clima { padding-left: 24px; padding-right: 24px; }
+}
+
+/* Clima desktop: nessun fondo dietro la card hero */
+@media (min-width: 1024px) {
+  .desk-clean-clima > div:first-child { background: transparent !important; }
+}
+
+/* Voli e scalo desktop: schede Pechino e Malpensa piatte, un solo accento */
+@media (min-width: 1024px) {
+  .desk-flat-flights :is(.rounded-2xl, .rounded-xl, .rounded-lg, .rounded-full) { border-radius: 0 !important; }
+  .desk-flat-flights [class*="bg-gradient"] { background-image: none !important; }
+  .desk-flat-flights :is(.bg-slate-900\/90, .bg-slate-900\/80, .bg-slate-900, .bg-slate-950, .bg-slate-950\/60, .bg-slate-800\/40, .bg-amber-500\/20, .bg-red-950\/30, .bg-red-500) {
+    background-color: transparent !important;
+  }
+  .desk-flat-flights .shadow-xl { box-shadow: none !important; }
+  .desk-flat-flights .border { border-width: 1px 0 0 0 !important; }
+  .desk-flat-flights :is(.border-amber-500\/20, .border-amber-500\/30, .border-amber-500\/40, .border-slate-800, .border-slate-700\/60) {
+    border-color: rgb(30 43 64 / 0.8) !important;
+  }
+  .desk-flat-flights :is(.text-amber-400, .text-amber-300, .text-amber-200\/80) { color: rgb(103 232 249) !important; }
+  .desk-flat-flights .uppercase { text-transform: none !important; }
+  .desk-flat-flights .tracking-wider { letter-spacing: normal !important; }
+  .desk-flat-flights .w-6.h-6 {
+    background: transparent !important;
+    color: rgb(148 163 184) !important;
+    width: 1.5rem;
+    height: auto;
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 1024px) {
+  .desk-flat-flights :is(.p-3, .p-4, .p-5, .p-6) { padding-left: 0 !important; padding-right: 0 !important; }
+  .desk-flat-flights :is(h3, h4) > svg, .desk-flat-flights a > svg:first-child { display: none; }
+}
+
+@media (min-width: 1024px) {
+  .desk-flat-flights .w-10.h-10 { background: transparent !important; width: auto; height: auto; }
+}
+
+/* Fase 3 - pagine restanti desktop: piatte, filetti, un accento */
+@media (min-width: 1024px) {
+  .desk-flat :is(.rounded-2xl, .rounded-3xl, .rounded-xl) { border-radius: 0 !important; }
+  .desk-flat [class*="bg-gradient"] { background-image: none !important; }
+  .desk-flat :is(div, section, article, li, details, aside)[class*="bg-slate-"]:not([class*="h-1"]):not([class*="h-2"]):not([class*="w-1"]):not([class*="w-2"]):not([class*="h-0"]),
+  .desk-flat :is(div, section, article, li, details, aside)[class*="bg-"][class*="/"]:not([class*="h-1"]):not([class*="h-2"]):not([class*="w-1"]):not([class*="w-2"]) {
+    background-color: transparent !important;
+  }
+  .desk-flat [class*="shadow-"]:not(button):not(a) { box-shadow: none !important; }
+  .desk-flat :is(div, section, article, li, details, aside).border { border-width: 1px 0 0 0 !important; border-color: rgb(30 43 64 / 0.8) !important; }
+  .desk-flat :is(div, section, article, li, details, aside).border:is(.p-3, .p-4, .p-5, .p-6, .px-3, .px-4, .px-5, .px-6) { padding-left: 0 !important; padding-right: 0 !important; }
+  .desk-flat :is(.text-pink-400, .text-pink-300, .text-violet-400, .text-violet-300, .text-indigo-400, .text-indigo-300, .text-purple-400, .text-purple-300, .text-teal-400, .text-teal-300, .text-sky-400, .text-sky-300, .text-blue-400, .text-blue-300, .text-amber-400, .text-amber-300, .text-orange-400, .text-orange-300) { color: rgb(103 232 249) !important; }
+  .desk-flat .uppercase { text-transform: none !important; }
+  .desk-flat :is(.tracking-wider, .tracking-widest, .tracking-wide) { letter-spacing: normal !important; }
+  .desk-flat :is(h1, h2, h3, h4) > svg { display: none; }
+}
+
+/* Fase 3b - pulsanti a un solo accento, etichette senza mono */
+@media (min-width: 1024px) {
+  .desk-flat :is(button, a)[class*="bg-emerald-5"]:not([class*="/"]),
+  .desk-flat :is(button, a)[class*="bg-violet-"]:not([class*="/"]),
+  .desk-flat :is(button, a)[class*="bg-purple-"]:not([class*="/"]),
+  .desk-flat :is(button, a)[class*="bg-pink-"]:not([class*="/"]),
+  .desk-flat :is(button, a)[class*="bg-sky-"]:not([class*="/"]),
+  .desk-flat :is(button, a)[class*="bg-indigo-"]:not([class*="/"]),
+  .desk-flat :is(button, a)[class*="bg-teal-"]:not([class*="/"]) {
+    background-color: rgb(6 182 212) !important; color: rgb(2 6 23) !important;
+  }
+  .desk-flat :is(button, a)[class*="rounded-full"]:is([class*="bg-violet-"], [class*="bg-purple-"], [class*="bg-emerald-"]) { background-color: rgb(34 211 238 / .15) !important; color: rgb(103 232 249) !important; }
+  .desk-flat .font-mono { font-family: inherit !important; }
+  .desk-flat [data-testid^="sos-call-"] { background: transparent !important; border-top: 1px solid rgb(30 43 64 / .8) !important; border-radius: 0 !important; box-shadow: none !important; }
+  .desk-flat :is(button, a).border-dashed { border-style: solid !important; border-color: rgb(30 43 64 / .8) !important; }
+}
+
+/* Fase 3c - pulsanti pieni: un solo accento */
+@media (min-width: 1024px) {
+  .desk-flat :is(button, a)[class~="bg-emerald-400"],
+  .desk-flat :is(button, a)[class~="bg-emerald-500"],
+  .desk-flat :is(button, a)[class~="bg-emerald-600"],
+  .desk-flat :is(button, a)[class~="bg-violet-400"],
+  .desk-flat :is(button, a)[class~="bg-violet-500"],
+  .desk-flat :is(button, a)[class~="bg-violet-600"],
+  .desk-flat :is(button, a)[class~="bg-purple-400"],
+  .desk-flat :is(button, a)[class~="bg-purple-500"],
+  .desk-flat :is(button, a)[class~="bg-purple-600"],
+  .desk-flat :is(button, a)[class~="bg-pink-400"],
+  .desk-flat :is(button, a)[class~="bg-pink-500"],
+  .desk-flat :is(button, a)[class~="bg-pink-600"],
+  .desk-flat :is(button, a)[class~="bg-sky-400"],
+  .desk-flat :is(button, a)[class~="bg-sky-500"],
+  .desk-flat :is(button, a)[class~="bg-sky-600"],
+  .desk-flat :is(button, a)[class~="bg-indigo-400"],
+  .desk-flat :is(button, a)[class~="bg-indigo-500"],
+  .desk-flat :is(button, a)[class~="bg-indigo-600"],
+  .desk-flat :is(button, a)[class~="bg-teal-400"],
+  .desk-flat :is(button, a)[class~="bg-teal-500"],
+  .desk-flat :is(button, a)[class~="bg-teal-600"],
+  .desk-flat :is(button, a)[class~="bg-amber-400"],
+  .desk-flat :is(button, a)[class~="bg-amber-500"],
+  .desk-flat :is(button, a)[class~="bg-amber-600"],
+  .desk-flat :is(button, a)[class~="bg-orange-400"],
+  .desk-flat :is(button, a)[class~="bg-orange-500"],
+  .desk-flat :is(button, a)[class~="bg-orange-600"],
+  .desk-flat :is(button, a)[class~="bg-blue-400"],
+  .desk-flat :is(button, a)[class~="bg-blue-500"],
+  .desk-flat :is(button, a)[class~="bg-blue-600"] {
+    background-color: rgb(6 182 212) !important; color: rgb(2 6 23) !important; box-shadow: none !important;
+  }
+  .desk-flat :is(button, a)[class*="from-amber"], .desk-flat :is(button, a)[class*="from-emerald"], .desk-flat :is(button, a)[class*="from-purple"] { background-image: none !important; background-color: rgb(6 182 212) !important; color: rgb(2 6 23) !important; }
+}
+
+@media (min-width: 1024px) {
+  .desk-flat a[data-testid^="sos-call-"] { background-color: transparent !important; color: #fff !important; }
+
+}
+
+@media (min-width: 1024px) {
+  .desk-flat [class*="ring-1"]:not(:focus-visible) { --tw-ring-shadow: 0 0 #0000 !important; box-shadow: none !important; }
+  .desk-flat .border.border-cyan-500\/50 { border-color: rgb(34 211 238) !important; }
+}
+
+/* Mappa desktop: layout a pannello + mappa piena, stile Google Maps / Naver Maps */
+@media (min-width: 1024px) {
+  .desk-map { padding-top: 4px; }
+  /* barra comandi: una riga piatta con filetto */
+  .desk-map > div:first-child {
+    border: 0 !important; border-bottom: 1px solid rgb(30 43 64 / .8) !important;
+    border-radius: 0 !important; background: transparent !important; padding: 0 0 14px !important;
+  }
+  /* contenitore: niente cornice, altezza a tutto schermo sotto la hero */
+  .desk-map > div:nth-child(2) {
+    height: calc(100vh - 300px) !important; min-height: 640px; border: 0 !important;
+    border-radius: 0 !important; box-shadow: none !important; background: transparent !important;
+  }
+  /* pannello laterale */
+  .desk-map > div:nth-child(2) > div:first-child {
+    width: 400px !important; border-right: 1px solid rgb(30 43 64 / .8) !important;
+    background: rgb(11 19 34) !important; backdrop-filter: none !important; height: 100% !important;
+  }
+  .desk-map > div:nth-child(2) > div:first-child > div { border-color: rgb(30 43 64 / .8) !important; }
+  .desk-map > div:nth-child(2) > div:first-child :is(.rounded-2xl, .rounded-xl, .rounded-lg) { border-radius: 0 !important; }
+  .desk-map > div:nth-child(2) > div:first-child :is(.bg-slate-900\/95, .bg-slate-900, .bg-slate-900\/80, .bg-slate-950, .bg-slate-950\/80) { background-color: transparent !important; }
+  .desk-map > div:nth-child(2) > div:first-child :is(.shadow-sm, .shadow-lg, .shadow-xl) { box-shadow: none !important; }
+  /* la mappa: area piena senza bordi */
+  .desk-map > div:nth-child(2) > div:not(:first-child) { border-radius: 0 !important; }
+  .desk-map > div:nth-child(2) .leaflet-container { border-radius: 0 !important; }
+  /* etichette tappe: un solo accento, niente uppercase */
+  .desk-map .uppercase { text-transform: none !important; letter-spacing: normal !important; }
+}

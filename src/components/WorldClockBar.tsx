@@ -18,7 +18,7 @@ const CITIES: CityClock[] = [
     id: 'rome',
     name: 'Italia',
     country: 'Roma',
-    flag: '🇮🇹',
+    flag: '',
     timeZone: 'Europe/Rome',
     code: 'CET/CEST',
     offsetLabel: 'Base Italia',
@@ -28,7 +28,7 @@ const CITIES: CityClock[] = [
     id: 'seoul',
     name: 'Seul',
     country: 'Corea del Sud',
-    flag: '🇰🇷',
+    flag: '',
     timeZone: 'Asia/Seoul',
     code: 'KST (UTC+9)',
     offsetLabel: '+8h risp. a Roma',
@@ -38,7 +38,7 @@ const CITIES: CityClock[] = [
     id: 'beijing',
     name: 'Pechino',
     country: 'Cina',
-    flag: '🇨🇳',
+    flag: '',
     timeZone: 'Asia/Shanghai',
     code: 'CST (UTC+8)',
     offsetLabel: '+7h risp. a Roma',
@@ -153,7 +153,7 @@ export const WorldClockBar: React.FC = () => {
             {/* 1. ITALIA */}
             <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition-colors">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-sm select-none shrink-0">🇮🇹</span>
+                <span className="text-sm select-none shrink-0"></span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="hidden min-[460px]:inline font-bold text-white text-[11px] sm:text-xs truncate">
@@ -183,7 +183,7 @@ export const WorldClockBar: React.FC = () => {
             {/* 2. SEUL */}
             <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-cyan-950/30 border border-cyan-500/40 hover:border-cyan-400 transition-colors shadow-sm shadow-cyan-500/10">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-sm select-none shrink-0">🇰🇷</span>
+                <span className="text-sm select-none shrink-0"></span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="hidden min-[460px]:inline font-bold text-cyan-300 text-[11px] sm:text-xs truncate">
@@ -220,7 +220,7 @@ export const WorldClockBar: React.FC = () => {
             {/* 3. PECHINO */}
             <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 transition-colors">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-sm select-none shrink-0">🇨🇳</span>
+                <span className="text-sm select-none shrink-0"></span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="hidden min-[460px]:inline font-bold text-white text-[11px] sm:text-xs truncate">

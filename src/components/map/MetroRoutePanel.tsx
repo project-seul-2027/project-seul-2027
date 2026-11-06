@@ -443,7 +443,7 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
           >
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold text-white truncate">
-                {selectedDestination.category === 'alloggio' ? '🏠 ' : ''}
+                {selectedDestination.category === 'alloggio' ? '' : ''}
                 {selectedDestination.italianName}
               </div>
               <div className="text-[11px] text-slate-400 truncate mt-0.5">
@@ -476,8 +476,8 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
             <div className="flex flex-wrap gap-1">
               {[
                 { id: 'all', label: 'Tutti' },
-                { id: 'alloggio', label: '🏠 Alloggi (4)' },
-                ...(destinations.some((d) => d.category === 'luogo') ? [{ id: 'luogo', label: '📍 Aggiunti' }] : []),
+                { id: 'alloggio', label: 'Alloggi (4)' },
+                ...(destinations.some((d) => d.category === 'luogo') ? [{ id: 'luogo', label: 'Aggiunti' }] : []),
                 { id: 'cultura', label: 'Cultura' },
                 { id: 'nightlife', label: 'Nightlife' },
                 { id: 'food', label: 'Food' },
@@ -518,7 +518,7 @@ export const MetroRoutePanel: React.FC<MetroRoutePanelProps> = ({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-semibold text-slate-100 truncate">
-                        {dest.category === 'alloggio' ? '🏠 ' : ''}
+                        {dest.category === 'alloggio' ? '' : ''}
                         {dest.italianName}
                       </div>
                       <div className="text-[10px] text-slate-500 truncate">

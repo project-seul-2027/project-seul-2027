@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { categoryIconSvg } from './map/categoryIcons';
 import { useQuickIntent } from '../utils/quickIntent';
 import { createPortal } from 'react-dom';
 import {
@@ -183,7 +184,7 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
             <div className="flex flex-wrap gap-1.5">
               {PLACE_CATEGORIES.map((c) => (
                 <button key={c.id} type="button" onClick={() => setCategory(c.id)} aria-pressed={category === c.id} className={`min-h-[40px] px-3 rounded-xl text-xs font-semibold ${category === c.id ? 'bg-violet-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`} data-testid={`place-cat-${c.id}`}>
-                  {c.emoji} {c.label}
+                  <span className="inline-flex align-middle mr-1" dangerouslySetInnerHTML={{ __html: categoryIconSvg(c.id, 14) }} />{c.label}
                 </button>
               ))}
             </div>
@@ -351,7 +352,17 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
     onShowMap();
   };
 
-  if (!user || !slot) return null;
+  if (!user) return null;
+  if (!slot) {
+    return (
+      <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 text-sm text-slate-300 space-y-1" data-testid="places-no-slot">
+        <div className="font-bold text-white">Scegli il tuo posto nel gruppo</div>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Per condividere e votare i luoghi serve un posto nel gruppo. Lo trovi nel profilo, alla voce Partecipanti.
+        </p>
+      </div>
+    );
+  }
   const chip = (active: boolean) => `shrink-0 min-h-[38px] px-3.5 rounded-full text-xs font-semibold border ${active ? 'bg-violet-400 text-slate-950 border-violet-300' : 'bg-slate-900 text-slate-300 border-slate-700'}`;
   return (
     <div className="space-y-4" data-testid="places-view">
@@ -373,7 +384,7 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="group" aria-label="Filtra per tipo">
         <button type="button" onClick={() => setCat('all')} aria-pressed={cat === 'all'} className={chip(cat === 'all')}>Tutti i tipi</button>
         {PLACE_CATEGORIES.map((c) => (
-          <button key={c.id} type="button" onClick={() => setCat(c.id)} aria-pressed={cat === c.id} className={chip(cat === c.id)} data-testid={`place-filter-cat-${c.id}`}>{c.emoji} {c.label}</button>
+          <button key={c.id} type="button" onClick={() => setCat(c.id)} aria-pressed={cat === c.id} className={chip(cat === c.id)} data-testid={`place-filter-cat-${c.id}`}><span className="inline-flex align-middle mr-1" dangerouslySetInnerHTML={{ __html: categoryIconSvg(c.id, 14) }} />{c.label}</button>
         ))}
       </div>
 
@@ -399,7 +410,7 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
         </div>
       )}
 
-      <ul className="space-y-3">
+      <ul className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
         {list.map((p) => {
           const c = categoryOf(p.category);
           const pr = priorityOf(p.priority);
@@ -411,7 +422,7 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
           return (
             <li key={p.id} className={`rounded-2xl border p-3.5 ${p.visited ? 'border-slate-800 bg-slate-900/40 opacity-75' : 'border-violet-500/30 bg-violet-500/5'}`} data-testid="place-card">
               <div className="flex items-start gap-3">
-                <span className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ backgroundColor: `${c.color}33` }}>{c.emoji}</span>
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${c.color}33`, color: c.color }} dangerouslySetInnerHTML={{ __html: categoryIconSvg(c.id, 18) }} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white leading-tight">{p.name}</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">

@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { packingService, describePackingError, PACKING_LIMITS, type PackingSyncStatus } from '../services/packingService';
 import type { PackingCategory, PackingItem, PackingListDoc, PackingLocation } from '../types/packing';
 import { PACKING_CATEGORIES, PACKING_LOCATIONS } from '../types/packing';
+import { useMediaQuery } from '../pwa';
 import {
   Luggage,
   CheckCircle2,
@@ -48,6 +49,7 @@ const CATEGORY_ICONS: Record<PackingCategory, React.ElementType> = {
 };
 
 export const PackingListView: React.FC = () => {
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const { user, group } = useAuth();
   const currentUser = user!;
 
@@ -409,7 +411,13 @@ export const PackingListView: React.FC = () => {
       )}
 
       {/* Header Panoramica Valigia */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950/40 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-xl space-y-3 md:space-y-5">
+      <div
+        className={
+          isDesktop
+            ? 'space-y-4 pb-5 border-b border-white/[0.06]'
+            : 'bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950/40 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-xl space-y-3 md:space-y-5'
+        }
+      >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -447,7 +455,7 @@ export const PackingListView: React.FC = () => {
               <Luggage className="w-6 h-6 text-teal-400" />
               <span>Valigia & Checklist Personale Seul 2027</span>
             </h2>
-            <p className="hidden md:block text-xs text-slate-300 max-w-2xl">
+            <p className="hidden md:block lg:hidden text-xs text-slate-300 max-w-2xl">
               Crea e spunta gli oggetti per il tuo viaggio in Corea. I dati sono legati al tuo account{' '}
               <strong className="text-white">{currentUser.displayName}</strong>, salvati in cloud e puoi decidere se
               condividere la tua lista con i tuoi compagni di viaggio per coordinarvi.
@@ -518,7 +526,30 @@ export const PackingListView: React.FC = () => {
         </div>
 
         {/* Barra di Avanzamento e Indicatori */}
-        <div className="hidden md:grid md:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80">
+        {/* Desktop: i numeri principali in una riga, senza riquadri */}
+        <div className="hidden lg:flex lg:flex-wrap lg:items-center lg:gap-x-10 lg:gap-y-2">
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-3xl font-bold font-mono text-teal-400">{packedCount}/{totalItems}</span>
+            <span className="text-xs text-slate-400">in valigia · {percentPacked}%</span>
+          </div>
+          <div className="flex items-baseline gap-2.5">
+            <span className="text-xl font-bold font-mono text-amber-400">{essentialPacked}/{essentialCount}</span>
+            <span className="text-xs text-slate-400">essenziali pronti</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-300">
+            <span>Malpensa 1 mar · 12:30</span>
+            <span className="text-cyan-400">· check bagaglio 28 feb</span>
+            <button
+              onClick={handleDownloadIcs}
+              aria-label="Aggiungi sveglia al calendario"
+              className="p-1.5 rounded-lg text-teal-300 hover:bg-white/[0.06]"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="hidden md:grid md:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80 lg:hidden">
           <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
             <div>
               <div className="text-[10px] uppercase font-mono text-slate-400">Oggetti in Valigia</div>
@@ -594,7 +625,33 @@ export const PackingListView: React.FC = () => {
         </div>
 
         {/* Suddivisione Oggetti nei 3 Bagagli (Zaino, A mano, Stiva) con Filtro Rapido */}
-        <div className="hidden md:block pt-2 border-t border-slate-800/80">
+        {/* Desktop: filtro per bagaglio come testo sottolineato */}
+        <div className="hidden lg:flex lg:items-center lg:gap-6" role="group" aria-label="Filtra per bagaglio">
+          {PACKING_LOCATIONS.map((loc) => {
+            const isSelected = selectedLocation === loc.id;
+            const totalInLoc = myList.items.filter((i) => (i.location || 'checked') === loc.id).length;
+            const packedInLoc = myList.items.filter((i) => (i.location || 'checked') === loc.id && i.packed).length;
+            return (
+              <button
+                key={loc.id}
+                onClick={() => setSelectedLocation(isSelected ? 'all' : loc.id)}
+                aria-pressed={isSelected}
+                className={`pb-1 text-sm border-b-2 transition-colors ${
+                  isSelected ? 'border-teal-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {loc.label} <span className="font-mono text-xs ml-1">{packedInLoc}/{totalInLoc}</span>
+              </button>
+            );
+          })}
+          {selectedLocation !== 'all' && (
+            <button onClick={() => setSelectedLocation('all')} className="text-xs text-slate-400 hover:text-white">
+              Mostra tutti
+            </button>
+          )}
+        </div>
+
+        <div className="hidden md:block lg:hidden pt-2 border-t border-slate-800/80">
           <div className="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-slate-300">
               <Luggage className="w-3.5 h-3.5 text-teal-400" />
@@ -727,7 +784,13 @@ export const PackingListView: React.FC = () => {
         <div className="space-y-4">
           {/* Banner di suggerimento se la lista ha pochi oggetti */}
           {myList.items.length < 5 && (
-            <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div
+              className={
+                isDesktop
+                  ? 'py-3 border-y border-amber-500/20 flex flex-row items-center justify-between gap-4'
+                  : 'p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3'
+              }
+            >
               <div className="flex items-start gap-3">
                 <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <div>
@@ -751,7 +814,7 @@ export const PackingListView: React.FC = () => {
 
           {/* Telefono: ricerca sempre visibile, il resto dei filtri si apre con un pulsante */}
           <div className="md:hidden flex items-center gap-2">
-            <div className="relative flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0 lg:flex-none lg:w-64">
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -775,9 +838,11 @@ export const PackingListView: React.FC = () => {
           </div>
 
           {/* Barra di Filtri Categoria & Ricerca */}
-          <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} md:flex bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex-col md:flex-row gap-3 items-stretch md:items-center justify-between min-w-0`}>
+          <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between min-w-0 ${
+            isDesktop ? 'py-2 border-b border-white/[0.06]' : 'bg-slate-900/80 border border-slate-800 rounded-xl p-3'
+          }`}>
             {/* Pillole Categoria */}
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none text-xs lg:flex-wrap lg:overflow-visible lg:flex-1 lg:min-w-0">
               <button
                 onClick={() => setSelectedCategory('all')}
                 className={`px-2.5 py-1 rounded-lg whitespace-nowrap font-medium transition-colors ${
@@ -812,7 +877,7 @@ export const PackingListView: React.FC = () => {
 
             {/* Ricerca e Filtro Stato */}
             <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-auto md:justify-end min-w-0">
-              <div className="hidden md:block relative col-span-2 md:col-span-1 md:w-48 min-w-0">
+              <div className="hidden md:block relative col-span-2 md:col-span-1 md:w-48 lg:w-64 lg:shrink-0 min-w-0">
                 <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -828,10 +893,10 @@ export const PackingListView: React.FC = () => {
                 onChange={(e) => setSelectedLocation(e.target.value)}
                 className="bg-slate-950 border border-slate-800 rounded-lg px-2 sm:px-2.5 py-2 sm:py-1.5 text-[11px] sm:text-xs text-slate-300 focus:outline-none focus:border-teal-500 font-mono min-w-0 w-full"
               >
-                <option value="all">🎒🧳✈️ Tutti</option>
-                <option value="backpack">🎒 Solo Zaino</option>
-                <option value="cabin">🧳 Solo Valigia a mano</option>
-                <option value="checked">✈️ Solo Valigia da stiva</option>
+                <option value="all">Tutti</option>
+                <option value="backpack">Solo Zaino</option>
+                <option value="cabin">Solo Valigia a mano</option>
+                <option value="checked">Solo Valigia da stiva</option>
               </select>
 
               <select
@@ -848,7 +913,11 @@ export const PackingListView: React.FC = () => {
 
           {/* Griglia / Elenco Oggetti */}
           {filteredMyItems.length === 0 ? (
-            <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 space-y-3">
+            <div
+              className={`text-center py-12 px-4 space-y-3 ${
+                isDesktop ? '' : 'rounded-2xl border border-dashed border-slate-800 bg-slate-900/40'
+              }`}
+            >
               <Luggage className="w-10 h-10 text-slate-600 mx-auto" />
               <div className="text-sm font-bold text-slate-300">Nessun oggetto trovato</div>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -874,7 +943,7 @@ export const PackingListView: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {filteredMyItems.map((item) => {
                 const categoryMeta = PACKING_CATEGORIES.find((c) => c.id === item.category);
                 const IconComponent = CATEGORY_ICONS[item.category] || Package;
@@ -1077,7 +1146,7 @@ export const PackingListView: React.FC = () => {
                       </h3>
                     </div>
                     <div className="text-xs text-slate-400">
-                      💡 <em>Puoi copiare qualsiasi oggetto utile direttamente nella tua valigia!</em>
+                      <em>Puoi copiare qualsiasi oggetto utile direttamente nella tua valigia!</em>
                     </div>
                   </div>
 
@@ -1087,7 +1156,7 @@ export const PackingListView: React.FC = () => {
                       La lista di {ownerDisplayName(currentSharedList)} è ancora vuota.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
                       {currentSharedList.items.map((item) => {
                         const IconComponent = CATEGORY_ICONS[item.category] || Package;
                         const inMyList = myList.items.some(
@@ -1124,7 +1193,7 @@ export const PackingListView: React.FC = () => {
                                 )}
                                 {item.location && (
                                   <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-purple-500/10 text-purple-300 border border-purple-500/30 flex items-center gap-1">
-                                    <span>{item.location === 'backpack' ? '🎒' : item.location === 'cabin' ? '🧳' : '✈️'}</span>
+                                    <span>{item.location === 'backpack' ? '' : item.location === 'cabin' ? '' : ''}</span>
                                     <span>{item.location === 'backpack' ? 'Zaino' : item.location === 'cabin' ? 'A mano' : 'Stiva'}</span>
                                   </span>
                                 )}

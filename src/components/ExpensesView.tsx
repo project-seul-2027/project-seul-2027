@@ -597,7 +597,7 @@ const MyBalanceCard: React.FC<{
   const mine = me ? summary[me] : null;
   const net = mine?.net ?? 0;
   return (
-    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 rounded-2xl p-4 shadow-xl">
+    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 rounded-2xl p-4 shadow-xl lg:border-0 lg:bg-none lg:bg-white/[0.03] lg:rounded-3xl lg:shadow-none lg:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-wider font-mono text-slate-400">Il tuo saldo</p>
@@ -663,7 +663,7 @@ const BalancesSection: React.FC<{
   const others = balances.filter((b) => b.from !== me && b.to !== me);
   if (balances.length === 0) {
     return (
-      <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-slate-800">
+      <div className="text-center py-8 px-4 rounded-2xl border border-dashed border-slate-800 lg:border-0 lg:bg-white/[0.03] lg:rounded-3xl">
         <HandCoins className="w-8 h-8 mx-auto text-emerald-400/70" />
         <p className="mt-2 text-sm font-semibold text-white">Tutti in pari</p>
         <p className="text-xs text-slate-400">Nessuno deve niente a nessuno.</p>
@@ -902,7 +902,7 @@ const FilterChips: React.FC<{ value: ListFilter; onChange: (f: ListFilter) => vo
 );
 
 const EmptyList: React.FC<{ filtered: boolean; onAdd: () => void }> = ({ filtered, onAdd }) => (
-  <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-slate-800">
+  <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-slate-800 lg:border-0 lg:bg-white/[0.03] lg:rounded-3xl">
     <Receipt className="w-8 h-8 mx-auto text-slate-500" />
     <p className="mt-2 text-sm font-semibold text-white">{filtered ? 'Nessuna spesa con questo filtro' : 'Ancora nessuna spesa'}</p>
     {!filtered && (
@@ -1210,7 +1210,7 @@ export const ExpensesView: React.FC = () => {
                     <span className="text-[10.5px] uppercase tracking-wider font-mono text-slate-400">{formatDay(g.date)}</span>
                     <span className="text-[10.5px] font-mono text-slate-500">{formatEur(g.cents)}</span>
                   </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 divide-y divide-slate-800/80 overflow-hidden">
+                  <div className={isDesktop ? 'rounded-3xl bg-white/[0.03] divide-y divide-white/[0.06] overflow-hidden' : 'rounded-2xl border border-slate-800 bg-slate-900/70 divide-y divide-slate-800/80 overflow-hidden'}>
                     {g.items.map((e) => (
                       <button
                         key={e.id}
@@ -1299,17 +1299,17 @@ export const ExpensesView: React.FC = () => {
           <MyBalanceCard me={me} summary={summary} total={total} count={expenses.length} todayShare={todayShare} budgetEur={budgetEur} />
           <LeaverBanner balances={balances} me={me} names={names} />
           <CurrencyConverter rates={rates} />
-          <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <section className={isDesktop ? 'rounded-3xl bg-white/[0.03] p-6 space-y-4' : 'bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3'}>
             <h3 className="text-sm font-bold text-white">Saldi</h3>
             <BalancesSection balances={balances} me={me} names={names} onSettle={settle} />
           </section>
-          <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <section className={isDesktop ? 'rounded-3xl bg-white/[0.03] p-6 space-y-4' : 'bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3'}>
             <h3 className="text-sm font-bold text-white">Riepilogo per persona</h3>
             <SummarySection summary={summary} expenses={expenses} names={names} me={me} compact />
           </section>
         </div>
 
-        <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 min-w-0">
+        <section className={isDesktop ? 'rounded-3xl bg-white/[0.03] p-6 space-y-4 min-w-0' : 'bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3 min-w-0'}>
           <div className="flex items-center justify-between gap-3">
             <FilterChips value={filter} onChange={setFilter} />
             <div className="relative w-64">
