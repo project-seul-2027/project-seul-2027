@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { History, GitCommit, ExternalLink, Search, ChevronDown, ChevronUp, Sparkles, Tag } from 'lucide-react';
-import { APP_VERSION, CHANGELOG, REPO_URL, seriesOf, type ChangelogEntry } from '../data/changelog';
+import { APP_VERSION, CHANGELOG, REPO_URL, seriesOf, type ChangelogBlock, type ChangelogEntry } from '../data/changelog';
 import { FoldText } from './mobile/FoldText';
 import { useMediaQuery } from '../pwa';
 
@@ -10,11 +10,31 @@ const COLLAPSED_ITEMS = 4;
 const dateFormat = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
 const timeFormat = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' });
 
+/** Nelle schede chiuse mostra il primo testo e le prime voci; `limit` null = tutto */
+function limitBlocks(blocks: ChangelogBlock[], limit: number | null): ChangelogBlock[] {
+  let left = limit ?? Infinity;
+  let textSeen = false;
+  const out: ChangelogBlock[] = [];
+  for (const b of blocks) {
+    if (b.kind === 'text') {
+      if (limit === null || !textSeen) out.push(b);
+      textSeen = true;
+    } else if (left > 0) {
+      const items = b.items.slice(0, left);
+      out.push({ ...b, items });
+      left -= items.length;
+    }
+  }
+  return out;
+}
+
 const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent: boolean; isDesktop: boolean }> = ({ entry, isLatest, isCurrent, isDesktop }) => {
   const [open, setOpen] = useState(false);
   const date = new Date(entry.date);
-  const shown = open ? entry.items : entry.items.slice(0, COLLAPSED_ITEMS);
-  const hidden = entry.items.length - shown.length;
+  const blocks: ChangelogBlock[] = entry.content ?? (entry.items.length ? [{ kind: 'list', heading: null, items: entry.items }] : []);
+  const shown = limitBlocks(blocks, open ? null : COLLAPSED_ITEMS);
+  const shownItems = shown.reduce((n, b) => n + (b.kind === 'list' ? b.items.length : 0), 0);
+  const hidden = entry.items.length - shownItems;
 
   return (
     <article
@@ -27,7 +47,8 @@ const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent:
             }`
       }
     >
-      <div className="flex flex-wrap items-center gap-2 lg:col-start-1 lg:row-start-1 lg:flex-col lg:items-start">
+      <div className="contents lg:flex lg:flex-col lg:items-start lg:gap-2 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+        <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-sm font-bold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-cyan-300">
           v{entry.version}
         </span>
@@ -51,20 +72,45 @@ const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent:
         <span className="ml-auto lg:ml-0 text-[11px] text-slate-400 font-mono tabular-nums">
           {dateFormat.format(date)} · {timeFormat.format(date)}
         </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px] text-slate-500">
+        <a
+          href={entry.url}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 font-mono text-slate-400 hover:text-cyan-300"
+        >
+          <GitCommit className="w-3 h-3" />
+          {entry.short}
+          <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+        {entry.author && <span>di {entry.author}</span>}
+        </div>
       </div>
 
       <h3 className="text-sm sm:text-base font-bold text-white leading-snug lg:col-start-2 lg:row-start-1 lg:text-lg">{entry.title}</h3>
 
-      {entry.items.length > 0 && (
-        <div className="space-y-1.5 lg:col-start-2 lg:row-start-2">
-          <ul className="space-y-1.5">
-            {shown.map((item, i) => (
-              <li key={i} className="text-xs sm:text-[13px] text-slate-300 flex items-start gap-2 leading-relaxed">
-                <span className="text-cyan-400 font-bold shrink-0">•</span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+      {blocks.length > 0 && (
+        <div className="space-y-4 lg:col-start-2 lg:row-start-2">
+          {shown.map((b, bi) =>
+            b.kind === 'text' ? (
+              <p key={bi} className="text-xs sm:text-[13px] text-slate-300 leading-relaxed">
+                {b.text}
+              </p>
+            ) : (
+              <section key={bi} className={bi > 0 ? 'pt-4 border-t border-white/[0.06]' : undefined}>
+                {b.heading && <h4 className="text-xs sm:text-sm font-semibold text-slate-100 mb-2">{b.heading}</h4>}
+                <ul className="space-y-1.5">
+                  {b.items.map((item, i) => (
+                    <li key={i} className="text-xs sm:text-[13px] text-slate-300 flex items-start gap-2 leading-relaxed">
+                      <span className="text-cyan-400 font-bold shrink-0">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          )}
           {entry.items.length > COLLAPSED_ITEMS && (
             <button
               type="button"
@@ -78,19 +124,6 @@ const EntryCard: React.FC<{ entry: ChangelogEntry; isLatest: boolean; isCurrent:
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-[11px] text-slate-500 lg:col-start-1 lg:row-start-2 lg:self-start">
-        <a
-          href={entry.url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 font-mono text-slate-400 hover:text-cyan-300"
-        >
-          <GitCommit className="w-3 h-3" />
-          {entry.short}
-          <ExternalLink className="w-2.5 h-2.5" />
-        </a>
-        {entry.author && <span>di {entry.author}</span>}
-      </div>
     </article>
   );
 };
