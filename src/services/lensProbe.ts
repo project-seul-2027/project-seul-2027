@@ -163,7 +163,7 @@ export interface LensAssignment {
   others: Record<string, { kind: MeasuredKind; mag: number }>;
 }
 
-const reliable = (e: MagEstimate | null): e is MagEstimate => !!e && e.score >= 0.5 && e.margin >= 0.06;
+export const reliable = (e: MagEstimate | null): e is MagEstimate => !!e && e.score >= 0.5 && e.margin >= 0.06;
 
 /**
  * Dai campi visivi misurati rispetto a un obiettivo di riferimento (quello aperto di default) ricava quale sia il principale.
@@ -172,8 +172,11 @@ const reliable = (e: MagEstimate | null): e is MagEstimate => !!e && e.score >= 
  * 1,25× più del successivo e il successivo non è già un teleobiettivo (oltre 2,3× il più largo). Se la misura non è netta: null.
  */
 export function assignLenses(refId: string, others: { id: string; est: MagEstimate | null }[]): LensAssignment | null {
-  if (others.length === 0 || !others.every((o) => reliable(o.est))) return null;
-  const all = [{ id: refId, s: 1 }, ...others.map((o) => ({ id: o.id, s: (o.est as MagEstimate).mag }))].sort(
+  // Gli obiettivi misurati male (es. un tele che non mette a fuoco da vicino) restano sconosciuti,
+  // senza far perdere quelli misurati bene
+  const good = others.filter((o) => reliable(o.est));
+  if (good.length === 0) return null;
+  const all = [{ id: refId, s: 1 }, ...good.map((o) => ({ id: o.id, s: (o.est as MagEstimate).mag }))].sort(
     (a, b) => a.s - b.s
   );
   const r = all[1].s / all[0].s;

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Check, Grid3x3, Images, Loader2, RotateCcw, ScanSearch, Settings2, Smartphone, Sun, SwitchCamera, Timer, X, Zap, ZapOff } from 'lucide-react';
 import { decodeScaled, type DecodedImage } from '../services/galleryService';
 import { isIos } from '../pwa';
-import { assignLenses, estimateMagnification, frameContrast, type GrayFrame } from '../services/lensProbe';
+import { assignLenses, estimateMagnification, frameContrast, reliable, type GrayFrame } from '../services/lensProbe';
 
 interface CameraCaptureModalProps {
   /** Foto scattata (JPEG) */
@@ -417,6 +417,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   const [probing, setProbing] = useState<{ step: number; total: number } | null>(null);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
   const [menuLens, setMenuLens] = useState<Lens | null>(null);
+  const [diag, setDiag] = useState<string[]>([]);
 
   // Telefono girato in orizzontale: le icone ruotano e la foto esce raddrizzata
   const [rotation, setRotation] = useState<Rotation>(0);
@@ -598,7 +599,11 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           mode = 'hardware';
           min = caps.zoom.min;
           max = Math.min(caps.zoom.max, HARDWARE_ZOOM_CAP);
-          initialHw = settings.zoom ?? caps.zoom.min;
+          // Telefoni con un solo obiettivo "logico" che scende sotto 1× (0,5×): si parte da 1×, non dall'ultra grandangolare
+          initialHw = settings.zoom ?? (caps.zoom.min <= 1 && caps.zoom.max >= 1 ? 1 : caps.zoom.min);
+          if (settings.zoom == null && initialHw === 1 && caps.zoom.min < 1) {
+            track.applyConstraints({ advanced: [{ zoom: 1 } as MediaTrackConstraintSet] }).catch(() => undefined);
+          }
         }
         if (role === 'main') {
           lastMainMaxRef.current = max;
@@ -625,6 +630,12 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         const ec = caps.exposureCompensation;
         setExpRange(ec && ec.max > ec.min ? { min: ec.min, max: ec.max, step: ec.step || 0.1 } : null);
         setExposure((settings as MediaTrackSettings & { exposureCompensation?: number }).exposureCompensation ?? 0);
+        setDiag([
+          `Aperto: ${track.label || '?'}`,
+          `Zoom: ${caps.zoom ? `${caps.zoom.min}–${caps.zoom.max}` : 'non disponibile'} (ora ${settings.zoom ?? '?'})`,
+          `Risoluzione: ${settings.width ?? '?'}×${settings.height ?? '?'}`,
+          `Obiettivi posteriori: ${rawList.length ? rawList.map((r) => r.label).join(' | ') : 'nessuno'}`,
+        ]);
         setRawLenses(rawList);
         setActiveLensId(activeId);
         setVideoDims({ w: video?.videoWidth ?? 0, h: video?.videoHeight ?? 0 });
@@ -823,6 +834,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
 
     let failure: string | null = null;
     let assignment: ReturnType<typeof assignLenses> = null;
+    let unresolved = 0;
     const ref = await probeFrame(refLens.id, portrait, alive);
     if (!ref) failure = 'Non riesco ad aprire gli obiettivi per confrontarli.';
     else if (frameContrast(ref) < 10) failure = 'La scena è troppo uniforme (buio o muro): inquadra qualcosa con molti dettagli.';
@@ -832,10 +844,19 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       for (let i = 0; i < targets.length && alive(); i++) {
         setProbing({ step: i + 1, total: targets.length + 1 });
         await sleep(300);
-        const frame = await probeFrame(targets[i].id, portrait, alive);
-        estimates.push({ id: targets[i].id, est: frame ? estimateMagnification(ref, frame) : null });
+        // Un tele non mette a fuoco subito (o da vicino): se la misura è incerta si riprova con un nuovo fotogramma
+        let est = null as ReturnType<typeof estimateMagnification>;
+        for (let attempt = 0; attempt < 3 && alive(); attempt++) {
+          const frame = await probeFrame(targets[i].id, portrait, alive);
+          const e = frame ? estimateMagnification(ref, frame) : null;
+          if (e && (!est || e.score > est.score)) est = e;
+          if (est && reliable(est)) break;
+          await sleep(300);
+        }
+        estimates.push({ id: targets[i].id, est });
       }
       if (alive()) assignment = assignLenses(refLens.id, estimates);
+      if (assignment) unresolved = estimates.filter((x) => !reliable(x.est)).length;
     }
     if (!alive()) return;
 
@@ -850,7 +871,14 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       mainIdRef.current = assignment.mainId;
       setMainId(assignment.mainId);
       const rebuilt = buildLenses(rawLenses, next, assignment.mainId);
-      setNotice({ ok: true, text: rebuilt.map((l) => l.name).join(' · ') });
+      setNotice({
+        ok: unresolved === 0,
+        text:
+          rebuilt.map((l) => l.name).join(' · ') +
+          (unresolved > 0
+            ? `. ${unresolved === 1 ? 'Un obiettivo non è stato riconosciuto' : `${unresolved} obiettivi non sono stati riconosciuti`}: riprova inquadrando una scena lontana e ricca di dettagli.`
+            : ''),
+      });
     } else {
       setNotice({
         ok: false,
@@ -864,6 +892,22 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     pendingZoomRef.current = null;
     switchingRef.current = false;
     setDeviceId(mainOverrideRef.current);
+    setRestartKey((k) => k + 1);
+  };
+
+  /** Dimentica quanto riconosciuto o detto (anche un principale sbagliato) e riparte dal predefinito del telefono */
+  const resetLenses = () => {
+    saveLensInfo({});
+    lensInfoRef.current = {};
+    setLensInfo({});
+    mainOverrideRef.current = null;
+    saveMainOverride(null);
+    mainIdRef.current = null;
+    setMainId(null);
+    setSettingsOpen(false);
+    pendingZoomRef.current = null;
+    switchingRef.current = false;
+    setDeviceId(null);
     setRestartKey((k) => k + 1);
   };
 
@@ -1084,6 +1128,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
 
   // Il pulsante "Riconosci" serve finché c'è un obiettivo di cui non si sa nulla
   const needsRecognition = lenses.length > 1;
+  // Suggerimento sull'anteprima finché c'è un obiettivo senza ruolo (es. un tele che il browser non nomina)
+  const hasUnknownLens = facing === 'environment' && lenses.some((l) => l.id !== mainId && l.kind === 'other' && l.origin === 'none');
 
   // Ripresa attenuata dietro il riquadro: stesse dimensioni e stesso ingrandimento del video principale, così combacia
   let ghostStyle: React.CSSProperties | null = null;
@@ -1340,6 +1386,20 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         )}
       </div>
 
+      {ready && !probing && !shot && hasUnknownLens && (
+        <div className="shrink-0 pt-3 flex justify-center">
+          <button
+            type="button"
+            onClick={() => void probeLenses()}
+            data-testid="camera-recognize"
+            className="cam-rise h-10 pl-3 pr-4 rounded-full bg-white/10 text-white text-[13px] font-medium flex items-center gap-2 active:scale-95 transition-transform"
+          >
+            <ScanSearch className="w-4 h-4 text-[#52d9e6]" />
+            Riconosci gli obiettivi per il cambio automatico
+          </button>
+        </div>
+      )}
+
       {/* Zoom: tocca un valore o trascina la fila per regolarlo fine */}
       {ready && zoomPresets.length > 1 && (
         <div className="cam-rise shrink-0 pt-4 flex justify-center">
@@ -1524,6 +1584,13 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
                 <p className="text-[12px] text-[#97a5b9] leading-snug">
                   Tocca di nuovo l'obiettivo in uso per dire che tipo è. Lo zoom passa da solo all'obiettivo giusto.
                 </p>
+                <button
+                  type="button"
+                  onClick={resetLenses}
+                  className="w-full min-h-[44px] px-4 rounded-xl text-[13px] font-medium text-[#97a5b9] text-left"
+                >
+                  Azzera il riconoscimento e ricomincia
+                </button>
               </section>
             )}
 
@@ -1538,6 +1605,17 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
               <Smartphone className="w-4 h-4 text-[#97a5b9]" />
               Usa l'app Fotocamera del telefono
             </button>
+
+            {diag.length > 0 && (
+              <details className="text-[11px] text-[#97a5b9] leading-snug">
+                <summary className="min-h-[36px] flex items-center cursor-pointer">Dettagli tecnici della fotocamera</summary>
+                <ul className="space-y-1 break-words pb-1">
+                  {diag.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
         </div>
       )}
