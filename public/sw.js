@@ -243,9 +243,14 @@ async function handleShare(request) {
   const copy = request.clone();
   let photos = [];
   let form = null;
+  // Cosa è arrivato davvero (per capire se il telefono ha consegnato il file)
+  const seen = [];
   try {
     form = await request.formData();
-    for (const [, v] of form.entries()) if (v && typeof v !== 'string' && v.size > 0) photos.push(v);
+    for (const [k, v] of form.entries()) {
+      seen.push(typeof v === 'string' ? `${k}=testo` : `${k}=${v.type || '?'} ${Math.round(v.size / 1024)}KB`);
+      if (v && typeof v !== 'string' && v.size > 0) photos.push(v);
+    }
   } catch (e1) {
     // formData non è riuscito: si prova a leggere il corpo grezzo
     try {
@@ -275,7 +280,7 @@ async function handleShare(request) {
       }
     }
     // Nessun file e nessun testo: lo si segnala alla pagina invece di tornare in silenzio a "Oggi"
-    return q.toString() ? go(q.toString()) : go('p=gallery&shared=empty');
+    return q.toString() ? go(q.toString()) : go(`p=gallery&shared=empty&why=${encodeURIComponent(`${form ? 'modulo' : 'grezzo'}: ${seen.join(', ') || 'nessun campo'}${sizeInfo}`.slice(0, 160))}`);
   } catch (e) {
     return fail('salvataggio', e, sizeInfo);
   }

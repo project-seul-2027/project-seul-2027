@@ -502,7 +502,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
       // La condivisione è arrivata ma la foto no: lo si dice, invece di tornare in silenzio alla pagina Oggi
       resetUploadForm();
       setIsUploadOpen(true);
-      setUploadError(sharedState === 'empty' ? "La foto condivisa non è arrivata all'app. Riprova, oppure scegli la foto con «Dalla galleria»." : `Condivisione non riuscita (${why ?? 'errore'}). Scegli la foto con «Dalla galleria».`);
+      setUploadError(sharedState === 'empty' ? `La foto condivisa non è arrivata all'app (${why ?? 'nessun dettaglio'}). Scegli la foto con «Dalla galleria».` : `Condivisione non riuscita (${why ?? 'errore'}). Scegli la foto con «Dalla galleria».`);
       return;
     }
     let active = true;
