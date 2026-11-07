@@ -487,17 +487,33 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   // Foto condivisa dal telefono ("Condividi → Seul 2027"): apre il caricamento con quella foto
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('shared') !== '1') return;
+    const sharedState = params.get('shared');
+    if (!sharedState) return;
+    const why = params.get('why');
     params.delete('shared');
+    params.delete('why');
     const rest = params.toString();
     try {
       window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}`);
     } catch {
       /* non essenziale */
     }
+    if (sharedState === 'err' || sharedState === 'empty') {
+      // La condivisione è arrivata ma la foto no: lo si dice, invece di tornare in silenzio alla pagina Oggi
+      resetUploadForm();
+      setIsUploadOpen(true);
+      setUploadError(sharedState === 'empty' ? "La foto condivisa non è arrivata all'app. Riprova, oppure scegli la foto con «Dalla galleria»." : `Condivisione non riuscita (${why ?? 'errore'}). Scegli la foto con «Dalla galleria».`);
+      return;
+    }
     let active = true;
     void takeSharedPhoto().then((file) => {
-      if (!active || !file) return;
+      if (!active) return;
+      if (!file) {
+        resetUploadForm();
+        setIsUploadOpen(true);
+        setUploadError('La foto condivisa non è stata trovata sul telefono. Scegli la foto con «Dalla galleria».');
+        return;
+      }
       resetUploadForm();
       setIsUploadOpen(true);
       void handleFileSelect(file);
