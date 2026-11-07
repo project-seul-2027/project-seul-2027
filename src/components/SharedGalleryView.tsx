@@ -1704,7 +1704,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-cyan-500/40 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl space-y-5 text-slate-200 my-auto max-h-[92vh] overflow-y-auto"
+            className="ms-upload bg-slate-900 border border-cyan-500/40 rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl space-y-5 text-slate-200 my-auto max-h-[92vh] overflow-y-auto"
           >
             {/* Header Modal Caricamento */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -1740,7 +1740,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             {/* Zona Drop / Selezione File */}
             <div className="space-y-3">
               <label className="block text-xs font-bold text-slate-300">
-                1. Seleziona l'immagine da caricare
+                <span className="ms-num">1.</span> Seleziona l'immagine da caricare
               </label>
 
               {!previewDataUrl ? (
@@ -1843,7 +1843,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             {/* Selezione Luogo (con opzione Scrittura Personalizzata) */}
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-300">
-                2. Dove è stata scattata la foto? (Seleziona o scrivi)
+                <span className="ms-num">2.</span> Dove è stata scattata la foto? (Seleziona o scrivi)
               </label>
 
               <select
@@ -1887,7 +1887,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             {/* Collegamento al Giorno dell'Itinerario */}
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-300">
-                3. A quale giorno dell'itinerario corrisponde?
+                <span className="ms-num">3.</span> A quale giorno dell'itinerario corrisponde?
               </label>
 
               <select
@@ -1908,10 +1908,10 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-300">
-                  4. Didascalia e menzioni compagni (@nome)
+                  <span className="ms-num">4.</span> Didascalia e menzioni compagni (@nome)
                 </label>
                 <span className="text-[11px] text-slate-400">
-                  Clicca un nome sotto per taggarlo rapidamente:
+                  Tocca un nome per taggarlo:
                 </span>
               </div>
 
@@ -1957,7 +1957,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-40 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/25 transition-all flex items-center gap-2 cursor-pointer"
               >
                 {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                <span>{isPublishing ? 'Pubblico…' : isCompressing ? 'Ottimizzo la foto…' : 'Pubblica nella Bacheca Condivisa'}</span>
+                <span>{isPublishing ? 'Pubblico…' : isCompressing ? 'Ottimizzo la foto…' : 'Pubblica nella bacheca'}</span>
               </button>
             </div>
             </>)}

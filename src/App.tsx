@@ -640,7 +640,7 @@ function TripPortal() {
       <main key={activeTab === 'pdf' ? 'pdf' : itineraryVersion} ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-5 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['today','itinerary','map'].includes(activeTab) ? '' : 'ms-skin'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing'].includes(activeTab) ? 'desk-flat' : ''}`}>
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
         {!isDesktop && !install.standalone && !installBannerHidden && !updateAvailable && !inTripWindow() && (install.canPrompt || install.needsIosInstructions) && (
-          <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30">
+          <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30 max-lg:fixed max-lg:inset-x-4 max-lg:bottom-[calc(96px+env(safe-area-inset-bottom))] max-lg:z-[60] max-lg:mb-0 max-lg:rounded-2xl max-lg:border-0 max-lg:bg-[#0f1c2b] max-lg:[background-image:none] max-lg:shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
             <img src="./icons/icon-192.png" alt="" className="w-11 h-11 rounded-xl shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-white">Installa Seul 2027</div>

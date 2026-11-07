@@ -49,11 +49,40 @@ export interface CompressedImage {
   compressionRatio: number;
 }
 
+/** Lato massimo con cui si decodifica la foto: oltre non serve (si pubblica a ~1600 px) e la memoria del telefono non basta */
+const DECODE_MAX_DIMENSION = 2400;
+
+/** Legge le dimensioni senza decodificare i pixel (le foto da 50-200 megapixel a piena risoluzione fanno crollare la scheda) */
+async function probeSize(file: File): Promise<{ w: number; h: number } | null> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('probe'));
+    });
+    return img.naturalWidth && img.naturalHeight ? { w: img.naturalWidth, h: img.naturalHeight } : null;
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 async function loadSource(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; close: () => void }> {
   // 'from-image' applica l'orientamento EXIF: le foto scattate in verticale col telefono restano dritte
   if (typeof createImageBitmap === 'function') {
     try {
-      const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      // Foto molto grandi: si decodifica già ridotta, così non si carica mai l'immagine intera in memoria
+      const size = await probeSize(file);
+      const opts: ImageBitmapOptions = { imageOrientation: 'from-image' };
+      if (size && Math.max(size.w, size.h) > DECODE_MAX_DIMENSION) {
+        if (size.w >= size.h) opts.resizeWidth = DECODE_MAX_DIMENSION;
+        else opts.resizeHeight = DECODE_MAX_DIMENSION;
+        opts.resizeQuality = 'high';
+      }
+      const bmp = await createImageBitmap(file, opts);
       return { source: bmp, width: bmp.width, height: bmp.height, close: () => bmp.close() };
     } catch {
       // formato non gestito da createImageBitmap: si prova con <img>
