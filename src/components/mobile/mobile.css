@@ -520,3 +520,28 @@
   .ms-profile select { color-scheme: dark; }
   .ms-profile select option { background: #152231; color: #eaf0f6; }
 }
+
+/* Caricamento foto (bacheca condivisa): foglio dal basso, campi piatti, come il resto dell'app */
+@media (max-width: 1023px) {
+  .ms-upload { background: #0a1119 !important; border: 0 !important; border-radius: 22px 22px 0 0 !important; box-shadow: none !important; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) !important; max-height: 94dvh !important; margin-top: auto !important; color: #eaf0f6; }
+  .ms-upload h3 { font-family: 'Outfit', system-ui, sans-serif; font-size: 22px; font-weight: 500; color: #eaf0f6 !important; }
+  .ms-upload p, .ms-upload span { color: #97a5b9; }
+  .ms-upload .ms-num { color: #52d9e6; font-weight: 600; margin-right: 2px; }
+  .ms-upload label { color: #eaf0f6 !important; font-size: 15px !important; font-weight: 600 !important; }
+  .ms-upload .border-b { border-color: rgba(234,240,246,.11) !important; }
+  .ms-upload .bg-slate-800, .ms-upload .bg-slate-950, .ms-upload .bg-cyan-950, .ms-upload .bg-cyan-950\/50 { background: var(--ms-fill) !important; }
+  .ms-upload .p-2.rounded-xl, .ms-upload .w-12.h-12 { background: var(--ms-fill) !important; border: 0 !important; color: #52d9e6 !important; }
+  .ms-upload select, .ms-upload textarea, .ms-upload input[type='text'] { background: var(--ms-fill) !important; border: 0 !important; border-radius: 12px !important; color: #eaf0f6 !important; font-size: 15px !important; min-height: 48px; padding: 12px 14px !important; }
+  .ms-upload textarea { min-height: 96px; }
+  .ms-upload label.border-dashed, .ms-upload .border-dashed { border: 0 !important; background: var(--ms-fill) !important; border-radius: 18px !important; padding: 28px 16px !important; }
+  .ms-upload button.inline-flex { background: var(--ms-fill) !important; border: 0 !important; color: #c3cfdd !important; min-height: 40px; border-radius: 999px !important; font-size: 14px !important; padding: 0 14px !important; }
+  .ms-upload button.inline-flex span { color: #c3cfdd; }
+  .ms-upload .border-t { border-color: rgba(234,240,246,.11) !important; }
+  .ms-upload .bg-slate-800.rounded-xl, .ms-upload button.rounded-xl.bg-slate-800 { background: transparent !important; color: #97a5b9 !important; font-size: 15px !important; font-weight: 500 !important; min-height: 48px; padding: 0 18px !important; }
+  .ms-upload button.rounded-xl.bg-gradient-to-r { background: #52d9e6 !important; color: #04242a !important; box-shadow: none !important; font-size: 15px !important; font-weight: 600 !important; min-height: 52px; border-radius: 12px !important; flex: 1; justify-content: center; }
+  .ms-upload button.rounded-xl.bg-gradient-to-r span { color: #04242a !important; }
+  .ms-upload button.rounded-xl.bg-gradient-to-r svg { color: #04242a; }
+  .ms-upload button.rounded-xl.bg-gradient-to-r:disabled { opacity: .4; }
+  .ms-upload .bg-red-950\/50 { background: rgba(248,113,113,.10) !important; border: 0 !important; }
+  .ms-upload .text-cyan-400 { color: #52d9e6 !important; }
+}
