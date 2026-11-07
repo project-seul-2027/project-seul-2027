@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Download, Maximize2, X, BookOpen, Upload } from 'lucide-react';
+import { FileText, Download, Maximize2, X, BookOpen, Upload, ChevronDown } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { itineraryPdfService, type OverrideReport } from '../services/itineraryPdfService';
 import { useItineraryPdf } from './useItineraryPdf';
@@ -97,6 +97,81 @@ export const PdfViewerModal: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [fullscreen]);
 
+  // Indice delle pagine: su telefono è una lista compatta sotto il visualizzatore
+  const topicsBlock = !custom ? (
+    isDesktop ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {pageTopics.map((pt) => (
+          <div
+            key={pt.page}
+            onClick={() => setSelectedPageTopic(pt.page)}
+            className={`p-3 transition-all cursor-pointer ${
+              isDesktop
+                ? selectedPageTopic === pt.page
+                  ? 'border-l-2 border-cyan-400 pl-4 text-white'
+                  : 'border-l-2 border-transparent pl-4 text-slate-300 hover:text-white'
+                : `rounded-xl border ${
+                    selectedPageTopic === pt.page
+                      ? 'bg-slate-800 border-cyan-500/50 shadow-md text-white ring-1 ring-cyan-500/20'
+                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
+                  }`
+            }`}
+          >
+            <div className="font-bold text-xs text-cyan-300 mb-1 flex items-center justify-between">
+              <span>{pt.title}</span>
+              <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {pt.summary}
+            </p>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <ul className="rounded-2xl bg-[#0a1119] border-t border-[rgba(234,240,246,.11)] divide-y divide-[rgba(234,240,246,.11)]" data-testid="pdf-topics">
+        {pageTopics.map((pt) => {
+          const open = selectedPageTopic === pt.page;
+          return (
+            <li key={pt.page} className="py-1">
+              <button
+                type="button"
+                onClick={() => setSelectedPageTopic(pt.page)}
+                aria-expanded={open}
+                className={`w-full min-h-[48px] flex items-center justify-between gap-3 text-left text-[15px] font-medium ${open ? 'text-[#52d9e6]' : 'text-[#eaf0f6]'}`}
+              >
+                <span>{pt.title}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 text-[#97a5b9] transition-transform ${open ? 'rotate-180' : ''}`} />
+              </button>
+              {open && <p className="pb-3 text-[14px] leading-relaxed text-[#97a5b9]">{pt.summary}</p>}
+            </li>
+          );
+        })}
+      </ul>
+    )
+  ) : null;
+
+  // Riepilogo per il telefono: le cose che servono subito, senza scorrere
+  const quickFacts = !custom && !isDesktop ? (
+    <section className="border-t border-[rgba(234,240,246,.11)] pt-4" data-testid="pdf-facts">
+      <h3 className="font-[Outfit] text-[19px] font-medium text-[#eaf0f6] mb-2">Da sapere subito</h3>
+      <dl className="divide-y divide-[rgba(234,240,246,.11)]">
+        {[
+          ['Ritrovo', '1 marzo, Malpensa T1 entro le 10:00'],
+          ['Andata', '1 marzo alle 12:30, Malpensa → Pechino'],
+          ['Scalo', 'Pechino, 3 h 05 senza uscire (arrivo alle 05:35 del 2 marzo)'],
+          ['Seul', 'Arrivo a Incheon alle 11:40 del 2 marzo'],
+          ['Rientro', '19 marzo alle 13:10 da Incheon'],
+          ['Milano', 'Atterraggio il 20 marzo alle 06:30']
+        ].map(([k, v]) => (
+          <div key={k} className="grid grid-cols-[84px_1fr] gap-3 py-2.5">
+            <dt className="text-[13px] text-[#97a5b9]">{k}</dt>
+            <dd className="text-[15px] text-[#eaf0f6] leading-snug">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  ) : null;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Banner */}
@@ -115,11 +190,11 @@ export const PdfViewerModal: React.FC = () => {
             <h3 className="text-base font-bold text-white font-display">
               Documento Ufficiale Aggiornato: Itinerario Seul 2027
             </h3>
-            <FoldText className="text-xs text-slate-400">
+            {isDesktop &&             <FoldText className="text-xs text-slate-400">
               {custom
                 ? `PDF caricato dal Posto 1 il ${new Date(meta!.updatedAt).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}: ${meta!.name}.`
                 : 'PDF di 13 pagine: voli e ritrovo, alloggi a confronto, serate, programma giorno per giorno, lo scalo di 240 ore a Pechino e il rientro a Milano. Scegli una pagina qui sotto per leggere cosa contiene e aprirla nel visualizzatore.'}
-            </FoldText>
+            </FoldText>}
           </div>
         </div>
 
@@ -131,7 +206,7 @@ export const PdfViewerModal: React.FC = () => {
                 type="button"
                 disabled={uploading}
                 onClick={() => fileInput.current?.click()}
-                className="px-3.5 py-2 rounded-xl border border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[var(--ms-fill)] hover:bg-[var(--ms-fill)] border-0 text-[#52d9e6] text-[14px] font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>{uploading ? 'Caricamento…' : 'Aggiorna PDF'}</span>
@@ -141,7 +216,7 @@ export const PdfViewerModal: React.FC = () => {
           <a
             href={pdfUrl}
             download="Itinerario_Seul_2027_Aggiornato.pdf"
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
+            className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[var(--ms-fill)] hover:bg-[var(--ms-fill)] text-[#eaf0f6] text-[14px] font-semibold flex items-center gap-2 transition-colors border-0"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Scarica PDF</span>
@@ -149,7 +224,7 @@ export const PdfViewerModal: React.FC = () => {
           <button
             type="button"
             onClick={() => setFullscreen(true)}
-            className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/20"
+            className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[#52d9e6] hover:bg-[#7fe4ee] text-[#04242a] text-[14px] font-semibold flex items-center gap-2 transition-all"
           >
             <Maximize2 className="w-3.5 h-3.5" />
             <span>Schermo intero</span>
@@ -182,36 +257,8 @@ export const PdfViewerModal: React.FC = () => {
         </div>
       )}
 
-      {/* Page index pills: solo per il PDF incluso nel sito */}
-      {!custom && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {pageTopics.map((pt) => (
-          <div
-            key={pt.page}
-            onClick={() => setSelectedPageTopic(pt.page)}
-            className={`p-3 transition-all cursor-pointer ${
-              isDesktop
-                ? selectedPageTopic === pt.page
-                  ? 'border-l-2 border-cyan-400 pl-4 text-white'
-                  : 'border-l-2 border-transparent pl-4 text-slate-300 hover:text-white'
-                : `rounded-xl border ${
-                    selectedPageTopic === pt.page
-                      ? 'bg-slate-800 border-cyan-500/50 shadow-md text-white ring-1 ring-cyan-500/20'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
-                  }`
-            }`}
-          >
-            <div className="font-bold text-xs text-cyan-300 mb-1 flex items-center justify-between">
-              <span>{pt.title}</span>
-              <BookOpen className="w-3.5 h-3.5 text-slate-500" />
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              {pt.summary}
-            </p>
-          </div>
-        ))}
-      </div>
-      )}
+      {isDesktop && topicsBlock}
+      {quickFacts}
 
       {/* Visualizzatore incorporato: le pagine sono disegnate nel sito, senza download */}
       <div
@@ -229,6 +276,8 @@ export const PdfViewerModal: React.FC = () => {
         </div>
         <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} className="flex-1 min-h-0" />
       </div>
+
+      {!isDesktop && topicsBlock}
 
       {/* Pannello a schermo intero dentro l'app */}
       {fullscreen && createPortal(

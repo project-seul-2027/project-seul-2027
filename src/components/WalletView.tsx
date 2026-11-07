@@ -700,9 +700,9 @@ export const WalletView: React.FC = () => {
           <div className="mx-auto w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center"><WalletCards className="w-7 h-7 text-cyan-400" /></div>
           <h3 className="mt-3 text-base font-bold text-white font-display">Il Wallet è vuoto</h3>
           <p className="mt-1 text-sm text-slate-400 max-w-sm mx-auto">Salva qui carte d’imbarco, eSIM, voucher e prenotazioni: li trovi con un tocco, anche in aereo o in metro senza segnale.</p>
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <div className="mt-4 flex flex-col gap-2">
             {[{ k: 'flight' as const, l: 'Biglietto aereo' }, { k: 'train' as const, l: 'Biglietto treno', p: 'trenitalia' }, { k: 'pass' as const, l: 'eSIM', p: 'esim' }, { k: 'pass' as const, l: 'Prenotazione alloggio', p: 'hotel' }, { k: 'other' as const, l: 'Assicurazione', p: 'insurance' }].map((s) => (
-              <button key={s.l} type="button" onClick={() => setSheet({ type: 'form', kind: s.k, presetId: s.p })} className="min-h-[44px] px-4 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold">{s.l}</button>
+              <button key={s.l} type="button" onClick={() => setSheet({ type: 'form', kind: s.k, presetId: s.p })} className="min-h-[48px] px-4 rounded-xl bg-[var(--ms-fill)] hover:bg-[var(--ms-fill)] text-[#eaf0f6] text-[15px] font-semibold text-left">{s.l}</button>
             ))}
           </div>
         </div>

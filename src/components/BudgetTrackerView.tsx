@@ -79,7 +79,7 @@ export const BudgetTrackerView: React.FC = () => {
           onClick={() => setActiveTab('estimates')}
           className={`px-2 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center leading-tight transition-all ${
             activeTab === 'estimates'
-              ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
+              ? 'text-[#eaf0f6] shadow-[inset_0_-2px_0_#52d9e6]'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
@@ -91,7 +91,7 @@ export const BudgetTrackerView: React.FC = () => {
           onClick={() => setActiveTab('saver_tips')}
           className={`px-2 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center leading-tight transition-all ${
             activeTab === 'saver_tips'
-              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+              ? 'text-[#eaf0f6] shadow-[inset_0_-2px_0_#52d9e6]'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
@@ -103,7 +103,7 @@ export const BudgetTrackerView: React.FC = () => {
           onClick={() => setActiveTab('converter')}
           className={`px-2 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-semibold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center leading-tight transition-all ${
             activeTab === 'converter'
-              ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+              ? 'text-[#eaf0f6] shadow-[inset_0_-2px_0_#52d9e6]'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >

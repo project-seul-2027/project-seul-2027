@@ -467,7 +467,7 @@ export const PackingListView: React.FC = () => {
             {/* Pulsante Condivisione */}
             <button
               onClick={() => setIsShareModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-colors shadow-sm"
+              className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[var(--ms-fill)] hover:bg-[var(--ms-fill)] border-0 text-[14px] font-semibold text-[#eaf0f6] flex items-center gap-2 transition-colors"
             >
               <Users className="w-4 h-4 text-purple-400" />
               <span>Condividi lista</span>
@@ -481,10 +481,10 @@ export const PackingListView: React.FC = () => {
             {/* Pulsante Integrazioni App (iOS, Android, Keep, Reminders) */}
             <button
               onClick={() => setIsIntegrationsModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-teal-500/20"
+              className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[var(--ms-fill)] hover:bg-[var(--ms-fill)] text-[14px] font-semibold text-[#eaf0f6] flex items-center gap-2 transition-all"
             >
-              <Smartphone className="w-4 h-4 text-slate-950" />
-              <span className="md:hidden">App & calendario</span>
+              <Smartphone className="w-4 h-4 text-[#52d9e6]" />
+              <span className="md:hidden">Calendario</span>
               <span className="hidden md:inline">Integrazioni App (iOS / Android)</span>
             </button>
           </div>
@@ -725,7 +725,7 @@ export const PackingListView: React.FC = () => {
             }`}
           >
             <Users className="w-4 h-4 shrink-0" />
-            <span className="text-left leading-tight">Valigie Condivise con Me</span>
+            <span className="text-left leading-tight md:hidden">Condivise</span><span className="text-left leading-tight hidden md:inline">Valigie Condivise con Me</span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
               activeSubTab === 'shared_lists' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
             }`}>

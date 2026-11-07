@@ -31,6 +31,7 @@
     "server",
     "server.ts",
     "scripts/trip-push.mts",
+    "functions",
     "node_modules"
   ]
 }

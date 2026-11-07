@@ -55,12 +55,15 @@ async function liveVersion() {
 let title = env.PUSH_TITLE?.trim();
 let body = env.PUSH_BODY?.trim();
 let tag = env.PUSH_TAG?.trim();
+// Dove si apre toccando l'avviso: per le nuove versioni la pagina "Novità", per i messaggi a mano la pagina iniziale
+let openUrl = siteUrl;
 if (!title) {
   const live = await liveVersion();
   const subject = (env.COMMIT_MESSAGE || '').split('\n')[0].trim();
   title = live?.version ? `Nuovo aggiornamento · v${live.version}` : 'Nuovo aggiornamento';
   body = body || subject || "È disponibile una nuova versione dell'app: aprila per aggiornarla.";
   tag = tag || 'app-update';
+  if (/^https?:/.test(siteUrl)) openUrl = `${siteUrl.replace(/\/?$/, '/')}?p=changelog`;
 }
 tag = tag || `msg-${Date.now()}`;
 
@@ -91,7 +94,7 @@ for (let i = 0; i < tokens.length; i += 500) {
   const chunk = tokens.slice(i, i + 500);
   const result = await messaging.sendEachForMulticast({
     tokens: chunk,
-    data: { title, body, url: siteUrl, tag },
+    data: { title, body, url: openUrl, tag, critical: '0' },
     webpush: { headers: { TTL: '86400', Urgency: 'high' } }
   });
   sent += result.successCount;

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, BellRing, CalendarClock, LifeBuoy, MapPin, Moon, Plane, Trash2, X } from 'lucide-react';
+import { Bell, BellRing, CalendarClock, LifeBuoy, MapPin, Moon, Plane, Trash2, Users, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { ACCOMMODATIONS, MAP_LOCATIONS } from '../data/tripData';
 import { haversineMeters } from '../data/metroRouter';
@@ -11,13 +11,14 @@ import { useGroupLive } from './group/groupLiveStore';
 import { PushToggle } from './PushToggle';
 import { syncPushPrefs } from '../notifications';
 import { readPrefs as readPrefsNow, usePrefs, writePrefs, type NotifyPrefs } from '../notify/prefs';
-import { clearFeed, markFeedSeen, notifyLocal, onToast, useFeed, wasDelivered, type FeedItem } from '../notify/feed';
+import { clearFeed, DEFAULT_ROUTE, markFeedSeen, notifyLocal, onToast, useFeed, wasDelivered, type FeedItem } from '../notify/feed';
+import { requestOpenPage } from '../pageAddress';
 import {
   ALERT_CATEGORIES, ALL_ALERTS, alertApplies, alertMessage, dueAlerts, estimateTravelMinutes, isQuietHour, relativeIt, type AlertCategory
 } from '../utils/tripAlerts';
 import { nowOrSim } from '../shared/tripPresence';
 
-const CAT_ICON: Record<AlertCategory, React.ElementType> = { schedule: CalendarClock, bookings: Plane, group: MapPin, updates: Bell };
+const CAT_ICON: Record<AlertCategory, React.ElementType> = { schedule: CalendarClock, bookings: Plane, group: MapPin, activity: Users, updates: Bell };
 
 function useMyContext() {
   const { user } = useAuth();
@@ -207,13 +208,15 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
                 {feed.slice(0, 8).map((f) => {
                   const Icon = CAT_ICON[f.category];
                   return (
-                    <li key={f.id} className="flex gap-2.5 items-start" data-testid="notify-feed-item">
+                    <li key={f.id} data-testid="notify-feed-item">
+                      <button type="button" onClick={() => { onClose(); requestOpenPage(f.route ?? DEFAULT_ROUTE[f.category]); }} className="w-full min-h-[44px] flex gap-2.5 items-start text-left">
                       <Icon className="w-4 h-4 mt-0.5 shrink-0 text-slate-400" />
                       <div className="min-w-0">
                         <p className="text-xs text-white font-semibold leading-snug">{f.title}</p>
                         <p className="text-[11px] text-slate-400 leading-snug">{f.body}</p>
                         <p className="text-[10px] text-slate-600">{seoulClock(f.at)} (ora di Seul)</p>
                       </div>
+                      </button>
                     </li>
                   );
                 })}

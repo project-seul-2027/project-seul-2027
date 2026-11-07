@@ -21,7 +21,7 @@ const MAP_HOST = 'tiles.openfreemap.org';
 const KEEP = [SHELL_CACHE, ASSET_CACHE, EXT_CACHE, OFFLINE_CACHE, MAP_CACHE];
 const MAX_ASSETS = 120;
 
-const SHELL_FILES = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png'];
+const SHELL_FILES = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/badge-96.png', './icons/apple-touch-icon.png'];
 const HASHED_ASSET = /\/assets\/[^/]+-[\w-]{8,}\.(?:js|css|woff2?|svg|png|jpe?g|webp|json)$/;
 const EXTERNAL_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'unpkg.com'];
 
@@ -129,8 +129,9 @@ async function staleWhileRevalidate(request, cacheName, event) {
   return (await update) || Response.error();
 }
 
-// Notifiche push (Firebase Cloud Messaging): messaggi "solo dati" con title, body, url e tag.
+// Notifiche push (Firebase Cloud Messaging): messaggi "solo dati" con title, body, url, tag e critical.
 // Su iPhone ogni push deve mostrare un avviso, quindi lo mostriamo sempre.
+// "critical" = emergenza (es. qualcuno ha perso il gruppo): resta sullo schermo finché non la tocchi e vibra.
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
@@ -139,16 +140,25 @@ self.addEventListener('push', (event) => {
     payload = { data: { body: event.data ? event.data.text() : '' } };
   }
   const d = Object.assign({}, payload.data || {}, payload.notification || {});
+  const critical = d.critical === '1' || d.critical === true;
   const options = {
     body: d.body || '',
     icon: './icons/icon-192.png',
+    // icona monocromatica della barra di stato (Android): senza, il telefono mostra un quadrato bianco
+    badge: './icons/badge-96.png',
     tag: d.tag || 'seul2027',
     renotify: true,
+    requireInteraction: critical,
+    vibrate: critical ? [300, 120, 300, 120, 300] : [120],
+    timestamp: Date.now(),
+    // la pagina da aprire toccando l'avviso (es. ?p=group)
     data: { url: d.url || './' }
   };
   event.waitUntil(self.registration.showNotification(d.title || 'Seul 2027', options));
 });
 
+// Toccando l'avviso: se l'app è già aperta la si porta davanti e le si dice quale pagina mostrare
+// (senza ricaricarla); se è chiusa, si apre direttamente sulla pagina giusta.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const target = new URL((event.notification.data && event.notification.data.url) || './', self.registration.scope).href;
@@ -157,6 +167,11 @@ self.addEventListener('notificationclick', (event) => {
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of windows) {
         if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
+          try {
+            client.postMessage({ type: 'open-page', url: target });
+          } catch {
+            /* la pagina potrebbe essere in chiusura */
+          }
           await client.focus();
           return;
         }

@@ -440,33 +440,35 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
                 )}
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => vote(p.id, slot, mine === 'up' ? null : 'up')} aria-pressed={mine === 'up'} title={names(ups) || 'Nessun voto'} className={`min-h-[40px] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${mine === 'up' ? 'bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`} data-testid="place-vote-up">
-                  <ThumbsUp className="w-4 h-4" /> Ci sto · {ups.length}
-                </button>
-                <button type="button" onClick={() => vote(p.id, slot, mine === 'down' ? null : 'down')} aria-pressed={mine === 'down'} title={names(downs) || 'Nessun voto'} className={`min-h-[40px] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 ${mine === 'down' ? 'bg-rose-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`} data-testid="place-vote-down">
-                  <ThumbsDown className="w-4 h-4" /> Passo · {downs.length}
-                </button>
-              </div>
-              {(ups.length > 0 || downs.length > 0) && (
-                <p className="mt-1.5 text-[11px] text-slate-500">
+              <div className="mt-2.5 flex items-center justify-between gap-3">
+              {(ups.length > 0 || downs.length > 0) ? (
+                <p className="min-w-0 flex-1 text-[11px] text-slate-500 leading-snug">
                   {ups.length > 0 && <>Ci stanno: {names(ups)}. </>}{downs.length > 0 && <>Passano: {names(downs)}.</>} Punteggio {placeScore(p) > 0 ? '+' : ''}{placeScore(p)}.
                 </p>
-              )}
+              ) : <span className="flex-1" />}
+              <div className="shrink-0 flex gap-1.5">
+                <button type="button" onClick={() => vote(p.id, slot, mine === 'up' ? null : 'up')} aria-pressed={mine === 'up'} title={names(ups) || 'Nessun voto'} className={`min-h-[34px] px-3 rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 ${mine === 'up' ? 'bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`} data-testid="place-vote-up">
+                  <ThumbsUp className="w-3.5 h-3.5" /> Ci sto · {ups.length}
+                </button>
+                <button type="button" onClick={() => vote(p.id, slot, mine === 'down' ? null : 'down')} aria-pressed={mine === 'down'} title={names(downs) || 'Nessun voto'} className={`min-h-[34px] px-3 rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 ${mine === 'down' ? 'bg-rose-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`} data-testid="place-vote-down">
+                  <ThumbsDown className="w-3.5 h-3.5" /> Passo · {downs.length}
+                </button>
+              </div>
+              </div>
 
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => showOnMap(p.id)} className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-violet-200 text-xs font-semibold flex items-center gap-1.5" data-testid="place-on-map"><MapIcon className="w-3.5 h-3.5" /> Mappa</button>
-                <a href={getNaverMapSearchUrl({ lat: p.lat, lng: p.lng, name: p.name })} target="_blank" rel="noopener noreferrer" className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-emerald-200 text-xs font-semibold flex items-center gap-1.5"><ExternalLink className="w-3.5 h-3.5" /> Naver</a>
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => showOnMap(p.id)} className="min-h-[44px] px-3 rounded-xl bg-slate-800 text-violet-200 text-[13px] font-semibold flex items-center justify-center gap-1.5" data-testid="place-on-map"><MapIcon className="w-3.5 h-3.5" /> Mappa</button>
+                <a href={getNaverMapSearchUrl({ lat: p.lat, lng: p.lng, name: p.name })} target="_blank" rel="noopener noreferrer" className="min-h-[44px] px-3 rounded-xl bg-slate-800 text-emerald-200 text-[13px] font-semibold flex items-center justify-center gap-1.5"><ExternalLink className="w-3.5 h-3.5" /> Naver</a>
                 {onRoute && (
-                  <button type="button" onClick={() => onRoute(`${PLACE_ID_PREFIX}${p.id}`)} className="min-h-[38px] px-3 rounded-xl bg-cyan-500 text-slate-950 text-xs font-bold flex items-center gap-1.5" data-testid="place-route">
+                  <button type="button" onClick={() => onRoute(`${PLACE_ID_PREFIX}${p.id}`)} className="min-h-[44px] px-3 rounded-xl bg-cyan-500 text-slate-950 text-[14px] font-bold flex items-center justify-center gap-1.5 col-span-2" data-testid="place-route">
                     <Navigation className="w-3.5 h-3.5" /> Portami lì
                   </button>
                 )}
-                <a href={directionsUrl(p)} target="_blank" rel="noopener noreferrer" className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-cyan-200 text-xs font-semibold flex items-center gap-1.5"><Navigation className="w-3.5 h-3.5" /> Indicazioni</a>
+                <a href={directionsUrl(p)} target="_blank" rel="noopener noreferrer" className="min-h-[44px] px-3 rounded-xl bg-slate-800 text-cyan-200 text-[13px] font-semibold flex items-center justify-center gap-1.5"><Navigation className="w-3.5 h-3.5" /> Indicazioni</a>
                 {p.link && (
-                  <a href={p.link} target="_blank" rel="noopener noreferrer" className="min-h-[38px] px-3 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-1.5"><ExternalLink className="w-3.5 h-3.5" /> Link</a>
+                  <a href={p.link} target="_blank" rel="noopener noreferrer" className="min-h-[44px] px-3 rounded-xl bg-slate-800 text-slate-200 text-[13px] font-semibold flex items-center justify-center gap-1.5"><ExternalLink className="w-3.5 h-3.5" /> Link</a>
                 )}
-                <button type="button" onClick={() => markVisited(p.id, !p.visited)} aria-pressed={p.visited} className={`min-h-[38px] px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${p.visited ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-200'}`} data-testid="place-visited">
+                <button type="button" onClick={() => markVisited(p.id, !p.visited)} aria-pressed={p.visited} className={`min-h-[44px] px-3 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-1.5 col-span-2 ${p.visited ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-200'}`} data-testid="place-visited">
                   <Check className="w-3.5 h-3.5" /> {p.visited ? 'Visitato' : 'Segna visitato'}
                 </button>
               </div>

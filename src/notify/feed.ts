@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AlertCategory } from '../utils/tripAlerts';
 import { readPrefs } from './prefs';
+import type { PushRoute } from '../shared/pushEvents';
 
 /** Registro degli avvisi ricevuti (ultimi 30) e consegna: notifica di sistema se l'app è in secondo piano, altrimenti avviso nell'app. */
 export interface FeedItem {
@@ -9,7 +10,12 @@ export interface FeedItem {
   category: AlertCategory;
   title: string;
   body: string;
+  /** Pagina che si apre toccando l'avviso */
+  route?: PushRoute;
 }
+
+/** Pagina predefinita per categoria, quando l'avviso non ne indica una */
+export const DEFAULT_ROUTE: Record<AlertCategory, PushRoute> = { schedule: 'itinerary', bookings: 'flights', group: 'group', activity: 'today', updates: 'today' };
 
 const FEED_KEY = 'seul2027:notify:feed';
 const SEEN_KEY = 'seul2027:notify:seen';
@@ -81,10 +87,11 @@ function markDelivered(id: string) {
  * Consegna un avviso: lo registra, lo mostra nell'app e, se l'app è in secondo piano e il permesso c'è,
  * lo manda anche come notifica del telefono. Rispetta le scelte di "Cosa vuoi ricevere".
  */
-export async function notifyLocal(n: { id: string; category: AlertCategory; title: string; body: string; toast?: boolean }): Promise<boolean> {
+export async function notifyLocal(n: { id: string; category: AlertCategory; title: string; body: string; toast?: boolean; route?: PushRoute }): Promise<boolean> {
   if (!readPrefs()[n.category] || wasDelivered(n.id)) return false;
   markDelivered(n.id);
-  const item: FeedItem = { id: n.id, at: Date.now(), category: n.category, title: n.title, body: n.body };
+  const route = n.route ?? DEFAULT_ROUTE[n.category];
+  const item: FeedItem = { id: n.id, at: Date.now(), category: n.category, title: n.title, body: n.body, route };
   feed = [item, ...feed].slice(0, 30);
   save(FEED_KEY, feed);
   emit();
@@ -92,7 +99,7 @@ export async function notifyLocal(n: { id: string; category: AlertCategory; titl
   if (hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted' && 'serviceWorker' in navigator) {
     try {
       const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification(n.title, { body: n.body, tag: n.id, icon: new URL('icons/icon-192.png', document.baseURI).href, data: { url: document.baseURI } });
+      await reg.showNotification(n.title, { body: n.body, tag: n.id, icon: new URL('icons/icon-192.png', document.baseURI).href, badge: new URL('icons/badge-96.png', document.baseURI).href, data: { url: new URL(`?p=${route}`, document.baseURI).href } });
       return true;
     } catch {
       /* si ripiega sull'avviso nell'app */

@@ -133,7 +133,7 @@
 .ms-acc .pp .key { color: var(--ms-text); margin: 0; font-size: 26px; }
 .ms-acc .pp span { display: block; color: var(--ms-mute); font-size: 12.5px; margin-top: 4px; }
 .ms-acc.pick .c { color: var(--ms-accent); }
-.ms-vote { display: inline-flex; align-items: center; min-height: 44px; color: var(--ms-accent); font-weight: 600; font-size: 14px; background: none; border: 0; padding: 0; text-decoration: none; cursor: pointer; }
+.ms-vote { display: inline-flex; align-items: center; min-height: 44px; color: var(--ms-accent); font-weight: 600; font-size: 15px; background: none; border: 0; padding: 0; text-decoration: none; cursor: pointer; }
 .ms-vote[aria-pressed='true'] { color: var(--ms-text); }
 
 /* Schede dettagliate ereditate: via riquadri annidati, sfondi e ombre; restano testo e filetti */
@@ -464,4 +464,59 @@
 /* Meteo, testata a tutta pagina: la luna/sole scende sotto i pulsanti °C/°F, aggiorna, info */
 @media (max-width: 1023px) {
   .ms-wx-hero .wx-celestial { top: 36% !important; }
+}
+
+/* Azioni di testo uguali in tutta l'app; testi sopra foto e video più leggibili */
+@media (max-width: 1023px) {
+  .ms-deep button[class*='underline-offset-2'] { font-size: 15px !important; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+  [data-testid='today-hero'], [data-testid='weather-hero'], [data-testid='mobile-alloggio-detail'] > section:first-child { text-shadow: 0 1px 12px rgba(4, 10, 16, 0.65); }
+  .ms-deep [data-testid='mobile-alloggio-detail'] .ms-acc h3, .ms-acc h3 { text-shadow: none; }
+}
+
+/* Revisione pagine: meno riquadri e bordi, azioni secondarie come testo, nessun filetto colorato a sinistra */
+@media (max-width: 1023px) {
+
+  /* Galleria: "Dalla galleria" e filtri senza bordo, su fondo tinto */
+  [data-testid='gal-upload'] { background: var(--ms-fill) !important; border: 0 !important; color: var(--ms-text) !important; }
+  [data-testid^='gal-chip-']:not([aria-pressed='true']) { background: var(--ms-fill) !important; border: 0 !important; color: var(--ms-text) !important; }
+
+  /* Gruppo: "Chi è dove" in lista piatta, "Ho perso il gruppo" come testo rosso */
+  .ms-skin ul.divide-y.rounded-2xl { background: none !important; border: 0 !important; border-radius: 0 !important; border-top: 1px solid var(--ms-line) !important; }
+  [data-testid='lost-open'] { background: none !important; border: 0 !important; min-height: 44px !important; font-size: 15px !important; }
+
+  /* Spese: campo di conversione e quote come riga con sottolineatura */
+  .ms-skin input[inputmode='decimal'] { background: none !important; border: 0 !important; border-bottom: 1px solid var(--ms-line-2) !important; border-radius: 0 !important; }
+
+  /* Voli: scali e note senza filetto colorato, con l'etichetta in ambra */
+  .ms-stop { border-left: 0 !important; margin-left: 0 !important; padding: 6px 0 10px !important; }
+  .ms-stop strong { color: var(--ms-amber) !important; }
+}
+
+/* Preventivo: i tab inattivi sono solo testo, senza fondo */
+@media (max-width: 1023px) {
+  .ms-skin .grid.grid-cols-3.gap-2.border-b button { background: none !important; border: 0 !important; }
+}
+
+/* Profilo viaggiatore sul telefono: campi piatti su fondo tinto, come il resto dell'app */
+@media (max-width: 1023px) {
+  .ms-profile input:not([type='checkbox']):not([type='radio']), .ms-profile select, .ms-profile textarea { background: var(--ms-fill) !important; border: 0 !important; border-radius: var(--ms-r) !important; color: #eaf0f6 !important; min-height: 44px; }
+  .ms-profile fieldset { border-color: var(--ms-line) !important; }
+  .ms-profile button[role='radio'], .ms-profile button[aria-pressed] { border-radius: var(--ms-r) !important; border: 0 !important; background: var(--ms-fill) !important; }
+  .ms-profile button[aria-pressed='true'], .ms-profile button[role='radio'][aria-checked='true'] { box-shadow: inset 0 0 0 1.5px #52d9e6 !important; }
+  .ms-profile h3 { font-family: 'Outfit', system-ui, sans-serif; font-size: 17px; font-weight: 500; }
+  .ms-profile label, .ms-profile p { font-size: 14px; }
+  .ms-profile button[type='submit'] { border-radius: var(--ms-r) !important; background: #52d9e6 !important; color: #04242a !important; min-height: 48px; font-weight: 600; }
+}
+
+/* Profilo viaggiatore: interruttore "visibile al gruppo" piatto, stato con il solo colore */
+@media (max-width: 1023px) {
+  .ms-profile .ms-share { border: 0 !important; background: var(--ms-fill) !important; color: #97a5b9 !important; min-height: 32px; padding: 0 12px; font-size: 13px; font-weight: 500; }
+  .ms-profile .ms-share[aria-checked='true'] { color: #52d9e6 !important; }
+  .ms-profile .ms-savebar button[type='submit'] { width: 100%; }
+}
+
+/* Menu a tendina nativi: elenco scuro, altrimenti il testo chiaro sparisce sul bianco */
+@media (max-width: 1023px) {
+  .ms-profile select { color-scheme: dark; }
+  .ms-profile select option { background: #152231; color: #eaf0f6; }
 }

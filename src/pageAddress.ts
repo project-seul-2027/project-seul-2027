@@ -21,6 +21,11 @@ export function pageFromUrl(search: string): string | null {
   return sp.get(PAGE_PARAM) ?? sp.get('tab');
 }
 
+/** Chiede all'app di aprire una pagina (da una notifica toccata o dall'elenco degli avvisi). */
+export function requestOpenPage(id: string): void {
+  window.dispatchEvent(new CustomEvent('seul:open-page', { detail: id }));
+}
+
 /** Ricorda la pagina richiesta, così sopravvive al giro di login. */
 export function rememberPage(id: string): void {
   try {
