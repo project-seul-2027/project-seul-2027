@@ -47,7 +47,6 @@ import {
   loadPendingCamera,
   clearPendingCamera,
   hasResumeFlag,
-  takeSharedPhoto,
   setResumeFlag
 } from '../services/pendingCamera';
 import { CameraCaptureModal } from './CameraCaptureModal';
@@ -408,12 +407,12 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     }
   };
 
-  // Foto scattata con la fotocamera del telefono: apre il modal in attesa di conferma
+  // Foto scattata: già confermata nella fotocamera (o nell'app Fotocamera di sistema), si passa subito a luogo e didascalia
   const handleCameraCapture = (file: File) => {
     resetUploadForm();
     setIsUploadOpen(true);
-    setCameraPending(true);
-    void savePendingCamera(file, false);
+    setCameraPending(false);
+    void savePendingCamera(file, true);
     void handleFileSelect(file);
   };
 
@@ -426,14 +425,10 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
     cameraInputRef.current?.click();
   };
 
-  // iPhone: la fotocamera di sistema si apre dentro l'app senza chiuderla, quindi si usa quella (zoom, HDR, notte).
-  // Android: la fotocamera di sistema può far chiudere l'app e perdere la foto, quindi si usa quella interna.
+  // Si apre sempre la fotocamera interna (anteprima immediata, nessun cambio di app).
+  // Su iPhone dentro c'è il pulsante "Fotocamera iPhone" per passare a quella di sistema (zoom, HDR, notte).
   const openCamera = () => {
     setCameraLostNotice(false);
-    if (isIos()) {
-      openSystemCamera();
-      return;
-    }
     const hasLiveCamera = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
     if (hasLiveCamera) setIsCameraOpen(true);
     else openSystemCamera();
@@ -478,46 +473,6 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
       setCameraPending(!pending.accepted);
       await handleFileSelect(pending.file);
     })();
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Foto condivisa dal telefono ("Condividi → Seul 2027"): apre il caricamento con quella foto
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sharedState = params.get('shared');
-    if (!sharedState) return;
-    const why = params.get('why');
-    params.delete('shared');
-    params.delete('why');
-    const rest = params.toString();
-    try {
-      window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}`);
-    } catch {
-      /* non essenziale */
-    }
-    if (sharedState === 'err' || sharedState === 'empty') {
-      // La condivisione è arrivata ma la foto no: lo si dice, invece di tornare in silenzio alla pagina Oggi
-      resetUploadForm();
-      setIsUploadOpen(true);
-      setUploadError(sharedState === 'empty' ? `La foto condivisa non è arrivata all'app (${why ?? 'nessun dettaglio'}). Scegli la foto con «Dalla galleria».` : `Condivisione non riuscita (${why ?? 'errore'}). Scegli la foto con «Dalla galleria».`);
-      return;
-    }
-    let active = true;
-    void takeSharedPhoto().then((file) => {
-      if (!active) return;
-      if (!file) {
-        resetUploadForm();
-        setIsUploadOpen(true);
-        setUploadError('La foto condivisa non è stata trovata sul telefono. Scegli la foto con «Dalla galleria».');
-        return;
-      }
-      resetUploadForm();
-      setIsUploadOpen(true);
-      void handleFileSelect(file);
-    });
     return () => {
       active = false;
     };
@@ -773,7 +728,7 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
 
       {isCameraOpen && (
         <CameraCaptureModal
-          onPickLibrary={onAndroid ? () => { setIsCameraOpen(false); libraryInputRef.current?.click(); } : undefined}
+          onPickLibrary={onAndroid || isIos() ? () => { setIsCameraOpen(false); libraryInputRef.current?.click(); } : undefined}
           onCapture={(file) => {
             setIsCameraOpen(false);
             handleCameraCapture(file);
