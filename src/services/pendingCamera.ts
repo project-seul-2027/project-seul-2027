@@ -37,6 +37,18 @@ async function withStore<T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
   }
 }
 
+/** Foto condivisa dal telefono verso l'app ("Condividi → Seul 2027"): la salva il service worker, qui si ritira (una sola volta). */
+export async function takeSharedPhoto(): Promise<File | null> {
+  try {
+    const record = await withStore<Blob | File | undefined>('readonly', (s) => s.get('shared-photo'));
+    if (!record) return null;
+    await withStore('readwrite', (s) => s.delete('shared-photo')).catch(() => undefined);
+    return record instanceof File ? record : new File([record], `foto-${Date.now()}.jpg`, { type: record.type || 'image/jpeg' });
+  } catch {
+    return null;
+  }
+}
+
 export function hasResumeFlag(): boolean {
   try {
     return localStorage.getItem(RESUME_FLAG) === '1';

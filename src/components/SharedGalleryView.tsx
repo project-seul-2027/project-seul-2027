@@ -47,11 +47,12 @@ import {
   loadPendingCamera,
   clearPendingCamera,
   hasResumeFlag,
+  takeSharedPhoto,
   setResumeFlag
 } from '../services/pendingCamera';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { useQuickIntent } from '../utils/quickIntent';
-import { isIos, useMediaQuery } from '../pwa';
+import { isAndroid, isIos, useMediaQuery } from '../pwa';
 import { locateNow, TIMED_DAYS } from '../utils/tripClock';
 import { PhoneGalleryChips, PhoneGalleryGrid, PhoneGalleryHeader, PhoneGallerySkeleton, phoneOrder, type QuickFilter } from './mobile/PhoneGallery';
 import { PhonePhotoViewer } from './mobile/PhotoViewer';
@@ -98,6 +99,9 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   // Foto appena scattata con la fotocamera: va confermata prima di compilare luogo, giorno e didascalia
   const [cameraPending, setCameraPending] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  // Android: foto già scattata, scelta dalla galleria del telefono (nessuna app esterna che può chiudere la nostra)
+  const libraryInputRef = useRef<HTMLInputElement>(null);
+  const onAndroid = isAndroid();
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   // Il telefono ha chiuso l'app durante lo scatto con l'app Fotocamera e la foto non è arrivata
   const [cameraLostNotice, setCameraLostNotice] = useState(false);
@@ -416,6 +420,8 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
   // Fotocamera di sistema (ripiego): Android/iOS possono chiudere l'app durante lo scatto,
   // quindi si segna di riaprire la galleria al ritorno
   const openSystemCamera = () => {
+    // Libera memoria prima di lasciare l'app (Android può chiuderla mentre la fotocamera è aperta)
+    document.querySelectorAll('video').forEach((v) => v.pause());
     setResumeFlag();
     cameraInputRef.current?.click();
   };
@@ -472,6 +478,30 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
       setCameraPending(!pending.accepted);
       await handleFileSelect(pending.file);
     })();
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Foto condivisa dal telefono ("Condividi → Seul 2027"): apre il caricamento con quella foto
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('shared') !== '1') return;
+    params.delete('shared');
+    const rest = params.toString();
+    try {
+      window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}`);
+    } catch {
+      /* non essenziale */
+    }
+    let active = true;
+    void takeSharedPhoto().then((file) => {
+      if (!active || !file) return;
+      resetUploadForm();
+      setIsUploadOpen(true);
+      void handleFileSelect(file);
+    });
     return () => {
       active = false;
     };
@@ -708,8 +738,26 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
         }}
       />
 
+      {/* Android: scelta dalla galleria (senza capture), apre il modulo di caricamento senza lasciare l'app */}
+      <input
+        ref={libraryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        data-testid="gal-library-input"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file) return;
+          resetUploadForm();
+          setIsUploadOpen(true);
+          void handleFileSelect(file);
+        }}
+      />
+
       {isCameraOpen && (
         <CameraCaptureModal
+          onPickLibrary={onAndroid ? () => { setIsCameraOpen(false); libraryInputRef.current?.click(); } : undefined}
           onCapture={(file) => {
             setIsCameraOpen(false);
             handleCameraCapture(file);
@@ -727,9 +775,9 @@ export const SharedGalleryView: React.FC<SharedGalleryViewProps> = ({
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
           <p className="flex-1">
             Il telefono ha chiuso l'app mentre usavi l'app Fotocamera e la foto non è arrivata. Riprova con
-            "Scatta Foto" e usa la fotocamera dentro l'app, oppure scatta con la fotocamera del telefono e poi
-            caricala con "Carica Nuova Foto".
+            "Scatta foto" (la fotocamera dentro l'app non chiude niente), scegli una foto già scattata dalla galleria oppure, dall'app Fotocamera, tocca "Condividi" e scegli Seul 2027.
           </p>
+          <button type="button" onClick={() => libraryInputRef.current?.click()} className="min-h-[36px] px-2.5 rounded-lg bg-amber-500/20 text-amber-100 font-semibold shrink-0">Galleria</button>
           <button
             type="button"
             onClick={() => setCameraLostNotice(false)}

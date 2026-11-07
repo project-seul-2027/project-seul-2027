@@ -9,6 +9,8 @@ interface CameraCaptureModalProps {
   onClose: () => void;
   /** Apre l'app Fotocamera di sistema (su Android può chiudere l'app durante lo scatto) */
   onUseSystemCamera: () => void;
+  /** Su Android si offre anche "Galleria" (scelta di una foto già scattata): l'app Fotocamera di sistema può far chiudere l'app */
+  onPickLibrary?: () => void;
 }
 
 /** Zoom digitale usato quando la fotocamera non espone lo zoom ottico/hardware */
@@ -301,7 +303,7 @@ async function probeFrame(deviceId: string | null, portrait: boolean, alive: () 
  * lo dichiara il nome, lo ha detto l'utente o lo ha misurato confrontando il campo visivo con quello del principale
  * ("Riconosci"). Altrimenti l'obiettivo resta "Obiettivo N" e non si cambia da solo.
  */
-export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCapture, onClose, onUseSystemCamera }) => {
+export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCapture, onClose, onUseSystemCamera, onPickLibrary }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   // Stessa ripresa, attenuata, che mostra anche ciò che resta fuori dal formato scelto
   const ghostRef = useRef<HTMLVideoElement>(null);
@@ -912,6 +914,15 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
               {torchOn ? <Zap className="w-5 h-5" /> : <ZapOff className="w-5 h-5" />}
             </button>
           )}
+          {onPickLibrary && (
+            <button
+              type="button"
+              onClick={onPickLibrary}
+              className="h-11 px-3.5 rounded-full bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+            >
+              <span>Galleria</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onUseSystemCamera}
@@ -1039,6 +1050,11 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
             >
               Usa l'app Fotocamera
             </button>
+            {onPickLibrary && (
+              <button type="button" onClick={(e) => { e.stopPropagation(); onPickLibrary(); }} className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs">
+                Scegli dalla galleria
+              </button>
+            )}
           </div>
         )}
       </div>
