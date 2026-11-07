@@ -50,6 +50,10 @@ export function isStandalone(): boolean {
   );
 }
 
+export function isAndroid(): boolean {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+}
+
 export function isIos(): boolean {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent;

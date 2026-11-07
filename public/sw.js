@@ -181,8 +181,52 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// Condivisione dal telefono: "Condividi → Seul 2027" dall'app Fotocamera o dalla Galleria. Funziona anche se Android ha
+// chiuso l'app mentre scattavi, perché la foto arriva al service worker, che la salva e riapre l'app sulla galleria.
+const KV_DB = 'seul2027-local';
+const KV_STORE = 'kv';
+function kvPut(key, value) {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open(KV_DB, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore(KV_STORE);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction(KV_STORE, 'readwrite');
+      tx.objectStore(KV_STORE).put(value, key);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
+    };
+  });
+}
+
+async function handleShare(request) {
+  const home = self.registration.scope;
+  try {
+    const form = await request.formData();
+    const photos = form.getAll('photo').filter((f) => f && typeof f !== 'string' && f.size > 0);
+    if (photos.length) {
+      await kvPut('shared-photo', photos[0]);
+      return Response.redirect(new URL('./?p=gallery&shared=1', home).href, 303);
+    }
+    // Solo testo o link: come prima, diventa un nuovo luogo
+    const q = new URLSearchParams();
+    for (const k of ['title', 'text', 'url']) {
+      const v = form.get(k);
+      if (typeof v === 'string' && v) q.set(k, v);
+    }
+    return Response.redirect(new URL(`./?${q.toString()}`, home).href, 303);
+  } catch {
+    return Response.redirect(home, 303);
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  if (request.method === 'POST' && new URL(request.url).pathname.endsWith('/share-target')) {
+    event.respondWith(handleShare(request));
+    return;
+  }
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
