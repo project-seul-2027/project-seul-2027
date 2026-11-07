@@ -202,12 +202,21 @@ function kvPut(key, value) {
 
 async function handleShare(request) {
   const home = self.registration.scope;
+  const go = (qs) => Response.redirect(new URL(`./?${qs}`, home).href, 303);
   try {
     const form = await request.formData();
-    const photos = form.getAll('photo').filter((f) => f && typeof f !== 'string' && f.size > 0);
+    // Qualunque file immagine nel modulo (il nome del campo può variare da un telefono all'altro)
+    const photos = [];
+    for (const [, v] of form.entries()) if (v && typeof v !== 'string' && v.size > 0) photos.push(v);
     if (photos.length) {
-      await kvPut('shared-photo', photos[0]);
-      return Response.redirect(new URL('./?p=gallery&shared=1', home).href, 303);
+      try {
+        await kvPut('shared-photo', photos[0]);
+      } catch (e) {
+        // Ripiego: se IndexedDB non risponde si salva nella cache (la legge la pagina)
+        const cache = await caches.open('seul2027-share');
+        await cache.put('shared-photo', new Response(photos[0], { headers: { 'Content-Type': photos[0].type || 'image/jpeg' } }));
+      }
+      return go('p=gallery&shared=1');
     }
     // Solo testo o link: come prima, diventa un nuovo luogo
     const q = new URLSearchParams();
@@ -215,9 +224,10 @@ async function handleShare(request) {
       const v = form.get(k);
       if (typeof v === 'string' && v) q.set(k, v);
     }
-    return Response.redirect(new URL(`./?${q.toString()}`, home).href, 303);
-  } catch {
-    return Response.redirect(home, 303);
+    // Nessun file e nessun testo: lo si segnala alla pagina invece di tornare in silenzio a "Oggi"
+    return q.toString() ? go(q.toString()) : go('p=gallery&shared=empty');
+  } catch (e) {
+    return go(`p=gallery&shared=err&why=${encodeURIComponent(String((e && e.message) || e).slice(0, 80))}`);
   }
 }
 
