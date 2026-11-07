@@ -108,7 +108,7 @@ export const PhoneGalleryChips: React.FC<ChipsProps> = ({ value, onChange, showT
         aria-expanded={filtersOpen}
         data-testid="gal-more-filters"
         className={`min-h-[40px] px-3.5 rounded-full text-[13px] font-semibold whitespace-nowrap border flex items-center gap-1.5 ${
-          filtersOpen || activeExtra > 0 ? 'border-app-accent text-app-accent bg-app-accent/10' : 'bg-app-surface text-slate-200 border-app-control'
+          filtersOpen || activeExtra > 0 ? 'border-0 text-app-accent bg-app-accent/10' : 'bg-[var(--ms-fill)] text-[#eaf0f6] border-0'
         }`}
       >
         <SlidersHorizontal className="w-3.5 h-3.5" /> Filtri{activeExtra > 0 ? ` (${activeExtra})` : ''}
@@ -184,7 +184,7 @@ export const PhoneGalleryHeader: React.FC<{
         <Upload className="w-5 h-5" /> Dalla galleria
       </button>
     </div>
-    <p className={`text-[12px] text-app-muted font-mono flex flex-wrap gap-x-3 gap-y-0.5 ${loaded ? '' : 'invisible'}`} aria-hidden={!loaded}>
+    <p className={`text-[13px] text-app-muted font-mono flex flex-wrap gap-x-3 gap-y-0.5 ${loaded ? '' : 'invisible'}`} aria-hidden={!loaded}>
       <span><b className="text-app-text">{stats.totalPhotos}</b> foto</span>
       <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /><b className="text-app-text">{stats.uniquePlaces}</b> luoghi</span>
       <span><b className="text-app-text">{stats.coveredDays}</b>/{totalDays} giorni</span>

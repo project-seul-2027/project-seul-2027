@@ -7,7 +7,7 @@ export interface NotifyPrefs extends Record<AlertCategory, boolean> {
   quiet: boolean;
 }
 
-export const DEFAULT_PREFS: NotifyPrefs = { schedule: true, bookings: true, group: true, updates: true, quiet: true };
+export const DEFAULT_PREFS: NotifyPrefs = { schedule: true, bookings: true, group: true, activity: true, updates: true, quiet: true };
 const KEY = 'seul2027:notify:prefs';
 
 let current: NotifyPrefs | null = null;

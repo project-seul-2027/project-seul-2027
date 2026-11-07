@@ -91,11 +91,12 @@ service cloud.firestore {
         && shortString(request.resource.data.token, 400)
         && shortString(request.resource.data.platform, 20)
         && request.resource.data.prefs is map
-        && request.resource.data.prefs.keys().hasOnly(['updates', 'schedule', 'bookings', 'group', 'quiet'])
+        && request.resource.data.prefs.keys().hasOnly(['updates', 'schedule', 'bookings', 'group', 'activity', 'quiet'])
         && request.resource.data.prefs.get('updates', false) is bool
         && request.resource.data.prefs.get('schedule', false) is bool
         && request.resource.data.prefs.get('bookings', false) is bool
         && request.resource.data.prefs.get('group', false) is bool
+        && request.resource.data.prefs.get('activity', false) is bool
         && request.resource.data.prefs.get('quiet', false) is bool
         && request.resource.data.updatedAt is number;
     }

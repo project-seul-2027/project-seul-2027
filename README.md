@@ -93,3 +93,26 @@ firestore.rules           regole di accesso ai dati condivisi
 
 - Il telefono ha un layout dedicato. Le modifiche di questa versione per i grandi schermi valgono solo da 1024 px in su.
 - I dati dell'itinerario, degli alloggi e dei numeri di emergenza vanno verificati prima della partenza.
+
+## Notifiche push
+
+Le notifiche arrivano nella barra del telefono anche con l'app chiusa (Firebase Cloud Messaging + `public/sw.js`). Toccandole si apre la pagina giusta (`?p=group`, `?p=expenses`, …). L'icona è quella dell'app (`icons/icon-192.png`) e, su Android, la sagoma `icons/badge-96.png` nella barra di stato.
+
+| Avviso | Categoria ("Cosa vuoi ricevere") | Quando parte | Apre |
+|---|---|---|---|
+| Qualcuno ha perso il gruppo (emergenza, resta sullo schermo) | Gruppo | subito (funzioni) / ≤10 min (GitHub) | Gruppo |
+| Nuovo ritrovo o punto fisso · qualcuno è a casa | Gruppo | come sopra | Gruppo |
+| Nuova spesa · nuova foto · nuovo luogo | Novità del gruppo | come sopra | Spese / Galleria / Luoghi |
+| Programma (30 min prima) · voli e prenotazioni | Programma / Prenotazioni | GitHub, ogni ~10 min | Itinerario / Voli |
+| Nuovo PDF dell'itinerario | Aggiornamenti | GitHub, ogni ~5 min | PDF |
+| Nuova versione dell'app · messaggio a mano | Aggiornamenti | dopo il deploy / a mano | Novità |
+
+Due corsie, senza doppioni (stesse chiavi in `pushLog`, stessi messaggi in `src/shared/pushEvents.ts`):
+
+1. **Rete di sicurezza (già attiva):** `.github/workflows/trip-push.yml` controlla ogni ~10 minuti (26 feb – 21 mar 2027). GitHub può ritardare i controlli programmati.
+2. **Corsia veloce (da attivare):** `functions/` contiene funzioni Firebase che mandano l'avviso in pochi secondi.
+   Servono il piano Blaze e la Firebase CLI:
+   ```bash
+   cp functions/.env.example functions/.env   # poi scrivi SITE_URL (e FUNCTIONS_REGION = regione di Firestore)
+   firebase deploy --only functions:push,firestore:rules
+   ```

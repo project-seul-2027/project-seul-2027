@@ -479,7 +479,7 @@ export const WeatherView: React.FC<WeatherViewProps> = ({ onNavigateToItinerary 
               <Compass className="w-3 h-3 shrink-0" />
               <span>Meteo live</span>
             </div>
-            <div className="text-[11px] text-slate-400 truncate">
+            <div className="text-[13px] text-slate-400 truncate">
               {weatherData ? `Aggiornato alle ${weatherData.fetchedAt}` : 'Caricamento…'}
             </div>
           </div>

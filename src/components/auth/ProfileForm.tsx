@@ -46,7 +46,7 @@ const Field: React.FC<{
 }> = ({ label, htmlFor, required, error, hint, shareOn, onShare, children }) => (
   <div className="space-y-1">
     <div className="flex items-center justify-between gap-2">
-      <label htmlFor={htmlFor} className="text-xs font-medium text-slate-300">
+      <label htmlFor={htmlFor} className="text-xs font-medium text-slate-300 max-lg:text-[13px] max-lg:text-[#97a5b9]">
         {label}
         {required && <span className="text-cyan-400"> *</span>}
       </label>
@@ -56,7 +56,7 @@ const Field: React.FC<{
           role="switch"
           aria-checked={!!shareOn}
           onClick={() => onShare(!shareOn)}
-          className={`h-6 px-2 rounded-full border text-[10.5px] font-semibold flex items-center gap-1 shrink-0 ${
+          className={`ms-share h-6 px-2 rounded-full border text-[10.5px] font-semibold flex items-center gap-1 shrink-0 ${
             shareOn
               ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-300'
               : 'bg-slate-900 border-slate-700 text-slate-400'
@@ -82,13 +82,13 @@ const Section: React.FC<{ icon: React.ReactNode; title: string; subtitle?: strin
   subtitle,
   children
 }) => (
-  <fieldset className="space-y-3 border-t border-slate-800 pt-5 first:border-t-0 first:pt-0">
+  <fieldset className="space-y-3 border-t border-slate-800 pt-5 first:border-t-0 first:pt-0 max-lg:space-y-4 max-lg:border-[rgba(234,240,246,.11)] max-lg:pt-6">
     <legend className="sr-only">{title}</legend>
     <div className="flex items-center gap-2">
-      <span className="text-cyan-400">{icon}</span>
+      <span className="text-cyan-400 max-lg:hidden">{icon}</span>
       <div>
         <h3 className="text-sm font-bold text-white font-display">{title}</h3>
-        {subtitle && <p className="text-[11px] text-slate-500">{subtitle}</p>}
+        {subtitle && <p className="text-[11px] text-slate-500 max-lg:text-[13px] max-lg:text-[#97a5b9] max-lg:mt-0.5">{subtitle}</p>}
       </div>
     </div>
     {children}
@@ -198,9 +198,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
   const errorClass = (key: keyof TravelerProfileInput) => (errors[key] ? 'border-red-500/70' : 'border-slate-700');
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-5">
+    <form onSubmit={handleSubmit} noValidate className="space-y-5 max-lg:space-y-6">
       {/* Account Google collegato */}
-      <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30">
+      <div className={`ms-acct flex items-center justify-between gap-3 p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 max-lg:p-0 max-lg:bg-transparent max-lg:border-0${mode === 'edit' ? ' max-lg:hidden' : ''}`}>
         <div className="flex items-center gap-2.5 min-w-0">
           {account?.avatarUrl ? (
             <img src={account.avatarUrl} alt="" referrerPolicy="no-referrer" className="w-8 h-8 rounded-full shrink-0" />
@@ -208,8 +208,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
             <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           )}
           <div className="min-w-0">
-            <div className="text-[11px] text-emerald-300">Account Google verificato</div>
-            <div className="text-xs text-white font-mono truncate">{account?.email}</div>
+            <div className="text-[11px] text-emerald-300 max-lg:text-[13px] max-lg:text-[#97a5b9]">Account Google verificato</div>
+            <div className="text-xs text-white font-mono truncate max-lg:font-[inherit] max-lg:text-[14px] max-lg:text-[#eaf0f6]">{account?.email}</div>
           </div>
         </div>
         {mode === 'onboarding' && (
@@ -225,22 +225,22 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
       </div>
 
       {/* Foto profilo: quella di Google, oppure una caricata dal telefono */}
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+      <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-950/70 border border-slate-800 max-lg:p-4 max-lg:border-0 max-lg:bg-[rgba(96,150,214,0.13)]">
         {form.customAvatar || account?.googlePhotoUrl || account?.avatarUrl ? (
           <img
             src={form.customAvatar || account?.googlePhotoUrl || account?.avatarUrl}
             alt=""
             referrerPolicy="no-referrer"
-            className="w-14 h-14 rounded-full object-cover border border-slate-700 shrink-0"
+            className="w-14 h-14 rounded-full object-cover border border-slate-700 shrink-0 max-lg:w-16 max-lg:h-16 max-lg:border-0"
           />
         ) : (
           <div className="w-14 h-14 rounded-full bg-slate-800 shrink-0" />
         )}
         <div className="min-w-0 flex-1 space-y-1.5">
-          <div className="text-xs font-semibold text-white">Foto profilo</div>
-          <div className="text-[11px] text-slate-400">{form.customAvatar ? 'Foto caricata dal telefono' : 'Foto del tuo account Google'}</div>
+          <div className="text-xs font-semibold text-white max-lg:text-[15px] max-lg:font-medium">Foto profilo</div>
+          <div className="text-[11px] text-slate-400 max-lg:text-[13px] max-lg:text-[#97a5b9]">{form.customAvatar ? 'Foto caricata dal telefono' : 'Foto del tuo account Google'}</div>
           <div className="flex flex-wrap gap-1.5">
-            <label className="h-8 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer">
+            <label className="h-8 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer max-lg:h-11 max-lg:text-[14px] max-lg:border-0 max-lg:bg-[#52d9e6] max-lg:text-[#04242a] max-lg:rounded-xl">
               <Camera className="w-3.5 h-3.5" />
               {avatarBusy ? 'Elaboro…' : 'Carica foto'}
               <input
@@ -258,7 +258,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
               <button
                 type="button"
                 onClick={() => set('customAvatar', '')}
-                className="h-8 px-3 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-semibold flex items-center gap-1.5"
+                className="h-8 px-3 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-semibold flex items-center gap-1.5 max-lg:h-11 max-lg:text-[14px] max-lg:border-0 max-lg:rounded-xl"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Usa quella di Google
@@ -270,7 +270,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
       </div>
 
       <Section icon={<User className="w-4 h-4" />} title="Chi sei">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-lg:gap-4">
           <Field label="Nome" htmlFor="pf-first" required error={errors.firstName}>
             <input
               id="pf-first"
@@ -316,7 +316,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         </div>
 
         <div className="space-y-1.5">
-          <div className="text-xs font-medium text-slate-300">
+          <div className="text-xs font-medium text-slate-300 max-lg:text-[13px] max-lg:text-[#97a5b9]">
             Il tuo posto nel gruppo<span className="text-cyan-400"> *</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -328,8 +328,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
                   key={t.id}
                   type="button"
                   disabled={Boolean(takenBy)}
+                  aria-pressed={selected}
                   onClick={() => set('travelerId', t.id as TravelerProfileInput['travelerId'])}
-                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition-all text-left ${
+                  className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition-all text-left max-lg:text-[14px] max-lg:min-h-[48px] ${
                     selected
                       ? 'bg-cyan-500/15 text-cyan-200 border-cyan-500/70 ring-1 ring-cyan-500/30'
                       : takenBy
@@ -534,7 +535,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         </Field>
 
         <div className="space-y-1.5">
-          <div className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+          <div className="text-xs font-medium text-slate-300 flex items-center gap-1.5 max-lg:text-[13px] max-lg:text-[#97a5b9]">
             <Home className="w-3.5 h-3.5 text-blue-400" />
             Alloggio preferito <span className="text-slate-500 font-normal">(facoltativo, vale come voto)</span>
           </div>
@@ -548,17 +549,18 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
                   onClick={() =>
                     set('accommodationPreference', selected ? null : (acc.id as TravelerProfileInput['accommodationPreference']))
                   }
+                  aria-pressed={selected}
                   className={`p-2 rounded-xl border text-left transition-all ${
                     selected
                       ? 'bg-blue-600/20 border-blue-500 text-white ring-1 ring-blue-500/40'
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-bold font-mono text-cyan-400">Alloggio {acc.code}</span>
-                    <span className="text-[10px] font-mono text-emerald-400">{acc.other3Cost17Nights} € · 17 notti</span>
+                  <div className="flex items-center justify-between gap-1 max-lg:flex-col max-lg:items-start max-lg:gap-0">
+                    <span className="text-[10px] font-bold font-mono text-cyan-400 max-lg:font-[Outfit] max-lg:text-[17px] max-lg:font-medium">{acc.code}</span>
+                    <span className="text-[10px] font-mono text-emerald-400 max-lg:font-[inherit] max-lg:text-[13px] max-lg:text-[#97a5b9]">{acc.other3Cost17Nights} € a testa</span>
                   </div>
-                  <div className="text-[11px] font-semibold text-slate-200 truncate mt-0.5">{acc.district}</div>
+                  <div className="text-[11px] font-semibold text-slate-200 truncate mt-0.5 max-lg:text-[14px] max-lg:font-medium">{acc.district}</div>
                 </button>
               );
             })}
@@ -593,12 +595,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         </div>
       )}
 
-      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-slate-800">
+      <div className="ms-savebar flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-slate-800 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-5 max-lg:px-5 max-lg:pt-3 max-lg:border-0 max-lg:bg-[#0a1119] max-lg:pb-[calc(12px+env(safe-area-inset-bottom))] max-lg:shadow-[0_-10px_16px_#0a1119]">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium"
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium max-lg:hidden"
           >
             Chiudi
           </button>
@@ -606,7 +608,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
         <button
           type="submit"
           disabled={isSaving}
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 disabled:opacity-60"
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 disabled:opacity-60 max-lg:shadow-none max-lg:bg-none max-lg:bg-[#52d9e6] max-lg:text-[15px]"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {mode === 'onboarding' ? 'Salva ed entra nel viaggio' : 'Salva modifiche'}
@@ -614,12 +616,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
       </div>
 
       {mode === 'edit' && (
-        <div className="pt-4 border-t border-slate-800 space-y-2">
+        <div className="pt-4 border-t border-slate-800 space-y-2 max-lg:border-0 max-lg:pb-4">
           {!confirmDelete ? (
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="text-xs text-slate-500 hover:text-red-400 flex items-center gap-1.5"
+              className="text-xs text-slate-500 hover:text-red-400 flex items-center gap-1.5 max-lg:text-[14px] max-lg:min-h-[44px]"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Elimina il mio account e i dati salvati

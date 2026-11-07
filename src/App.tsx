@@ -174,6 +174,33 @@ function TripPortal() {
   const install = useInstallPrompt();
   const { updateAvailable, newVersion, applyUpdate } = useUpdateAvailable();
   useSyncPushRegistration(currentUser.id);
+  // Notifica toccata con l'app già aperta (messaggio del service worker) o avviso toccato nell'elenco: apre la pagina giusta
+  useEffect(() => {
+    const open = (id: string | null) => {
+      if (id && (ALL_TABS as string[]).includes(id)) {
+        setIsMoreOpen(false);
+        setIsActionsOpen(false);
+        setActiveTab(id as Tab);
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+    };
+    const onSw = (e: MessageEvent) => {
+      const d = e.data as { type?: string; url?: string } | null;
+      if (d?.type !== 'open-page' || !d.url) return;
+      try {
+        open(pageFromUrl(new URL(d.url).search));
+      } catch {
+        /* indirizzo non valido: si ignora */
+      }
+    };
+    const onApp = (e: Event) => open((e as CustomEvent<string>).detail);
+    navigator.serviceWorker?.addEventListener('message', onSw);
+    window.addEventListener('seul:open-page', onApp);
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', onSw);
+      window.removeEventListener('seul:open-page', onApp);
+    };
+  }, []);
   const [installBannerHidden, setInstallBannerHidden] = useState(() => {
     try {
       return localStorage.getItem('seoul2027_install_banner_hidden') === '1';

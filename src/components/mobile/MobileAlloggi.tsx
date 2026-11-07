@@ -34,7 +34,7 @@ export const MobileAlloggi: React.FC<Props> = ({ accs, myVote, votes, leadingId,
             <h3><button type="button" onClick={() => onOpen(a.id)} data-testid={`open-${a.id}`} style={{ all: 'inherit', cursor: 'pointer', textAlign: 'left', padding: 0 }}>{a.district}</button></h3>
             <p>{a.highlightBadge.replace(/\s*\(.*\)$/, '')}.</p>
             <button type="button" className="ms-vote" aria-pressed={mine} disabled={busy} onClick={(e) => { e.stopPropagation(); onVote(a.id); }}>
-              {mine ? `Hai votato ${a.code}, ritira` : `Vota ${a.code}`}{n > 0 && !mine ? ` (${n})` : ''}
+              {mine ? `✓ Votato ${a.code}, ritira` : `Vota ${a.code}`}{n > 0 && !mine ? ` (${n})` : ''}
             </button>
           </div>
           <div className="pp">

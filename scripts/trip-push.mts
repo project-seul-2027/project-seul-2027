@@ -13,9 +13,10 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { LOOKBACK_MS, planPushes, type LiveInfo, type MeetupInfo, type MemberInfo, type PushTokenDoc } from '../src/utils/tripPushPlan';
+import { LOOKBACK_MS, planPushes, type ActivityInfo, type LiveInfo, type MeetupInfo, type MemberInfo, type PushTokenDoc } from '../src/utils/tripPushPlan';
 import { ITINERARY_DAYS } from '../src/data/tripData';
 import { rebuildTimedDays } from '../src/utils/tripClock';
+import { pushUrl } from '../src/shared/pushEvents';
 import { TRAVELER_SLOT_IDS, type TravelerSlotId } from '../src/shared/travelerProfile';
 
 const env = process.env;
@@ -63,7 +64,26 @@ const meetups: MeetupInfo[] = (await db.collection('meetups').where('createdAt',
   createdAt: (d.get('createdAt') as Timestamp).toMillis(),
   fixed: d.get('fixed') === true
 }));
-const live: LiveInfo[] = (await db.collection('live').where('lost', '>', since).get()).docs.map((d) => ({ uid: d.id, lost: Number(d.get('lost')) }));
+const liveRows = new Map<string, LiveInfo>();
+for (const d of (await db.collection('live').where('lost', '>', since).get()).docs) liveRows.set(d.id, { uid: d.id, lost: Number(d.get('lost')) });
+for (const d of (await db.collection('live').where('statusAt', '>', since).get()).docs) {
+  if (d.get('status') === 'home') liveRows.set(d.id, { ...(liveRows.get(d.id) ?? { uid: d.id, lost: null }), home: Number(d.get('statusAt')) });
+}
+const live: LiveInfo[] = [...liveRows.values()];
+
+// Novità del gruppo: spese, foto e luoghi aggiunti da poco
+const ms = (v: unknown) => (v instanceof Timestamp ? v.toMillis() : 0);
+const sinceTs = Timestamp.fromMillis(since);
+const activity: ActivityInfo[] = [];
+for (const d of (await db.collection('expenses').where('createdAt', '>', sinceTs).get()).docs) {
+  activity.push({ kind: 'expense', id: d.id, by: String(d.get('createdBy') ?? ''), createdAt: ms(d.get('createdAt')), text: String(d.get('title') ?? ''), extra: Number(d.get('amountCents') ?? 0) });
+}
+for (const d of (await db.collection('gallery').where('createdAt', '>', sinceTs).select('uploaderId', 'caption', 'locationName', 'createdAt').get()).docs) {
+  activity.push({ kind: 'photo', id: d.id, by: String(d.get('uploaderId') ?? ''), createdAt: ms(d.get('createdAt')), text: String(d.get('caption') ?? ''), extra: String(d.get('locationName') ?? '') });
+}
+for (const d of (await db.collection('places').where('createdAt', '>', sinceTs).get()).docs) {
+  activity.push({ kind: 'place', id: d.id, by: String(d.get('addedBy') ?? ''), createdAt: ms(d.get('createdAt')), text: String(d.get('name') ?? ''), extra: '' });
+}
 
 // Avvisi già mandati negli ultimi giorni
 const logged = new Set<string>();
@@ -84,7 +104,7 @@ try {
   console.warn('Programma da PDF non letto, uso quello del sito:', e instanceof Error ? e.message : e);
 }
 
-const plan = planPushes({ now, tokens, members, meetups, live, logged });
+const plan = planPushes({ now, tokens, members, meetups, live, activity, logged });
 console.log(`Telefoni: ${tokens.length} · avvisi da mandare: ${plan.length}`);
 if (plan.length === 0) process.exit(0);
 
@@ -100,8 +120,9 @@ for (const p of plan) {
     const chunk = list.slice(i, i + 500);
     const res = await messaging.sendEachForMulticast({
       tokens: chunk,
-      data: { title: p.title, body: p.body, url: siteUrl, tag: p.tag },
-      webpush: { headers: { TTL: '3600', Urgency: p.category === 'group' ? 'high' : 'normal' } }
+      data: { title: p.title, body: p.body, url: pushUrl(siteUrl, p.route), tag: p.tag, critical: p.critical ? '1' : '0' },
+      android: { priority: p.critical ? 'high' : 'normal' },
+      webpush: { headers: { TTL: p.critical ? '1800' : '3600', Urgency: p.critical ? 'high' : 'normal' } }
     });
     sent += res.successCount;
     for (const [idx, r] of res.responses.entries()) {

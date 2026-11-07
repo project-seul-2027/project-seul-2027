@@ -199,7 +199,7 @@ export const ChangelogView: React.FC = () => {
           href={`${REPO_URL}/commits/main`}
           target="_blank"
           rel="noreferrer"
-          className="shrink-0 self-start md:self-auto px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
+          className="shrink-0 self-start md:self-auto px-0 py-2 min-h-[44px] text-[#52d9e6] text-[14px] font-semibold flex items-center gap-1.5 transition-colors"
         >
           <ExternalLink className="w-3.5 h-3.5" />
           Apri su GitHub
