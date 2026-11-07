@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, RefreshCw, ScanSearch, Smartphone, X, Zap, ZapOff } from 'lucide-react';
+import { Check, Grid3x3, Images, Loader2, RotateCcw, ScanSearch, Settings2, Smartphone, Sun, SwitchCamera, Timer, X, Zap, ZapOff } from 'lucide-react';
+import { decodeScaled, type DecodedImage } from '../services/galleryService';
+import { isIos } from '../pwa';
 import { assignLenses, estimateMagnification, frameContrast, type GrayFrame } from '../services/lensProbe';
 
 interface CameraCaptureModalProps {
@@ -26,6 +28,33 @@ const TELE_DISPLAY_CAP = 30;
 const LENS_INFO_KEY = 'seul2027_lens_info_v2';
 const MAIN_LENS_KEY = 'seul2027_main_lens_v2';
 const ASPECT_KEY = 'seul2027_camera_aspect';
+const TIMER_KEY = 'seul2027_camera_timer';
+const GRID_KEY = 'seul2027_camera_grid';
+
+type TimerSec = 0 | 3 | 10;
+
+function readPref(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function savePref(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* archiviazione non disponibile: la scelta vale finché la fotocamera è aperta */
+  }
+}
+function loadTimer(): TimerSec {
+  const v = Number(readPref(TIMER_KEY));
+  return v === 3 || v === 10 ? v : 0;
+}
+const loadGrid = () => readPref(GRID_KEY) === '1';
+
+/** Zoom all'italiana: 0,5 · 1 · 2,4 */
+const fmtZoom = (m: number) => (Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', ','));
 
 type ZoomMode = 'hardware' | 'digital';
 
@@ -33,6 +62,7 @@ interface CameraCaps {
   zoom?: { min: number; max: number; step?: number };
   torch?: boolean;
   focusMode?: string[];
+  exposureCompensation?: { min: number; max: number; step?: number };
 }
 
 interface ImageCaptureLike {
@@ -199,44 +229,77 @@ function fitRegion(w: number, h: number, aspect: number): { sw: number; sh: numb
   return { sw: w, sh: w / aspect };
 }
 
+/** Rotazione dell'interfaccia rispetto allo schermo (il telefono girato in orizzontale) */
+type Rotation = 0 | 90 | -90 | 180;
+
+const normRotation = (deg: number): Rotation => {
+  const d = ((Math.round(deg / 90) * 90) % 360 + 360) % 360;
+  return d === 90 ? 90 : d === 270 ? -90 : d === 180 ? 180 : 0;
+};
+
+/**
+ * Disegna una parte della sorgente in una tela nuova, ruotata di `rot` gradi (orario).
+ * Con ±90 la tela scambia larghezza e altezza: così una foto scattata col telefono in orizzontale esce orizzontale.
+ */
+function drawRotated(
+  source: CanvasImageSource,
+  sx: number,
+  sy: number,
+  sw: number,
+  sh: number,
+  outW: number,
+  outH: number,
+  rot: Rotation
+): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  const quarter = rot === 90 || rot === -90;
+  canvas.width = Math.max(1, Math.round(quarter ? outH : outW));
+  canvas.height = Math.max(1, Math.round(quarter ? outW : outH));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((rot * Math.PI) / 180);
+  ctx.drawImage(source, sx, sy, sw, sh, -outW / 2, -outH / 2, outW, outH);
+  return canvas;
+}
+
+const canvasToJpeg = (canvas: HTMLCanvasElement) =>
+  new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+
 /** Fotogramma dal video, con ritaglio centrale per lo zoom digitale e per il formato scelto */
-function grabFrame(video: HTMLVideoElement, digitalZoom: number, aspect: number): Promise<Blob | null> {
+function grabFrame(video: HTMLVideoElement, digitalZoom: number, aspect: number, rot: Rotation): Promise<Blob | null> {
   const vw = video.videoWidth;
   const vh = video.videoHeight;
   const { sw, sh } = fitRegion(vw / digitalZoom, vh / digitalZoom, aspect);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(sw);
-  canvas.height = Math.round(sh);
-  canvas.getContext('2d')?.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+  return canvasToJpeg(drawRotated(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, sw, sh, rot));
 }
 
-/** Porta una foto già scattata (piena risoluzione) al formato scelto */
-async function cropBlobToAspect(blob: Blob, aspect: number, videoPortrait: boolean): Promise<Blob> {
-  let bitmap: ImageBitmap;
+/** Lato lungo massimo della foto finale: abbondante per la galleria (pubblica a 1600 px) e sicuro per la memoria */
+const PHOTO_MAX_DIMENSION = 3200;
+
+/**
+ * Porta una foto già scattata al formato scelto e la raddrizza.
+ * La decodifica avviene già ridotta: i sensori da 50-200 MP a piena risoluzione esaurirebbero la memoria della scheda.
+ */
+async function finishPhoto(blob: Blob, aspect: number, videoPortrait: boolean, rot: Rotation): Promise<Blob | null> {
+  let img: DecodedImage;
   try {
-    bitmap = await createImageBitmap(blob);
+    img = await decodeScaled(blob, PHOTO_MAX_DIMENSION);
   } catch {
-    return blob;
+    // Senza decodifica non si può ritagliare né raddrizzare: chi chiama ripiega sul fotogramma del video
+    return null;
   }
-  const bw = bitmap.width;
-  const bh = bitmap.height;
-  // Se la foto è girata rispetto all'anteprima, le proporzioni si invertono
-  const a = aspect !== 1 && bh >= bw !== videoPortrait ? 1 / aspect : aspect;
-  if (Math.abs(bw / bh - a) < 0.01) {
-    bitmap.close?.();
-    return blob;
+  try {
+    const bw = img.width;
+    const bh = img.height;
+    // Se la foto è girata rispetto all'anteprima, le proporzioni si invertono
+    const a = aspect !== 1 && bh >= bw !== videoPortrait ? 1 / aspect : aspect;
+    const { sw, sh } = Math.abs(bw / bh - a) < 0.01 ? { sw: bw, sh: bh } : fitRegion(bw, bh, a);
+    return await canvasToJpeg(drawRotated(img.source, (bw - sw) / 2, (bh - sh) / 2, sw, sh, sw, sh, rot));
+  } finally {
+    img.close();
   }
-  const { sw, sh } = fitRegion(bw, bh, a);
-  // Sensori da 50-200 MP: si limita la dimensione per non esaurire la memoria
-  const shrink = Math.min(1, Math.sqrt(24_000_000 / (sw * sh)));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(sw * shrink);
-  canvas.height = Math.round(sh * shrink);
-  canvas.getContext('2d')?.drawImage(bitmap, (bw - sw) / 2, (bh - sh) / 2, sw, sh, 0, 0, canvas.width, canvas.height);
-  bitmap.close?.();
-  const out = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-  return out ?? blob;
 }
 
 /** Una ripresa in piccolo e in scala di grigi da un obiettivo, per confrontare i campi visivi */
@@ -354,6 +417,80 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
   const [probing, setProbing] = useState<{ step: number; total: number } | null>(null);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
   const [menuLens, setMenuLens] = useState<Lens | null>(null);
+
+  // Telefono girato in orizzontale: le icone ruotano e la foto esce raddrizzata
+  const [rotation, setRotation] = useState<Rotation>(0);
+  const rotationRef = useRef<Rotation>(0);
+  // Autoscatto, griglia, esposizione
+  const [timer, setTimer] = useState<TimerSec>(loadTimer);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [grid, setGrid] = useState<boolean>(loadGrid);
+  const [expRange, setExpRange] = useState<{ min: number; max: number; step: number } | null>(null);
+  const [exposure, setExposure] = useState(0);
+  const [expVisible, setExpVisible] = useState(false);
+  // Lampo bianco allo scatto e foto appena scattata, da confermare
+  const [flash, setFlash] = useState(false);
+  const [shot, setShot] = useState<{ file: File; url: string } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Trascinamento sulla fila dello zoom (rotella)
+  const dragRef = useRef<{ x: number; zoom: number; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
+  const busyRef = useRef(false);
+  const countdownTimerRef = useRef<number | null>(null);
+  const captureRef = useRef<() => Promise<void>>(async () => undefined);
+
+  // Orientamento del telefono dalla gravità: lo schermo dell'app resta verticale, quindi lo si calcola da qui
+  useEffect(() => {
+    const onMotion = (e: DeviceMotionEvent) => {
+      const g = e.accelerationIncludingGravity;
+      if (!g || g.x == null || g.y == null) return;
+      const { x, y } = g;
+      // Telefono quasi orizzontale sul tavolo: si tiene l'ultimo orientamento
+      if (Math.hypot(x, y) < 5) return;
+      let device: number | null = null;
+      if (Math.abs(x) > Math.abs(y) * 1.4) device = x > 0 ? 90 : -90;
+      else if (Math.abs(y) > Math.abs(x) * 1.4) device = y > 0 ? 0 : 180;
+      if (device === null) return;
+      // Se il browser ha già girato la pagina, si toglie la sua rotazione
+      const screenAngle = typeof screen !== 'undefined' && screen.orientation ? screen.orientation.angle : 0;
+      const next = normRotation(device - screenAngle);
+      if (next !== rotationRef.current) {
+        rotationRef.current = next;
+        setRotation(next);
+      }
+    };
+    window.addEventListener('devicemotion', onMotion);
+    return () => window.removeEventListener('devicemotion', onMotion);
+  }, []);
+
+  // Ritorno in primo piano: se il telefono ha spento la fotocamera la si riaccende
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const track = trackRef.current;
+      if (!track || track.readyState === 'ended') setRestartKey((k) => k + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  // La foto in anteprima occupa memoria: si libera quando cambia o si chiude
+  useEffect(() => {
+    if (!shot) return;
+    return () => URL.revokeObjectURL(shot.url);
+  }, [shot]);
+
+  useEffect(() => {
+    if (!expVisible) return;
+    const id = window.setTimeout(() => setExpVisible(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [expVisible, exposure]);
+
+  useEffect(() => {
+    if (!flash) return;
+    const id = window.setTimeout(() => setFlash(false), 230);
+    return () => window.clearTimeout(id);
+  }, [flash]);
 
   useEffect(() => {
     lensInfoRef.current = lensInfo;
@@ -485,6 +622,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
         setZoom(round1(scale * hw));
         setTorchSupported(!!caps.torch);
         setFocusSupported(Array.isArray(caps.focusMode) && caps.focusMode.includes('single-shot'));
+        const ec = caps.exposureCompensation;
+        setExpRange(ec && ec.max > ec.min ? { min: ec.min, max: ec.max, step: ec.step || 0.1 } : null);
+        setExposure((settings as MediaTrackSettings & { exposureCompensation?: number }).exposureCompensation ?? 0);
         setRawLenses(rawList);
         setActiveLensId(activeId);
         setVideoDims({ w: video?.videoWidth ?? 0, h: video?.videoHeight ?? 0 });
@@ -526,12 +666,14 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (menuLens) setMenuLens(null);
+        else if (settingsOpen) setSettingsOpen(false);
+        else if (shot) setShot(null);
         else onClose();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, menuLens]);
+  }, [onClose, menuLens, settingsOpen, shot]);
 
   // Misura dell'area dell'anteprima, per adattare il riquadro al formato scelto
   useEffect(() => {
@@ -759,7 +901,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
 
   // Tocco sull'anteprima: messa a fuoco in quel punto (dove il telefono lo supporta)
   const onPreviewTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!focusSupported || !ready) return;
+    if (!ready) return;
+    if (expRange) setExpVisible(true);
+    if (!focusSupported) return;
     const areaRect = e.currentTarget.getBoundingClientRect();
     setFocusPoint({ x: e.clientX - areaRect.left, y: e.clientY - areaRect.top, key: Date.now() });
     const box = boxRef.current?.getBoundingClientRect();
@@ -798,14 +942,25 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     return () => window.clearTimeout(id);
   }, [focusPoint]);
 
-  const takePhoto = async () => {
+  /** Scatta adesso: foto a piena risoluzione dove il telefono lo permette, poi ritaglio, raddrizzamento e anteprima */
+  const capture = async () => {
     const video = videoRef.current;
     const track = trackRef.current;
-    if (!video || !video.videoWidth || busy || probing) return;
+    // Il ref blocca i doppi scatti anche tra due render (lo stato busy arriva in ritardo)
+    if (!video || !video.videoWidth || busyRef.current || probing) return;
+    busyRef.current = true;
     setBusy(true);
+    setFlash(true);
+    try {
+      navigator.vibrate?.(15);
+    } catch {
+      /* non essenziale */
+    }
     try {
       const portrait = video.videoHeight >= video.videoWidth;
       const wanted = aspectValue(aspect, portrait, area.w, area.h);
+      // La foto si raddrizza al contrario di come ruotano le icone (vedi drawRotated)
+      const photoRot = normRotation(-rotationRef.current);
       let blob: Blob | null = null;
       // Foto a piena risoluzione del sensore (Android Chrome), con lo zoom hardware già applicato
       const ImageCaptureCtor = (window as unknown as { ImageCapture?: new (t: MediaStreamTrack) => ImageCaptureLike })
@@ -814,20 +969,106 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       if (ImageCaptureCtor && track && canUseFullRes) {
         try {
           const full = await new ImageCaptureCtor(track).takePhoto();
-          blob = await cropBlobToAspect(full, wanted, portrait);
+          blob = await finishPhoto(full, wanted, portrait, photoRot);
         } catch {
           blob = null;
         }
       }
-      if (!blob) blob = await grabFrame(video, digitalZoom, wanted);
+      if (!blob) blob = await grabFrame(video, digitalZoom, wanted, photoRot);
       if (!blob) {
-        setError('Scatto non riuscito, riprova.');
+        setNotice({ ok: false, text: 'Scatto non riuscito, riprova.' });
         return;
       }
-      onCapture(new File([blob], `foto-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' }));
+      const file = new File([blob], `foto-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+      setShot({ file, url: URL.createObjectURL(file) });
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
+  };
+  captureRef.current = capture;
+
+  // Autoscatto: conto alla rovescia con un timer esplicito (non da un effetto, che potrebbe scattare due volte)
+  const stopCountdown = () => {
+    if (countdownTimerRef.current !== null) window.clearInterval(countdownTimerRef.current);
+    countdownTimerRef.current = null;
+    setCountdown(null);
+  };
+  useEffect(() => () => {
+    if (countdownTimerRef.current !== null) window.clearInterval(countdownTimerRef.current);
+  }, []);
+
+  const onShutter = () => {
+    // Toccando di nuovo durante il conto alla rovescia lo si annulla
+    if (countdownTimerRef.current !== null) {
+      stopCountdown();
+      return;
+    }
+    if (timer === 0) {
+      void capture();
+      return;
+    }
+    let left: number = timer;
+    setCountdown(left);
+    countdownTimerRef.current = window.setInterval(() => {
+      left -= 1;
+      if (left > 0) {
+        setCountdown(left);
+        return;
+      }
+      stopCountdown();
+      void captureRef.current();
+    }, 1000);
+  };
+
+  const acceptShot = () => {
+    if (!shot) return;
+    const file = shot.file;
+    setShot(null);
+    onCapture(file);
+  };
+
+  const cycleTimer = () => {
+    const next: TimerSec = timer === 0 ? 3 : timer === 3 ? 10 : 0;
+    setTimer(next);
+    savePref(TIMER_KEY, String(next));
+  };
+
+  const toggleGrid = () => {
+    setGrid((g) => {
+      savePref(GRID_KEY, g ? '0' : '1');
+      return !g;
+    });
+  };
+
+  const changeExposure = (value: number) => {
+    setExposure(value);
+    setExpVisible(true);
+    trackRef.current
+      ?.applyConstraints({ advanced: [{ exposureMode: 'continuous', exposureCompensation: value } as MediaTrackConstraintSet] })
+      .catch(() => undefined);
+  };
+
+  // Rotella dello zoom: trascinando la fila dei valori a sinistra si ingrandisce, a destra si allarga
+  const onZoomPointerDown = (e: React.PointerEvent) => {
+    // Un tocco nuovo azzera il blocco lasciato da un trascinamento precedente
+    suppressClickRef.current = false;
+    dragRef.current = { x: e.clientX, zoom, moved: false };
+  };
+  const onZoomPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    if (!d.moved && Math.abs(dx) < 8) return;
+    if (!d.moved) {
+      d.moved = true;
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    }
+    applyZoom(d.zoom * Math.exp(-dx / 140));
+  };
+  const onZoomPointerUp = () => {
+    suppressClickRef.current = !!dragRef.current?.moved;
+    dragRef.current = null;
   };
 
   // Pulsanti rapidi di zoom (0.5× compare solo se si può davvero scendere sotto 1×; un tele dedicato aggiunge il suo ingrandimento)
@@ -838,19 +1079,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
       )
     )
   ).sort((a, b) => a - b);
-  const nearestPreset = zoomPresets.reduce((a, b) => (Math.abs(b - zoom) < Math.abs(a - zoom) ? b : a), zoomPresets[0] ?? 1);
-
-  // Avviso verde: compare solo quando è certo quale obiettivo è in uso e sparisce tornando al principale
-  let lensNotice: string | null = null;
-  if (ready && facing === 'environment') {
-    if (activeLens && activeLens.id !== mainId) {
-      const feminine = activeLens.kind === 'ultra' || activeLens.kind === 'macro';
-      lensNotice = `${activeLens.name} ${feminine ? 'attiva' : 'attivo'}`;
-    } else if (scale === 1 && hwMin < 1 && zoom < 1) {
-      // Il principale scende sotto 1× da solo: per definizione è l'ultra grandangolare
-      lensNotice = 'Ultra grandangolare attiva';
-    }
-  }
+  // Valore evidenziato: l'ultimo preset non oltre lo zoom attuale (2,4× resta sul «2», come nelle fotocamere native)
+  const activePreset = zoomPresets.filter((p) => p <= zoom + 0.05).pop() ?? zoomPresets[0] ?? 1;
 
   // Il pulsante "Riconosci" serve finché c'è un obiettivo di cui non si sa nulla
   const needsRecognition = lenses.length > 1;
@@ -880,61 +1110,79 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
     .filter(Boolean)
     .join(' ');
 
+  // Le icone girano con il telefono; i pulsanti restano dove sono (come nelle fotocamere native)
+  const ios = isIos();
+  const iconTurn: React.CSSProperties = { transform: `rotate(${rotation}deg)`, transition: 'transform 280ms ease' };
+  const roundBtn =
+    'w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-all duration-150 disabled:opacity-30';
+  const idleBtn = `${roundBtn} bg-white/10 text-white`;
+  const onBtn = `${roundBtn} bg-[#52d9e6] text-[#04242a]`;
+
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Fotocamera"
-      className="fixed inset-0 z-[10001] bg-black flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] select-none"
+      className="cam-open fixed inset-0 z-[10001] bg-black flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] select-none text-white"
+      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
     >
-      {/* Barra superiore */}
+      {/* Barra superiore: chiudi a sinistra, impostazioni dello scatto a destra */}
       <div className="shrink-0 flex items-center justify-between px-4 py-3">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Chiudi fotocamera"
-          className="w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-95 transition-transform"
-        >
-          <X className="w-5 h-5" />
+        <button type="button" onClick={onClose} aria-label="Chiudi fotocamera" className={idleBtn}>
+          <X className="w-5 h-5" style={iconTurn} />
         </button>
 
         <div className="flex items-center gap-2">
-          {facing === 'environment' && (
+          {facing === 'environment' && torchSupported && (
             <button
               type="button"
               onClick={toggleTorch}
-              disabled={!torchSupported}
-              title={torchSupported ? undefined : 'Flash non disponibile su questa fotocamera'}
-              aria-label={torchSupported ? (torchOn ? 'Spegni flash' : 'Accendi flash') : 'Flash non disponibile'}
+              aria-label={torchOn ? 'Spegni flash' : 'Accendi flash'}
               aria-pressed={torchOn}
-              className={`w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-all disabled:opacity-30 ${
-                torchOn ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'
-              }`}
+              className={torchOn ? onBtn : idleBtn}
             >
-              {torchOn ? <Zap className="w-5 h-5" /> : <ZapOff className="w-5 h-5" />}
-            </button>
-          )}
-          {onPickLibrary && (
-            <button
-              type="button"
-              onClick={onPickLibrary}
-              className="h-11 px-3.5 rounded-full bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
-            >
-              <span>Galleria</span>
+              {torchOn ? <Zap className="w-5 h-5" style={iconTurn} /> : <ZapOff className="w-5 h-5" style={iconTurn} />}
             </button>
           )}
           <button
             type="button"
-            onClick={onUseSystemCamera}
-            className="h-11 px-3.5 rounded-full bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
+            onClick={cycleTimer}
+            aria-label={timer ? `Autoscatto ${timer} secondi. Tocca per cambiare` : 'Autoscatto spento. Tocca per attivarlo'}
+            aria-pressed={timer > 0}
+            className={`${timer ? onBtn : idleBtn} relative`}
           >
-            <Smartphone className="w-4 h-4" />
-            <span>App Fotocamera</span>
+            <Timer className="w-5 h-5" style={iconTurn} />
+            {timer > 0 && (
+              <span className="absolute -bottom-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-black text-[10px] font-semibold flex items-center justify-center">
+                {timer}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={toggleGrid}
+            aria-label={grid ? 'Nascondi griglia' : 'Mostra griglia'}
+            aria-pressed={grid}
+            className={grid ? onBtn : idleBtn}
+          >
+            <Grid3x3 className="w-5 h-5" style={iconTurn} />
+          </button>
+          <button
+            type="button"
+            onClick={cycleAspect}
+            aria-label={`Formato foto ${ASPECT_LABEL[aspect]}. Tocca per cambiare`}
+            className={`${roundBtn} bg-white/10 text-white text-[12px] font-semibold`}
+            style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
+          >
+            <span style={iconTurn}>{ASPECT_LABEL[aspect]}</span>
+          </button>
+          <button type="button" onClick={() => setSettingsOpen(true)} aria-label="Altre opzioni" className={idleBtn}>
+            <Settings2 className="w-5 h-5" style={iconTurn} />
           </button>
         </div>
       </div>
 
-      {/* Anteprima: pizzica per lo zoom, tocca per mettere a fuoco */}
+      {/* Anteprima: pizzica per lo zoom, tocca per mettere a fuoco e regolare la luce */}
       <div
         ref={areaRef}
         className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden"
@@ -952,7 +1200,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
           if (e.touches.length < 2) pinchRef.current = null;
         }}
       >
-        {/* Fuori dal formato scelto si vede la stessa ripresa, attenuata: così si capisce come viene la foto in totale */}
+        {/* Fuori dal formato scelto si vede la stessa ripresa, attenuata: così si capisce cosa resta fuori */}
         {ghostStyle && (
           <video
             ref={ghostRef}
@@ -960,7 +1208,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
             muted
             autoPlay
             aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 top-1/2 max-w-none opacity-35"
+            className="pointer-events-none absolute left-1/2 top-1/2 max-w-none opacity-30"
             style={{
               ...ghostStyle,
               transform: `translate(-50%, -50%)${previewTransform ? ` ${previewTransform}` : ''}`,
@@ -980,140 +1228,191 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
             className="w-full h-full object-cover"
             style={{ transform: previewTransform || undefined }}
           />
+          {grid && ready && (
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0" data-testid="camera-grid">
+              <span className="absolute top-0 bottom-0 left-1/3 w-px bg-white/35" />
+              <span className="absolute top-0 bottom-0 left-2/3 w-px bg-white/35" />
+              <span className="absolute left-0 right-0 top-1/3 h-px bg-white/35" />
+              <span className="absolute left-0 right-0 top-2/3 h-px bg-white/35" />
+            </div>
+          )}
         </div>
 
         {focusPoint && (
           <span
             key={focusPoint.key}
-            className="pointer-events-none absolute w-16 h-16 -ml-8 -mt-8 rounded-full border-2 border-amber-300 animate-ping"
+            className="pointer-events-none absolute w-[72px] h-[72px] -ml-9 -mt-9 rounded-[14px] border-2 border-[#52d9e6] animate-in zoom-in-125 fade-in duration-200"
             style={{ left: focusPoint.x, top: focusPoint.y }}
           />
         )}
 
-        {ready && (
-          <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/60 text-white text-xs font-mono">
-            {fmtMag(zoom)}
-          </span>
+        {/* Luminosità: compare dopo un tocco, dove il telefono permette di regolarla */}
+        {expRange && expVisible && ready && (
+          <div
+            className="cam-rise absolute bottom-4 left-1/2 -translate-x-1/2 w-[min(78%,300px)] h-11 px-3 rounded-full bg-black/55 flex items-center gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Sun className="w-4 h-4 shrink-0 text-white/80" />
+            <input
+              type="range"
+              min={expRange.min}
+              max={expRange.max}
+              step={expRange.step}
+              value={exposure}
+              onChange={(e) => changeExposure(Number(e.target.value))}
+              aria-label="Luminosità"
+              className="flex-1 accent-[#52d9e6]"
+            />
+            <Sun className="w-5 h-5 shrink-0 text-white" />
+          </div>
         )}
 
-        {lensNotice && (
-          <span
-            role="status"
-            className="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-emerald-500 text-slate-950 text-xs font-bold shadow-lg whitespace-nowrap"
-          >
-            {lensNotice}
-          </span>
+        {countdown !== null && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-live="assertive">
+            <span
+              key={countdown}
+              className="text-[120px] leading-none font-light text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.6)] animate-in zoom-in-150 fade-in duration-300"
+              style={{ fontFamily: "'Outfit', system-ui, sans-serif", ...iconTurn }}
+            >
+              {countdown}
+            </span>
+          </div>
         )}
 
         {notice && (
           <span
             role="status"
-            className={`pointer-events-none absolute bottom-3 left-3 right-3 mx-auto max-w-sm px-3 py-2 rounded-xl text-xs font-semibold text-center shadow-lg ${
-              notice.ok ? 'bg-emerald-500 text-slate-950' : 'bg-amber-400 text-slate-950'
-            }`}
+            className="cam-rise pointer-events-none absolute top-3 left-3 right-3 mx-auto max-w-sm px-4 py-2.5 rounded-xl bg-black/70 text-white text-[13px] text-center"
           >
             {notice.text}
           </span>
         )}
 
         {!ready && !error && !probing && (
-          <div className="absolute inset-0 flex items-center justify-center gap-2 text-slate-300 text-sm">
+          <div className="absolute inset-0 flex items-center justify-center gap-2 text-white/70 text-sm">
             <Loader2 className="w-4 h-4 animate-spin" /> Apro la fotocamera…
           </div>
         )}
 
         {probing && (
-          <div
-            role="status"
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-6 text-center bg-black/85 text-slate-100"
-          >
+          <div role="status" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-6 text-center bg-black/85">
             <Loader2 className="w-6 h-6 animate-spin" />
-            <p className="text-sm font-semibold">
-              Riconosco gli obiettivi… {probing.step}/{probing.total}
+            <p className="text-[15px] font-semibold">
+              Riconosco gli obiettivi {probing.step} di {probing.total}
             </p>
-            <p className="text-xs text-slate-300 max-w-xs">
+            <p className="text-[13px] text-white/70 max-w-xs">
               Tieni fermo il telefono su una scena con molti dettagli, a qualche metro. L'anteprima si spegne per qualche secondo.
             </p>
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center bg-black/80">
-            <p className="text-sm text-slate-200 max-w-xs">{error}</p>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onUseSystemCamera();
-              }}
-              className="px-4 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs"
-            >
-              Usa l'app Fotocamera
-            </button>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center bg-black/85" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[15px] text-white/90 max-w-xs mb-2">{error}</p>
             {onPickLibrary && (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onPickLibrary(); }} className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs">
+              <button type="button" onClick={onPickLibrary} className="min-h-[48px] px-5 rounded-xl bg-[#52d9e6] text-[#04242a] font-semibold text-[15px]">
                 Scegli dalla galleria
               </button>
             )}
+            <button type="button" onClick={onUseSystemCamera} className="min-h-[48px] px-5 rounded-xl bg-white/10 text-white font-semibold text-[15px]">
+              Usa l'app Fotocamera
+            </button>
           </div>
+        )}
+
+        {/* Lampo allo scatto */}
+        {flash && <div aria-hidden="true" className="cam-flash pointer-events-none absolute inset-0 bg-white" />}
+
+        {/* iPhone: la fotocamera di sistema (zoom, HDR, notte) è sempre a un tocco */}
+        {ios && ready && !error && !probing && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onUseSystemCamera();
+            }}
+            data-testid="camera-ios-native"
+            className="cam-rise cam-hint absolute bottom-3 left-3 h-11 pl-3 pr-4 rounded-full bg-black/60 text-white text-[13px] font-medium flex items-center gap-2 active:scale-95 transition-transform"
+          >
+            <Smartphone className="w-4 h-4 text-[#52d9e6]" style={iconTurn} />
+            Fotocamera iPhone
+          </button>
         )}
       </div>
 
-      {/* Scelta dell'obiettivo posteriore (solo se il telefono ne espone più di uno) */}
-      {ready && facing === 'environment' && lenses.length > 1 && (
-        <div className="shrink-0 px-4 pt-3 flex overflow-x-auto" role="group" aria-label="Obiettivo">
-          <div className="mx-auto flex items-center gap-2">
-            {lenses.map((lens) => (
-              <button
-                key={lens.id}
-                type="button"
-                onClick={() => selectLens(lens)}
-                aria-pressed={lens.id === activeLensId}
-                className={`h-9 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  lens.id === activeLensId ? 'bg-white text-slate-950' : 'bg-white/10 text-white'
-                }`}
-              >
-                {lens.name}
-              </button>
-            ))}
-            {needsRecognition && (
-              <button
-                type="button"
-                onClick={() => void probeLenses()}
-                className="h-9 px-3 rounded-full border border-dashed border-white/40 text-white/90 text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 active:scale-95 transition-transform"
-              >
-                <ScanSearch className="w-3.5 h-3.5" />
-                Riconosci
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Controlli zoom */}
+      {/* Zoom: tocca un valore o trascina la fila per regolarlo fine */}
       {ready && zoomPresets.length > 1 && (
-        <div className="shrink-0 px-6 pt-3 space-y-3">
-          <div className="flex items-center justify-center gap-2">
-            {zoomPresets.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => applyZoom(preset)}
-                className={`min-w-[44px] h-9 px-2 rounded-full text-xs font-bold font-mono transition-colors ${
-                  preset === nearestPreset && Math.abs(zoom - preset) < 0.05
-                    ? 'bg-amber-400 text-slate-950'
-                    : 'bg-white/10 text-white'
-                }`}
-              >
-                {fmtMag(preset)}
-              </button>
-            ))}
+        <div className="cam-rise shrink-0 pt-4 flex justify-center">
+          <div
+            role="group"
+            aria-label="Zoom"
+            className="flex items-center gap-1 p-1 rounded-full bg-white/10"
+            style={{ touchAction: 'none' }}
+            onPointerDown={onZoomPointerDown}
+            onPointerMove={onZoomPointerMove}
+            onPointerUp={onZoomPointerUp}
+            onPointerCancel={onZoomPointerUp}
+          >
+            {zoomPresets.map((preset) => {
+              const active = preset === activePreset;
+              const label = active ? `${fmtZoom(zoom)}×` : fmtZoom(preset);
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => {
+                    if (suppressClickRef.current) {
+                      suppressClickRef.current = false;
+                      return;
+                    }
+                    applyZoom(preset);
+                  }}
+                  aria-label={`Zoom ${fmtZoom(preset)}×`}
+                  aria-pressed={active}
+                  className={`min-w-[44px] h-11 px-2 rounded-full text-[14px] font-medium transition-all duration-200 active:scale-95 ${
+                    active ? 'bg-black/70 text-[#52d9e6]' : 'text-white/90'
+                  }`}
+                  style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
+                >
+                  <span style={iconTurn} className="inline-block">{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Scatto, cambio fotocamera e formato della foto */}
-      <div className="shrink-0 px-8 py-5 flex items-center justify-between">
+      {/* Galleria, scatto, cambio fotocamera */}
+      <div className="shrink-0 px-8 pt-5 pb-6 grid grid-cols-3 items-center">
+        <div className="justify-self-start">
+          {onPickLibrary ? (
+            <button type="button" onClick={onPickLibrary} aria-label="Scegli dalla galleria" className={`${roundBtn} w-12 h-12 bg-white/10 text-white`}>
+              <Images className="w-5 h-5" style={iconTurn} />
+            </button>
+          ) : (
+            <span className="w-12 h-12" />
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onShutter}
+          disabled={!ready || busy || !!probing}
+          aria-label={countdown !== null ? 'Annulla autoscatto' : timer ? `Scatta tra ${timer} secondi` : 'Scatta foto'}
+          className="justify-self-center w-[78px] h-[78px] rounded-full border-[3px] border-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
+          data-testid="camera-shutter"
+        >
+          {busy ? (
+            <Loader2 className="w-7 h-7 animate-spin" />
+          ) : (
+            <span
+              className={`rounded-full transition-all duration-200 ${
+                countdown !== null ? 'w-7 h-7 rounded-[8px] bg-[#f87171]' : 'w-[64px] h-[64px] bg-white'
+              }`}
+            />
+          )}
+        </button>
+
         <button
           type="button"
           onClick={() => {
@@ -1123,44 +1422,141 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
             setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
           }}
           aria-label="Cambia fotocamera"
-          className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-95 transition-transform"
+          className={`justify-self-end ${roundBtn} w-12 h-12 bg-white/10 text-white`}
         >
-          <RefreshCw className="w-5 h-5" />
-        </button>
-
-        <button
-          type="button"
-          onClick={takePhoto}
-          disabled={!ready || busy || !!probing}
-          aria-label="Scatta foto"
-          className="w-[76px] h-[76px] rounded-full border-4 border-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
-        >
-          {busy ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : <span className="w-[60px] h-[60px] rounded-full bg-white" />}
-        </button>
-
-        <button
-          type="button"
-          onClick={cycleAspect}
-          aria-label={`Formato foto ${ASPECT_LABEL[aspect]}. Tocca per cambiare`}
-          className="w-12 h-12 rounded-full bg-white/10 text-white text-[11px] font-bold font-mono flex items-center justify-center active:scale-95 transition-transform"
-        >
-          {ASPECT_LABEL[aspect]}
+          <SwitchCamera className="w-5 h-5" style={iconTurn} />
         </button>
       </div>
 
+      {/* Foto appena scattata: si conferma prima di passare al caricamento */}
+      {shot && (
+        <div className="cam-fade absolute inset-0 z-30 bg-black flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" data-testid="camera-review">
+          <div className="flex-1 min-h-0 flex items-center justify-center p-3">
+            <img
+              src={shot.url}
+              alt="Foto appena scattata"
+              className="cam-drop object-contain rounded-xl"
+              style={{
+                ...iconTurn,
+                // Col telefono in orizzontale l'anteprima gira con lui: larghezza e altezza disponibili si scambiano
+                maxWidth: rotation === 90 || rotation === -90 ? 'calc(100dvh - 170px)' : '100%',
+                maxHeight: rotation === 90 || rotation === -90 ? 'calc(100vw - 24px)' : '100%',
+              }}
+            />
+          </div>
+          <div className="cam-rise shrink-0 px-5 pb-6 pt-2 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setShot(null)}
+              className="min-h-[52px] rounded-xl bg-white/10 text-white text-[15px] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+            >
+              <RotateCcw className="w-5 h-5" /> Riscatta
+            </button>
+            <button
+              type="button"
+              onClick={acceptShot}
+              className="min-h-[52px] rounded-xl bg-[#52d9e6] text-[#04242a] text-[15px] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              data-testid="camera-use"
+            >
+              <Check className="w-5 h-5" /> Usa foto
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Altre opzioni: obiettivi, riconoscimento e app Fotocamera del telefono */}
+      {settingsOpen && (
+        <div className="cam-fade absolute inset-0 z-20 bg-black/60 flex items-end" onClick={() => setSettingsOpen(false)}>
+          <div
+            role="dialog"
+            aria-label="Opzioni della fotocamera"
+            className="animate-sheet-up w-full rounded-t-[22px] bg-[#0a1119] px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))] space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-[20px] font-medium" style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}>
+                Altre opzioni
+              </h2>
+              <button type="button" onClick={() => setSettingsOpen(false)} aria-label="Chiudi" className={idleBtn}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {facing === 'environment' && lenses.length > 1 && (
+              <section className="space-y-2">
+                <h3 className="text-[13px] text-[#97a5b9]">Obiettivi</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {lenses.map((lens) => (
+                    <button
+                      key={lens.id}
+                      type="button"
+                      onClick={() => {
+                        if (lens.id === activeLensId && lens.id !== mainId) {
+                          setSettingsOpen(false);
+                          setMenuLens(lens);
+                          return;
+                        }
+                        setSettingsOpen(false);
+                        selectLens(lens);
+                      }}
+                      aria-pressed={lens.id === activeLensId}
+                      className={`min-h-[48px] px-3 rounded-xl text-[14px] font-medium text-left ${
+                        lens.id === activeLensId ? 'bg-[rgba(96,150,214,0.13)] text-[#52d9e6] shadow-[inset_0_0_0_1.5px_#52d9e6]' : 'bg-[rgba(96,150,214,0.13)] text-white'
+                      }`}
+                    >
+                      {lens.name}
+                    </button>
+                  ))}
+                </div>
+                {needsRecognition && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsOpen(false);
+                      void probeLenses();
+                    }}
+                    className="w-full min-h-[48px] px-4 rounded-xl bg-[rgba(96,150,214,0.13)] text-white text-[14px] font-medium flex items-center gap-2"
+                  >
+                    <ScanSearch className="w-4 h-4 text-[#52d9e6]" />
+                    Riconosci gli obiettivi
+                  </button>
+                )}
+                <p className="text-[12px] text-[#97a5b9] leading-snug">
+                  Tocca di nuovo l'obiettivo in uso per dire che tipo è. Lo zoom passa da solo all'obiettivo giusto.
+                </p>
+              </section>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsOpen(false);
+                onUseSystemCamera();
+              }}
+              className="w-full min-h-[48px] px-4 rounded-xl bg-[rgba(96,150,214,0.13)] text-white text-[14px] font-medium flex items-center gap-2"
+            >
+              <Smartphone className="w-4 h-4 text-[#97a5b9]" />
+              Usa l'app Fotocamera del telefono
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Che obiettivo è? La risposta resta salvata su questo telefono */}
       {menuLens && (
-        <div className="absolute inset-0 z-20 bg-black/60 flex items-end" onClick={() => setMenuLens(null)}>
+        <div className="cam-fade absolute inset-0 z-20 bg-black/60 flex items-end" onClick={() => setMenuLens(null)}>
           <div
             role="dialog"
             aria-label="Che obiettivo è?"
-            className="w-full rounded-t-3xl bg-slate-900 border-t border-slate-700 p-5 pb-8 space-y-3"
+            className="animate-sheet-up w-full rounded-t-[22px] bg-[#0a1119] px-5 pt-5 pb-[calc(24px+env(safe-area-inset-bottom))] space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
-              <div className="text-sm font-bold text-white">Che obiettivo è «{menuLens.name}»?</div>
-              <p className="text-[11px] text-slate-400 leading-snug mt-1">
-                Il telefono non lo dice al browser. Se lo sai, ricordo la scelta; altrimenti usa «Riconosci».
+              <h2 className="text-[20px] font-medium" style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}>
+                Che obiettivo è «{menuLens.name}»?
+              </h2>
+              <p className="text-[13px] text-[#97a5b9] leading-snug mt-1">
+                Il telefono non lo dice al browser. Se lo sai, ricordo la scelta; altrimenti usa «Riconosci gli obiettivi».
               </p>
             </div>
             <div className="grid grid-cols-1 gap-2">
@@ -1175,18 +1571,16 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({ onCaptur
                   key={kind}
                   type="button"
                   onClick={() => labelLens(menuLens, kind)}
-                  className={`h-11 rounded-xl text-sm font-semibold ${
-                    menuLens.kind === kind && menuLens.origin === 'user' ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'
+                  className={`min-h-[48px] rounded-xl text-[15px] font-medium ${
+                    menuLens.kind === kind && menuLens.origin === 'user'
+                      ? 'bg-[rgba(96,150,214,0.13)] text-[#52d9e6] shadow-[inset_0_0_0_1.5px_#52d9e6]'
+                      : 'bg-[rgba(96,150,214,0.13)] text-white'
                   }`}
                 >
                   {label}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => labelLens(menuLens, null)}
-                className="h-11 rounded-xl text-sm font-semibold bg-white/5 text-slate-300"
-              >
+              <button type="button" onClick={() => labelLens(menuLens, null)} className="min-h-[48px] rounded-xl text-[15px] font-medium text-[#97a5b9]">
                 Non lo so
               </button>
             </div>

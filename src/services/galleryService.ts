@@ -53,7 +53,7 @@ export interface CompressedImage {
 const DECODE_MAX_DIMENSION = 2400;
 
 /** Legge le dimensioni senza decodificare i pixel (le foto da 50-200 megapixel a piena risoluzione fanno crollare la scheda) */
-async function probeSize(file: File): Promise<{ w: number; h: number } | null> {
+async function probeSize(file: Blob): Promise<{ w: number; h: number } | null> {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -70,16 +70,31 @@ async function probeSize(file: File): Promise<{ w: number; h: number } | null> {
   }
 }
 
-async function loadSource(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; close: () => void }> {
+export interface DecodedImage {
+  source: CanvasImageSource;
+  width: number;
+  height: number;
+  close: () => void;
+}
+
+/**
+ * Decodifica una foto con il lato lungo al massimo maxDim, senza mai caricare l'immagine intera in memoria
+ * (le foto da 50-200 megapixel a piena risoluzione fanno crollare la scheda del browser). Applica l'orientamento EXIF.
+ */
+export async function decodeScaled(file: Blob, maxDim: number = DECODE_MAX_DIMENSION): Promise<DecodedImage> {
+  return loadSource(file, maxDim);
+}
+
+async function loadSource(file: Blob, maxDim: number = DECODE_MAX_DIMENSION): Promise<DecodedImage> {
   // 'from-image' applica l'orientamento EXIF: le foto scattate in verticale col telefono restano dritte
   if (typeof createImageBitmap === 'function') {
     try {
       // Foto molto grandi: si decodifica già ridotta, così non si carica mai l'immagine intera in memoria
       const size = await probeSize(file);
       const opts: ImageBitmapOptions = { imageOrientation: 'from-image' };
-      if (size && Math.max(size.w, size.h) > DECODE_MAX_DIMENSION) {
-        if (size.w >= size.h) opts.resizeWidth = DECODE_MAX_DIMENSION;
-        else opts.resizeHeight = DECODE_MAX_DIMENSION;
+      if (size && Math.max(size.w, size.h) > maxDim) {
+        if (size.w >= size.h) opts.resizeWidth = maxDim;
+        else opts.resizeHeight = maxDim;
         opts.resizeQuality = 'high';
       }
       const bmp = await createImageBitmap(file, opts);
@@ -94,7 +109,17 @@ async function loadSource(file: File): Promise<{ source: CanvasImageSource; widt
     img.decoding = 'async';
     img.src = url;
     await img.decode();
-    return { source: img, width: img.naturalWidth, height: img.naturalHeight, close: () => undefined };
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    const k = Math.min(1, maxDim / Math.max(w, h));
+    if (k >= 1) return { source: img, width: w, height: h, close: () => undefined };
+    // Ripiego senza createImageBitmap ridotto: si copia subito in una tela piccola, così l'immagine grande si può liberare
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(w * k));
+    canvas.height = Math.max(1, Math.round(h * k));
+    canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.src = '';
+    return { source: canvas, width: canvas.width, height: canvas.height, close: () => undefined };
   } finally {
     URL.revokeObjectURL(url);
   }
