@@ -200,14 +200,62 @@ function kvPut(key, value) {
   });
 }
 
+// Ripiego se request.formData() fallisce: legge il corpo grezzo e ne estrae il primo file
+function findBytes(buf, pat, from) {
+  outer: for (let i = from; i <= buf.length - pat.length; i++) {
+    for (let j = 0; j < pat.length; j++) if (buf[i + j] !== pat[j]) continue outer;
+    return i;
+  }
+  return -1;
+}
+async function firstFileFromRaw(request) {
+  const type = request.headers.get('content-type') || '';
+  const m = /boundary=("?)([^";]+)\1/i.exec(type);
+  if (!m) throw new Error('no-boundary');
+  const buf = new Uint8Array(await request.arrayBuffer());
+  const enc = new TextEncoder();
+  const delim = enc.encode('--' + m[2]);
+  const headSep = enc.encode('\r\n\r\n');
+  const partEnd = enc.encode('\r\n--' + m[2]);
+  let pos = 0;
+  while ((pos = findBytes(buf, delim, pos)) !== -1) {
+    const headEnd = findBytes(buf, headSep, pos);
+    if (headEnd === -1) break;
+    const head = new TextDecoder().decode(buf.subarray(pos, headEnd));
+    const start = headEnd + 4;
+    const end = findBytes(buf, partEnd, start);
+    if (/filename="/i.test(head) && end > start) {
+      const ct = /content-type:\s*([^\r\n]+)/i.exec(head);
+      return new Blob([buf.slice(start, end)], { type: ct ? ct[1].trim() : 'image/jpeg' });
+    }
+    pos = start;
+  }
+  return null;
+}
+
 async function handleShare(request) {
   const home = self.registration.scope;
   const go = (qs) => Response.redirect(new URL(`./?${qs}`, home).href, 303);
+  const fail = (stage, e, extra) =>
+    go(`p=gallery&shared=err&why=${encodeURIComponent(`${stage}: ${String((e && e.message) || e)}${extra || ''}`.slice(0, 120))}`);
+  const size = request.headers.get('content-length');
+  const sizeInfo = size ? ` · ${Math.round(Number(size) / 1024)} KB` : '';
+  const copy = request.clone();
+  let photos = [];
+  let form = null;
   try {
-    const form = await request.formData();
-    // Qualunque file immagine nel modulo (il nome del campo può variare da un telefono all'altro)
-    const photos = [];
+    form = await request.formData();
     for (const [, v] of form.entries()) if (v && typeof v !== 'string' && v.size > 0) photos.push(v);
+  } catch (e1) {
+    // formData non è riuscito: si prova a leggere il corpo grezzo
+    try {
+      const blob = await firstFileFromRaw(copy);
+      if (blob) photos = [blob];
+    } catch (e2) {
+      return fail('lettura', e1, ` / grezzo: ${String((e2 && e2.message) || e2)}${sizeInfo}`);
+    }
+  }
+  try {
     if (photos.length) {
       try {
         await kvPut('shared-photo', photos[0]);
@@ -220,14 +268,16 @@ async function handleShare(request) {
     }
     // Solo testo o link: come prima, diventa un nuovo luogo
     const q = new URLSearchParams();
-    for (const k of ['title', 'text', 'url']) {
-      const v = form.get(k);
-      if (typeof v === 'string' && v) q.set(k, v);
+    if (form) {
+      for (const k of ['title', 'text', 'url']) {
+        const v = form.get(k);
+        if (typeof v === 'string' && v) q.set(k, v);
+      }
     }
     // Nessun file e nessun testo: lo si segnala alla pagina invece di tornare in silenzio a "Oggi"
     return q.toString() ? go(q.toString()) : go('p=gallery&shared=empty');
   } catch (e) {
-    return go(`p=gallery&shared=err&why=${encodeURIComponent(String((e && e.message) || e).slice(0, 80))}`);
+    return fail('salvataggio', e, sizeInfo);
   }
 }
 
