@@ -7,7 +7,7 @@ import {
 import { FoldText } from './mobile/FoldText';
 import { useMediaQuery } from '../pwa';
 import { MobileVoli } from './mobile/MobileVoli';
-import { FlightReliability } from './FlightReliability';
+import { FlightReliability, LegStatsToggle } from './FlightReliability';
 import './mobile/mobile.css';
 
 export const FlightsAndLayoverView: React.FC = () => {
@@ -68,6 +68,7 @@ export const FlightsAndLayoverView: React.FC = () => {
       </div>
       {leg.layoverNotice && <p className="text-sm text-slate-300">{leg.layoverNotice}</p>}
       <p className="text-sm text-slate-400">{leg.baggageInfo}</p>
+      <LegStatsToggle legId={leg.id} phone={false} />
     </li>
   );
 

@@ -572,3 +572,9 @@
   .ms-rel-dl-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
   .ms-rel-dd { margin: 0; color: var(--ms-text); font-variant-numeric: tabular-nums; text-align: right; }
 }
+
+/* Puntualità sotto ogni volo (telefono): riga tappabile che apre i dettagli */
+@media (max-width: 1023px) {
+  .ms-leg-stats { margin-top: 6px; }
+  .ms-leg-stats-btn { background: none; border: 0; padding: 0; min-height: 44px; color: var(--ms-accent); font-size: 14px; font-weight: 600; }
+}
