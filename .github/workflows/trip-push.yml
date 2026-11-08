@@ -42,7 +42,7 @@ jobs:
       - name: Prepara
         if: steps.window.outputs.active == 'true'
         run: |
-          npm install --no-save --no-package-lock firebase-admin@13 esbuild@0.25
+          npm install --no-save --no-package-lock --legacy-peer-deps firebase-admin@13 esbuild@0.25
           npx esbuild scripts/trip-push.mts --bundle --platform=node --format=esm --target=node22 \
             --define:import.meta.env.BASE_URL='"/"' \
             --external:firebase-admin --outfile=trip-push.bundle.mjs

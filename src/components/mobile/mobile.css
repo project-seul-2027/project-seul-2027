@@ -562,3 +562,13 @@
   .ms-rel-note { font-size: 14px; line-height: 1.45; color: var(--ms-mute); margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--ms-amber); }
   .ms-rel-note strong { color: var(--ms-text); font-weight: 600; }
 }
+
+/* Puntualità: voce cliccabile e dettagli espandibili (telefono) */
+@media (max-width: 1023px) {
+  .ms-rel-btn { width: 100%; background: none; border: 0; padding: 0; text-align: left; color: inherit; min-height: 44px; }
+  .ms-rel-panel { margin-top: 12px; padding: 12px; border-radius: var(--ms-r); background: var(--ms-fill); display: grid; gap: 14px; }
+  .ms-rel-detail-title { font: 500 15px/1.2 'Outfit', system-ui, sans-serif; color: var(--ms-accent); margin: 0 0 6px; }
+  .ms-rel-dl { margin: 0; display: grid; gap: 6px; }
+  .ms-rel-dl-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .ms-rel-dd { margin: 0; color: var(--ms-text); font-variant-numeric: tabular-nums; text-align: right; }
+}

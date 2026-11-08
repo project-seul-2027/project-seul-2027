@@ -1,5 +1,5 @@
-# Puntualità dei voli del viaggio: scarica da AeroDataBox i ritardi degli ultimi ~90 giorni e li salva per l'app.
-# Parte da sola ogni giorno fino al 21 marzo 2027 (lo script aggiorna ogni volo al massimo ogni ~40 ore).
+# Puntualità dei voli del viaggio: scarica da AeroDataBox gli ultimi voli operati (finestre da 7 giorni) e ne calcola la puntualità per l'app.
+# Parte da sola ogni giorno fino al 21 marzo 2027 (lo script aggiorna ogni volo al massimo ogni ~20 ore).
 # Prova a mano: GitHub → Actions → "Puntualità dei voli" → Run workflow (con "solo elenco" non salva nulla).
 # Servono i segreti RAPIDAPI_KEY e FIREBASE_SERVICE_ACCOUNT.
 name: Puntualità dei voli
@@ -42,7 +42,7 @@ jobs:
       - name: Prepara
         if: steps.window.outputs.active == 'true'
         run: |
-          npm install --no-save --no-package-lock firebase-admin@13 esbuild@0.25
+          npm install --no-save --no-package-lock --legacy-peer-deps firebase-admin@13 esbuild@0.25
           npx esbuild scripts/flight-stats.mts --bundle --platform=node --format=esm --target=node22 \
             --external:firebase-admin --outfile=flight-stats.bundle.mjs
       - name: Aggiorna
