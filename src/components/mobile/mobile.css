@@ -548,24 +548,50 @@
 
 /* Puntualità dei voli (telefono): voci senza riquadri, separate da un filetto, stato in chiaro a destra */
 @media (max-width: 1023px) {
-  .ms-rel-list { list-style: none; margin: 14px 0 0; padding: 0; }
-  .ms-rel-item { padding: 14px 0; border-top: 1px solid var(--ms-line); }
-  .ms-rel-item:first-child { border-top: 0; padding-top: 4px; }
-  .ms-rel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  .ms-rel-name { font: 500 17px/1.2 'Outfit', system-ui, sans-serif; color: var(--ms-text); }
-  .ms-rel-badge { font-size: 14px; font-weight: 600; color: var(--ms-mute); white-space: nowrap; }
-  .ms-rel-stable { color: #6ee7b7; }
-  .ms-rel-variable { color: var(--ms-amber); }
-  .ms-rel-unstable { color: #fda4af; }
-  .ms-rel-line { font-size: 14px; line-height: 1.45; color: var(--ms-text); margin: 8px 0 0; }
-  .ms-rel-line strong { font-weight: 600; }
-  .ms-rel-note { font-size: 14px; line-height: 1.45; color: var(--ms-mute); margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--ms-amber); }
-  .ms-rel-note strong { color: var(--ms-text); font-weight: 600; }
+  .ms-rel-ok { --t: #6ee7b7; --tb: rgba(110, 231, 183, 0.12); }
+  .ms-rel-warn { --t: var(--ms-amber); --tb: rgba(251, 191, 36, 0.12); }
+  .ms-rel-bad { --t: #fda4af; --tb: rgba(253, 164, 175, 0.12); }
+  .ms-rel-none { --t: var(--ms-mute); --tb: var(--ms-fill); }
+  .ms-rel-strong { color: var(--ms-text); font-weight: 600; }
+
+  /* Riquadro in cima: la cosa da sapere prima di tutto */
+  .ms-rel-alert { display: flex; gap: 12px; align-items: flex-start; margin: 14px 0 0; padding: 14px; border-radius: var(--ms-r); background: var(--tb); }
+  .ms-rel-alert-icon { flex: none; margin-top: 1px; color: var(--t); }
+  .ms-rel-alert-title { margin: 0; font: 500 16px/1.25 'Outfit', system-ui, sans-serif; color: var(--ms-text); }
+  .ms-rel-alert-text { margin: 4px 0 0; font-size: 14px; line-height: 1.45; color: var(--ms-mute); }
+
+  .ms-rel-list { list-style: none; margin: 6px 0 0; padding: 0; }
+  .ms-rel-item { padding: 16px 0 14px; border-top: 1px solid var(--ms-line); }
+  .ms-rel-item:first-child { border-top: 0; }
+  .ms-rel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .ms-rel-name { display: block; font: 500 20px/1.15 'Outfit', system-ui, sans-serif; letter-spacing: -0.01em; color: var(--ms-text); }
+  .ms-rel-route { display: block; margin-top: 2px; font-size: 13px; color: var(--ms-mute); }
+  .ms-rel-chip { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--t); background: var(--tb); white-space: nowrap; }
+
+  .ms-rel-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 14px; }
+  .ms-rel-big { display: block; font: 500 34px/1 'Outfit', system-ui, sans-serif; letter-spacing: -0.02em; color: var(--ms-text); font-variant-numeric: tabular-nums; }
+  .ms-rel-cap { display: block; margin-top: 4px; font-size: 13px; color: var(--ms-mute); }
+  .ms-rel-time { text-align: right; }
+  .ms-rel-time-big { display: block; font: 500 22px/1 'Outfit', system-ui, sans-serif; color: var(--ms-text); font-variant-numeric: tabular-nums; }
+
+  /* Barra del ritardo: il filetto chiaro è l'orario programmato, la fascia contiene 9 voli su 10, il pallino è il valore tipico */
+  .ms-rel-scale { margin: 18px 0 0; }
+  .ms-rel-track { position: relative; height: 8px; border-radius: 4px; background: var(--ms-fill); }
+  .ms-rel-band { position: absolute; top: 0; height: 8px; border-radius: 4px; background: var(--t); opacity: 0.4; }
+  .ms-rel-zero { position: absolute; top: -5px; width: 2px; height: 18px; margin-left: -1px; border-radius: 1px; background: var(--ms-text); }
+  .ms-rel-dot { position: absolute; top: -3px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--t); box-shadow: 0 0 0 3px var(--ms-bg); }
+  .ms-rel-axis { position: relative; height: 16px; margin-top: 10px; font-size: 12px; color: var(--ms-mute); }
+  .ms-rel-axis span { position: absolute; top: 0; }
+  .ms-rel-range { margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: var(--ms-text); }
 }
 
 /* Puntualità: voce cliccabile e dettagli espandibili (telefono) */
 @media (max-width: 1023px) {
-  .ms-rel-btn { width: 100%; background: none; border: 0; padding: 0; text-align: left; color: inherit; min-height: 44px; }
+  .ms-rel-btn { display: block; width: 100%; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; }
+  .ms-rel-more { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-top: 2px; padding: 0; background: none; border: 0; color: var(--ms-accent); font-size: 14px; font-weight: 600; }
+  .ms-rel-chev { flex: none; }
+  .ms-rel-open { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: no-preference) { .ms-rel-chev { transition: transform .2s ease; } }
   .ms-rel-panel { margin-top: 12px; padding: 12px; border-radius: var(--ms-r); background: var(--ms-fill); display: grid; gap: 14px; }
   .ms-rel-detail-title { font: 500 15px/1.2 'Outfit', system-ui, sans-serif; color: var(--ms-accent); margin: 0 0 6px; }
   .ms-rel-dl { margin: 0; display: grid; gap: 6px; }
@@ -576,5 +602,8 @@
 /* Puntualità sotto ogni volo (telefono): riga tappabile che apre i dettagli */
 @media (max-width: 1023px) {
   .ms-leg-stats { margin-top: 6px; }
-  .ms-leg-stats-btn { background: none; border: 0; padding: 0; min-height: 44px; color: var(--ms-accent); font-size: 14px; font-weight: 600; }
+  .ms-leg-stats-btn { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; padding: 0; min-height: 44px; text-align: left; color: var(--ms-text); font-size: 14px; }
+  .ms-leg-stats-text { flex: 1; color: var(--ms-mute); }
+  .ms-leg-stats-text strong { color: var(--ms-text); font-weight: 600; }
+  .ms-leg-stats .ms-rel-chev { color: var(--ms-mute); }
 }
