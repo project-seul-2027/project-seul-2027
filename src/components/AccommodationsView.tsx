@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ACCOMMODATIONS, priceAccommodation } from '../data/tripData';
+import { ACCOMMODATIONS, formatAccommodationEur, priceAccommodation } from '../data/tripData';
 import { accommodationPriceService, type PriceOverrides } from '../services/accommodationPriceService';
 import { useAuth } from '../auth/AuthContext';
 import type { AccommodationId } from '../shared/travelerProfile';
@@ -234,9 +234,9 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
                       <div className="font-semibold text-white">{acc.code} · {acc.name.replace(/^Alloggio [A-D]:\s*/, '')}</div>
                       <div className="text-xs text-slate-400 mt-0.5">{acc.highlightBadge}</div>
                     </td>
-                    <td className="py-4 px-4 text-right tabular-nums text-slate-300">{acc.totalEur17Nights} €</td>
-                    <td className="py-4 px-4 text-right tabular-nums text-slate-300">{acc.pietroCost8Nights} €</td>
-                    <td className="py-4 px-4 text-right tabular-nums text-xl font-semibold text-white">{acc.other3Cost17Nights} €</td>
+                    <td className="py-4 px-4 text-right tabular-nums text-slate-300">{formatAccommodationEur(acc.totalEur17Nights)}</td>
+                    <td className="py-4 px-4 text-right tabular-nums text-slate-300">{formatAccommodationEur(acc.pietroCost8Nights)}</td>
+                    <td className="py-4 px-4 text-right tabular-nums text-xl font-semibold text-white">{formatAccommodationEur(acc.other3Cost17Nights)}</td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-3">
                         {voters.length > 0 && (
@@ -306,10 +306,10 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
           <div className="grid grid-cols-3 divide-x divide-slate-800/80 border-y border-slate-800/80">
             <div className="py-5 pr-6 space-y-1.5">
               <p className="text-xs text-slate-400">Costo</p>
-              <p className="text-2xl font-semibold text-white tabular-nums">{sel.totalEur17Nights} € totali</p>
+              <p className="text-2xl font-semibold text-white tabular-nums">{formatAccommodationEur(sel.totalEur17Nights)} totali</p>
               <PriceEditor key={sel.id} accId={sel.id} current={sel.totalEur17Nights} canEdit={canEditPrice} />
-              <p className="text-sm text-slate-300">Pietro, 8 notti: <span className="text-white font-semibold">{sel.pietroCost8Nights} €</span></p>
-              <p className="text-sm text-slate-300">Ognuno dei 3, 17 notti: <span className="text-white font-semibold">{sel.other3Cost17Nights} €</span></p>
+              <p className="text-sm text-slate-300">Pietro, 8 notti: <span className="text-white font-semibold">{formatAccommodationEur(sel.pietroCost8Nights)}</span></p>
+              <p className="text-sm text-slate-300">Ognuno dei 3, 17 notti: <span className="text-white font-semibold">{formatAccommodationEur(sel.other3Cost17Nights)}</span></p>
               <p className="text-xs text-slate-400">Canone mensile indicato: {sel.monthlyKrw.toLocaleString('it-IT')} ₩</p>
             </div>
             <div className="py-5 px-6 space-y-1.5">
@@ -577,13 +577,13 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
                     <span>{acc.name}</span>
                   </td>
                   <td className="py-3 px-3 text-right text-slate-200">
-                    {acc.totalEur17Nights} €
+                    {formatAccommodationEur(acc.totalEur17Nights)}
                   </td>
                   <td className="py-3 px-3 text-right text-amber-300 font-bold">
-                    {acc.pietroCost8Nights} €
+                    {formatAccommodationEur(acc.pietroCost8Nights)}
                   </td>
                   <td className="py-3 px-3 text-right text-emerald-400 font-bold">
-                    {acc.other3Cost17Nights} €
+                    {formatAccommodationEur(acc.other3Cost17Nights)}
                   </td>
                   <td className="py-3 px-3 text-center">
                     <button 
