@@ -1,6 +1,6 @@
 import React from 'react';
 import { FLIGHTS_SCHEDULE, FLIGHTS_BOOKING_URL } from '../../data/tripData';
-import { FlightReliability } from '../FlightReliability';
+import { FlightReliability, LegStatsToggle } from '../FlightReliability';
 import './mobile.css';
 
 /** Voli del telefono, come nel mockup: codici aeroporto grandi, linea colorata (ciano andata, ambra ritorno), scalo con filetto ambra. */
@@ -23,6 +23,7 @@ const Leg: React.FC<{ id: string; color: string; showDate?: boolean; meta: strin
         </div>
       </div>
       <p className="ms-meta">{meta}</p>
+      <LegStatsToggle legId={id} phone />
     </div>
   );
 };

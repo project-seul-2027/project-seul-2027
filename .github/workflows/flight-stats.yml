@@ -1,6 +1,6 @@
 # Puntualità dei voli del viaggio: scarica da AeroDataBox gli ultimi voli operati (finestre da 7 giorni) e ne calcola la puntualità per l'app.
 # Parte da sola ogni giorno fino al 21 marzo 2027 (lo script aggiorna ogni volo al massimo ogni ~20 ore).
-# Prova a mano: GitHub → Actions → "Puntualità dei voli" → Run workflow (con "solo elenco" non salva nulla).
+# Prova a mano: GitHub → Actions → "Puntualità dei voli" → Run workflow (con "solo elenco" attivo non salva nulla).
 # Servono i segreti RAPIDAPI_KEY e FIREBASE_SERVICE_ACCOUNT.
 name: Puntualità dei voli
 
@@ -12,7 +12,7 @@ on:
       dry_run:
         description: Solo elenco, non salva niente
         type: boolean
-        default: true
+        default: false
       force:
         description: Scarica anche se aggiornato da poco
         type: boolean

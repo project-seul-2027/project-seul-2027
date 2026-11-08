@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FLIGHTS_SCHEDULE } from '../data/tripData';
 import { TRACKED_FLIGHTS, type FlightStatsDoc, type LegDelayStats } from '../shared/flightStats';
-import { flightStatsService, type FlightStatsMap } from '../services/flightStatsService';
+import { useFlightStats } from '../services/useFlightStats';
 import {
   RELIABILITY_LABEL,
   formatDelay,
@@ -65,10 +65,57 @@ const LegDetails: React.FC<{ label: string; scheduled: string; s: LegSummary; ra
   );
 };
 
+/**
+ * Pulsante "Puntualità e orari medi" sotto un volo: apre gli orari medi, il ritardo medio, la deviazione standard e le fasce.
+ * Se le statistiche non ci sono ancora lo dice, invece di restare muto.
+ */
+export const LegStatsToggle: React.FC<{ legId: string; phone: boolean }> = ({ legId, phone }) => {
+  const stats = useFlightStats();
+  const [open, setOpen] = useState(false);
+  const t = TRACKED_FLIGHTS.find((x) => x.legId === legId);
+  const leg = FLIGHTS_SCHEDULE.find((l) => l.id === legId);
+  if (!t || !leg) return null;
+  const doc = stats?.[t.flight];
+  const dep = doc?.dep ? summarize(doc.dep) : null;
+  const arr = doc?.arr ? summarize(doc.arr) : null;
+  const panelId = `leg-stats-${legId}`;
+  return (
+    <div className={phone ? 'ms-leg-stats' : 'mt-3'}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className={phone ? 'ms-leg-stats-btn' : 'text-sm text-cyan-300 hover:text-cyan-200 min-h-[32px]'}
+        data-testid={`leg-stats-${legId}`}
+      >
+        Puntualità e orari medi {open ? '▴' : '▾'}
+      </button>
+      {open && (
+        <div id={panelId} className={phone ? 'ms-rel-panel' : 'mt-3 grid grid-cols-2 gap-6 rounded-lg bg-slate-900/60 p-4'}>
+          {dep && doc?.dep && <LegDetails label="Partenza" scheduled={leg.departureTime} s={dep} raw={doc.dep} phone={phone} />}
+          {arr && doc?.arr && <LegDetails label="Arrivo" scheduled={leg.arrivalTime} s={arr} raw={doc.arr} phone={phone} />}
+          {!dep && !arr && (
+            <p className={phone ? 'ms-meta' : 'text-sm text-slate-400 col-span-2'}>
+              {stats === null
+                ? 'Carico le statistiche…'
+                : 'Statistiche non ancora disponibili: si aggiornano ogni giorno e compaiono dopo il primo aggiornamento.'}
+            </p>
+          )}
+          {!!doc?.cancelled && (
+            <p className={phone ? 'ms-meta' : 'text-xs text-slate-400 col-span-2'}>
+              Cancellati {doc.cancelled} voli su {doc.total} nell'ultimo mese.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const FlightReliability: React.FC<Props> = ({ phone }) => {
-  const [stats, setStats] = useState<FlightStatsMap | null>(null);
+  const stats = useFlightStats();
   const [openId, setOpenId] = useState<string | null>(null);
-  useEffect(() => flightStatsService.watch(setStats, (err) => console.warn('Puntualità dei voli non leggibile:', err)), []);
 
   const rows = useMemo(() => {
     if (!stats) return [];
