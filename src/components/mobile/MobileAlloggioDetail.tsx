@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
-import type { AccommodationOption } from '../../data/tripData';
+import { formatAccommodationEur, type AccommodationOption } from '../../data/tripData';
 import './mobile.css';
 
 const PHOTO: Record<string, string> = { A: 'assets/alloggi/a.webp', B: 'assets/alloggi/b.webp', C: 'assets/alloggi/c.webp', D: 'assets/alloggi/d.webp' };
 const TONE: Record<string, string> = { A: '#52d9e6', B: '#a78bfa', C: '#f472b6', D: '#fbbf24' };
-const eur = (n: number) => `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(n)} €`;
+const eur = formatAccommodationEur;
 
 interface Props {
   acc: AccommodationOption;
@@ -76,7 +76,7 @@ export const MobileAlloggioDetail: React.FC<Props> = ({ acc, mine, voters, busy,
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[13px] text-[#97a5b9]">Circa {acc.nightlyRateEur} € a notte · canone mensile {acc.monthlyKrw.toLocaleString('it-IT')} ₩</p>
+      <p className="mt-2 text-[13px] text-[#97a5b9]">Circa {formatAccommodationEur(acc.nightlyRateEur)} a notte · canone mensile {acc.monthlyKrw.toLocaleString('it-IT')} ₩</p>
       <div className="text-[13px]">{priceEditor}</div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
