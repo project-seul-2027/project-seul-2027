@@ -106,7 +106,7 @@ export const TripNotifierEngine: React.FC = () => {
 /* ---------- Campanella e pannello ---------- */
 
 const Switch: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: string; testId?: string }> = ({ on, onChange, label, testId }) => (
-  <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${on ? 'bg-cyan-500' : 'bg-slate-700'}`} data-testid={testId}>
+  <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`nc-sw relative w-12 h-7 rounded-full shrink-0 transition-colors ${on ? 'bg-cyan-500' : 'bg-slate-700'}`} data-testid={testId}>
     <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white transition-transform ${on ? 'translate-x-5' : ''}`} />
   </button>
 );
@@ -160,14 +160,14 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
     notifyLocal({ id: `test-${Date.now()}`, category: 'updates', title: 'Prova di notifica', body: 'Se la vedi, gli avvisi funzionano su questo telefono.' });
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] bg-black/70 flex items-end sm:items-start sm:justify-end" role="dialog" aria-modal="true" aria-label="Notifiche" data-testid="notify-panel">
-      <div className="w-full sm:w-[26rem] sm:mt-16 sm:mr-4 max-h-[92dvh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl">
-        <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-800">
-          <BellRing className="w-5 h-5 text-cyan-300" />
+    <div className="nc-overlay fixed inset-0 z-[10000] bg-black/70 flex items-end sm:items-start sm:justify-end" role="dialog" aria-modal="true" aria-label="Notifiche" data-testid="notify-panel" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="nc-card w-full sm:w-[26rem] sm:mt-16 sm:mr-4 max-h-[92dvh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl">
+        <div className="nc-head flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-800">
+          <BellRing className="bell w-5 h-5 text-cyan-300" />
           <p className="flex-1 text-sm font-bold text-white">Notifiche</p>
           <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-xl text-slate-300 hover:bg-slate-800 flex items-center justify-center" aria-label="Chiudi"><X className="w-5 h-5" /></button>
         </div>
-        <div className="overflow-y-auto px-4 py-4 space-y-5">
+        <div className="nc-body overflow-y-auto px-4 py-4 space-y-5">
           {lostNow.map((d) => (
             <div key={d.uid} className="rounded-2xl border border-rose-500/50 bg-rose-500/10 p-3 text-sm text-rose-100 flex gap-2" data-testid="notify-lost">
               <LifeBuoy className="w-4 h-4 mt-0.5 shrink-0" /> Qualcuno ha perso il gruppo: guarda “Il gruppo adesso” nella scheda Oggi.
@@ -175,7 +175,7 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
           ))}
 
           <section>
-            <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">A breve</h3>
+            <h3 className="nc-h text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">A breve</h3>
             {upcoming.length === 0 ? (
               <p className="text-xs text-slate-500">Niente in programma nelle prossime 36 ore.</p>
             ) : (
@@ -198,7 +198,7 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
 
           <section>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Ricevute</h3>
+              <h3 className="nc-h text-[11px] font-bold uppercase tracking-wider text-slate-500">Ricevute</h3>
               {feed.length > 0 && <button type="button" onClick={clearFeed} className="text-[11px] text-slate-400 flex items-center gap-1" data-testid="notify-clear"><Trash2 className="w-3 h-3" /> Svuota</button>}
             </div>
             {feed.length === 0 ? (
@@ -226,11 +226,11 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
 
           {onToggleHero && (
             <section>
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Aspetto</h3>
+              <h3 className="nc-h text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Aspetto</h3>
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-white font-semibold">Video animato in Oggi</p>
-                  <p className="text-[11px] text-slate-500 leading-snug">Spegnilo per mostrare un solo fotogramma e risparmiare batteria.</p>
+                  <p className="nc-sub text-[11px] text-slate-500 leading-snug">Spegnilo per mostrare un solo fotogramma e risparmiare batteria.</p>
                 </div>
                 <Switch on={!!heroEnabled} onChange={() => onToggleHero()} label="Video animato in Oggi" testId="hero-animation-toggle" />
               </div>
@@ -238,13 +238,13 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
           )}
 
           <section>
-            <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Cosa vuoi ricevere</h3>
+            <h3 className="nc-h text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Cosa vuoi ricevere</h3>
             <ul className="space-y-3">
               {ALERT_CATEGORIES.map((c) => (
                 <li key={c.id} className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-white font-semibold">{c.label}</p>
-                    <p className="text-[11px] text-slate-500 leading-snug">{c.hint}</p>
+                    <p className="nc-sub text-[11px] text-slate-500 leading-snug">{c.hint}</p>
                   </div>
                   <Switch on={prefs[c.id]} onChange={(v) => change({ [c.id]: v } as Partial<NotifyPrefs>)} label={c.label} testId={`notify-pref-${c.id}`} />
                 </li>
@@ -253,7 +253,7 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
                 <Moon className="w-4 h-4 text-indigo-300 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-white font-semibold">Niente avvisi di notte</p>
-                  <p className="text-[11px] text-slate-500 leading-snug">Dalle 23 alle 7 (ora di Seul) tace il programma. Voli e prenotazioni arrivano comunque.</p>
+                  <p className="nc-sub text-[11px] text-slate-500 leading-snug">Dalle 23 alle 7 (ora di Seul) tace il programma. Voli e prenotazioni arrivano comunque.</p>
                 </div>
                 <Switch on={prefs.quiet} onChange={(v) => change({ quiet: v })} label="Niente avvisi di notte" testId="notify-pref-quiet" />
               </li>
@@ -262,10 +262,10 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
 
           <section className="space-y-2">
             <PushToggle variant="sheet" />
-            <p className="text-[11px] text-slate-500 leading-snug">
+            <p className="nc-sub text-[11px] text-slate-500 leading-snug">
               Con l’app aperta o in secondo piano gli avvisi arrivano sempre. Ad app chiusa arrivano solo con le notifiche attive qui sopra e partono da un controllo del server ogni circa 10 minuti, quindi possono ritardare.
             </p>
-            <button type="button" onClick={test} className="w-full min-h-[44px] rounded-xl bg-slate-800 text-slate-200 text-sm font-semibold" data-testid="notify-test">Prova una notifica</button>
+            <button type="button" onClick={test} className="nc-test w-full min-h-[44px] rounded-xl bg-slate-800 text-slate-200 text-sm font-semibold" data-testid="notify-test">Prova una notifica</button>
           </section>
         </div>
       </div>

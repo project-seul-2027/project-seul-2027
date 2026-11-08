@@ -3,7 +3,9 @@ import {
   deleteField,
   doc,
   onSnapshot,
+  query,
   serverTimestamp,
+  where,
   writeBatch,
   type DocumentData,
   type Timestamp
@@ -22,7 +24,8 @@ import {
   type ExpenseCategory,
   type ExpenseCurrency,
   type ExpenseInput,
-  type PairBalance
+  type PairBalance,
+  type PrivateSpend
 } from '../types/expenses';
 
 /**
@@ -32,6 +35,8 @@ import {
  */
 
 const COLLECTION = 'expenses';
+const PRIVATE_EXPENSES = 'expensesPrivate';
+const PRIVATE_SPEND = 'privateSpend';
 
 export function friendlyExpenseError(err: unknown): string {
   const code = (err as { code?: string })?.code;
@@ -47,7 +52,7 @@ const millis = (v: unknown): number | null =>
 
 const CATEGORY_IDS = EXPENSE_CATEGORIES.map((c) => c.id);
 
-function parseExpense(id: string, d: DocumentData, pending: boolean): Expense | null {
+function parseExpense(id: string, d: DocumentData, pending: boolean, isPrivate = false): Expense | null {
   if (!isSlot(d.paidBy) || typeof d.amountCents !== 'number' || d.amountCents <= 0) return null;
   const shares: Expense['shares'] = {};
   const repaid: Expense['repaid'] = {};
@@ -75,7 +80,8 @@ function parseExpense(id: string, d: DocumentData, pending: boolean): Expense | 
     createdBy: String(d.createdBy ?? ''),
     createdAt: millis(d.createdAt),
     updatedAt: millis(d.updatedAt),
-    pending
+    pending,
+    isPrivate
   };
 }
 
@@ -129,6 +135,75 @@ function payload(input: ExpenseInput) {
  * mentre la spesa compare subito nella lista (Firestore aggiorna la copia locale all'istante).
  * Si restituisce comunque la promessa per segnalare un eventuale rifiuto (es. regole).
  */
+/** Spese personali di tutto il gruppo: solo importo, posto e data (le regole non danno altro) */
+export function watchPrivateSpend(onData: (list: PrivateSpend[]) => void, onError: (message: string) => void): () => void {
+  const { db } = firebase();
+  return onSnapshot(
+    collection(db, PRIVATE_SPEND),
+    (snap) => {
+      const list: PrivateSpend[] = [];
+      snap.forEach((d) => {
+        const v = d.data();
+        if (!isSlot(v.slot) || typeof v.amountCents !== 'number' || v.amountCents <= 0) return;
+        list.push({ id: d.id, slot: v.slot, cents: v.amountCents, date: typeof v.date === 'string' ? v.date : '' });
+      });
+      onData(list);
+    },
+    (err) => onError(friendlyExpenseError(err))
+  );
+}
+
+/** Le proprie spese personali con tutti i dettagli: le regole le danno solo a chi le ha create */
+export function watchMyPrivateExpenses(uid: string, onData: (list: Expense[]) => void, onError: (message: string) => void): () => void {
+  const { db } = firebase();
+  return onSnapshot(
+    query(collection(db, PRIVATE_EXPENSES), where('createdBy', '==', uid)),
+    { includeMetadataChanges: true },
+    (snap) => {
+      const list: Expense[] = [];
+      snap.forEach((d) => {
+        const e = parseExpense(d.id, d.data({ serverTimestamps: 'estimate' }), d.metadata.hasPendingWrites, true);
+        if (e) list.push(e);
+      });
+      onData(list);
+    },
+    (err) => onError(friendlyExpenseError(err))
+  );
+}
+
+/** Spesa personale: il dettaglio resta a chi scrive, il solo importo va in privateSpend (letto da tutti) */
+export function addPrivateExpense(input: ExpenseInput, uid: string, slot: TravelerSlotId): { id: string; done: Promise<void> } {
+  const { db } = firebase();
+  const ref = doc(collection(db, PRIVATE_EXPENSES));
+  const data = payload(personalInput(input, slot));
+  const batch = writeBatch(db);
+  batch.set(ref, { ...data, repaid: {}, createdBy: uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(doc(db, PRIVATE_SPEND, ref.id), { slot, amountCents: data.amountCents, date: data.date });
+  return { id: ref.id, done: batch.commit() };
+}
+
+export function updatePrivateExpense(previous: Expense, input: ExpenseInput, slot: TravelerSlotId): Promise<void> {
+  const { db } = firebase();
+  const data = payload(personalInput(input, slot));
+  const batch = writeBatch(db);
+  batch.update(doc(db, PRIVATE_EXPENSES, previous.id), { ...data, updatedAt: serverTimestamp() });
+  batch.update(doc(db, PRIVATE_SPEND, previous.id), { amountCents: data.amountCents, date: data.date });
+  return batch.commit();
+}
+
+export function deletePrivateExpense(id: string): Promise<void> {
+  const { db } = firebase();
+  const batch = writeBatch(db);
+  batch.delete(doc(db, PRIVATE_EXPENSES, id));
+  batch.delete(doc(db, PRIVATE_SPEND, id));
+  return batch.commit();
+}
+
+/** Una spesa personale non ha altre persone: paga e consuma solo chi la scrive */
+function personalInput(input: ExpenseInput, slot: TravelerSlotId): ExpenseInput {
+  return { ...input, isPrivate: true, paidBy: slot, splitMode: 'equal', participants: [slot], exactAmounts: {} };
+}
+
 export function addExpense(input: ExpenseInput, uid: string): { id: string; done: Promise<void> } {
   const { db } = firebase();
   const ref = doc(collection(db, COLLECTION));
