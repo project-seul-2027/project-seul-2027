@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FLIGHTS_SCHEDULE } from '../data/tripData';
-import { TRACKED_FLIGHTS, type FlightStatsDoc } from '../shared/flightStats';
+import { TRACKED_FLIGHTS, type FlightStatsDoc, type LegDelayStats } from '../shared/flightStats';
 import { flightStatsService, type FlightStatsMap } from '../services/flightStatsService';
 import {
   RELIABILITY_LABEL,
@@ -28,13 +28,46 @@ const clock = (hhmm: string, delta: number) => {
   return dayShift === 0 ? time : `${time} (${dayShift > 0 ? '+' : ''}${dayShift})`;
 };
 
+const signed = (n: number) => `${n > 0 ? '+' : ''}${Math.round(n)} min`;
+
 interface Props {
   /** true = telefono (stili .ms-rel), false = desktop */
   phone: boolean;
 }
 
+/** Dettagli di un tratto: orari medi, ritardo medio, deviazione standard e fasce */
+const LegDetails: React.FC<{ label: string; scheduled: string; s: LegSummary; raw: LegDelayStats; phone: boolean }> = ({ label, scheduled, s, raw, phone }) => {
+  const rows: [string, string][] = [
+    ['Orario programmato', scheduled],
+    ['Orario tipico (mediana)', clock(scheduled, s.median)],
+    ['Orario medio', clock(scheduled, s.mean)],
+    ['Ritardo tipico (mediana)', signed(s.median)],
+    ['Ritardo medio', signed(s.mean)],
+    ['Deviazione standard', `±${Math.round(s.sigma)} min`],
+    ['Fascia 10°–90°', `${clock(scheduled, s.p10)} – ${clock(scheduled, s.p90)}`],
+    ['Fascia 5°–95°', `${clock(scheduled, raw.percentiles[0])} – ${clock(scheduled, raw.percentiles[18])}`],
+    ['Entro 15 min dall\'orario', `${Math.round(s.onTime * 100)}% dei voli`],
+    ['Oltre un\'ora di ritardo', `${Math.round(s.over60 * 100)}% dei voli`],
+    ['Voli considerati', String(s.n)],
+  ];
+  return (
+    <div className={phone ? 'ms-rel-detail' : 'text-sm'}>
+      <p className={phone ? 'ms-rel-detail-title' : 'font-semibold text-white mb-2'}>{label}</p>
+      <dl className={phone ? 'ms-rel-dl' : 'grid grid-cols-2 gap-x-6 gap-y-1 text-slate-300'}>
+        {rows.map(([k, v]) => (
+          <div key={k} className={phone ? 'ms-rel-dl-row' : 'flex justify-between gap-3'}>
+            <dt className={phone ? 'ms-mute' : 'text-slate-400'}>{k}</dt>
+            <dd className={phone ? 'ms-rel-dd' : 'text-white tabular-nums'}>{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+};
+
 export const FlightReliability: React.FC<Props> = ({ phone }) => {
   const [stats, setStats] = useState<FlightStatsMap | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
   useEffect(() => flightStatsService.watch(setStats, (err) => console.warn('Puntualità dei voli non leggibile:', err)), []);
 
   const rows = useMemo(() => {
@@ -77,12 +110,17 @@ export const FlightReliability: React.FC<Props> = ({ phone }) => {
   }
 
   const sample = rows[0].doc.dep?.n ?? rows[0].doc.arr?.n ?? 0;
+  const allRecent = rows.every((r) => [r.doc.dep, r.doc.arr].every((s) => !s || s.source === 'recent'));
+  const updated = new Date(Math.max(...rows.map((r) => r.doc.fetchedAt))).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
 
   return (
     <section className={wrap} data-testid="flight-reliability">
       {title}
       <p className={phone ? 'ms-meta' : 'text-sm text-slate-400'}>
-        Come hanno viaggiato questi voli negli ultimi 90 giorni circa (circa {sample} voli per tratta). Sono medie del passato, non una previsione.
+        {allRecent
+          ? `Come hanno viaggiato questi voli nell'ultimo mese (circa ${sample} voli per tratta), aggiornato al ${updated}.`
+          : `Come hanno viaggiato questi voli negli ultimi mesi (circa ${sample} voli per tratta), aggiornato al ${updated}.`}{' '}
+        Sono medie del passato, non una previsione.
       </p>
       {widest && rows.length > 1 && (
         <p className={phone ? 'ms-rel-note' : 'text-sm text-slate-300'}>
@@ -90,7 +128,7 @@ export const FlightReliability: React.FC<Props> = ({ phone }) => {
         </p>
       )}
 
-      <ul className={phone ? 'ms-rel-list' : 'space-y-8'}>
+      <ul className={phone ? 'ms-rel-list' : 'space-y-4'}>
         {rows.map(({ t, leg, doc, dep, arr, level }) => {
           const next = FLIGHTS_SCHEDULE.find((l) => l.id === 'fl_outbound_2');
           let miss: ReturnType<typeof missConnection> | null = null;
@@ -99,42 +137,60 @@ export const FlightReliability: React.FC<Props> = ({ phone }) => {
             layover = toMinutes(next.departureTime) - toMinutes(leg.arrivalTime);
             if (layover > 0) miss = missConnection(doc.arr, layover, MIN_CONNECTION_MIN);
           }
+          const open = openId === t.flight;
+          const panelId = `rel-${t.flight}`;
           return (
-            <li key={t.flight} className={phone ? 'ms-rel-item' : 'space-y-2'}>
-              <div className={phone ? 'ms-rel-head' : 'flex items-baseline justify-between'}>
+            <li key={t.flight} className={phone ? 'ms-rel-item' : 'border-t border-slate-800/80 pt-4'}>
+              <button
+                type="button"
+                onClick={() => setOpenId(open ? null : t.flight)}
+                aria-expanded={open}
+                aria-controls={panelId}
+                className={`${phone ? 'ms-rel-head ms-rel-btn' : 'flex w-full items-baseline justify-between text-left'}`}
+                data-testid={`rel-toggle-${t.flight}`}
+              >
                 <span className={phone ? 'ms-rel-name' : 'text-base font-semibold text-white'}>
                   {leg.flightNumber.replace(/ \(.*\)$/, '')} · {leg.departureAirportCode} → {leg.arrivalAirportCode}
                 </span>
                 <span className={phone ? `ms-rel-badge ms-rel-${level}` : `text-sm font-semibold ${level === 'unstable' ? 'text-rose-300' : level === 'variable' ? 'text-amber-300' : level === 'stable' ? 'text-emerald-300' : 'text-slate-400'}`}>
-                  {RELIABILITY_LABEL[level]}
+                  {RELIABILITY_LABEL[level]} {open ? '▴' : '▾'}
                 </span>
-              </div>
+              </button>
 
               {dep && (
-                <p className={phone ? 'ms-rel-line' : 'text-sm text-slate-300'}>
+                <p className={phone ? 'ms-rel-line' : 'text-sm text-slate-300 mt-2'}>
                   <strong>Partenza</strong> {leg.departureTime}: di solito {clock(leg.departureTime, dep.median)}, tra le {clock(leg.departureTime, dep.p10)} e le {clock(leg.departureTime, dep.p90)}.{' '}
                   <span className={phone ? 'ms-mute' : 'text-slate-400'}>{formatDelay(dep.median)}, ±{Math.round(dep.sigma)} min.</span>
                 </p>
               )}
               {arr && (
-                <p className={phone ? 'ms-rel-line' : 'text-sm text-slate-300'}>
+                <p className={phone ? 'ms-rel-line' : 'text-sm text-slate-300 mt-1'}>
                   <strong>Arrivo</strong> {leg.arrivalTime}: di solito {clock(leg.arrivalTime, arr.median)}, tra le {clock(leg.arrivalTime, arr.p10)} e le {clock(leg.arrivalTime, arr.p90)}.{' '}
                   <span className={phone ? 'ms-mute' : 'text-slate-400'}>{formatDelay(arr.median)}, ±{Math.round(arr.sigma)} min.</span>
                 </p>
               )}
-              {dep && dep.level !== 'few-data' && (
-                <p className={phone ? 'ms-meta' : 'text-xs text-slate-400'}>
-                  In partenza entro 15 min dall'orario {Math.round(dep.onTime * 100)}% dei voli, oltre un'ora di ritardo {Math.round(dep.over60 * 100)}%.
-                  {dep.level === 'unstable' && ' Ritardi molto variabili: tieni un margine in più.'}
-                </p>
-              )}
-              {(dep?.level === 'few-data' || arr?.level === 'few-data') && (
-                <p className={phone ? 'ms-meta' : 'text-xs text-slate-400'}>Voli registrati ancora pochi: le stime sono poco affidabili.</p>
-              )}
               {miss && (
-                <p className={phone ? 'ms-rel-note' : 'text-sm text-slate-300'}>
+                <p className={phone ? 'ms-rel-note' : 'text-sm text-slate-300 mt-2'}>
                   <strong>Coincidenza a Pechino</strong>: scalo di {Math.floor(layover / 60)} h {layover % 60} min, ne servono almeno {MIN_CONNECTION_MIN} per cambiare aereo. Probabilità di arrivare troppo tardi: {formatPercent(miss)}.
                 </p>
+              )}
+
+              {open && (
+                <div id={panelId} className={phone ? 'ms-rel-panel' : 'mt-3 grid grid-cols-2 gap-6'}>
+                  {dep && <LegDetails label="Partenza" scheduled={leg.departureTime} s={dep} raw={doc.dep!} phone={phone} />}
+                  {arr && <LegDetails label="Arrivo" scheduled={leg.arrivalTime} s={arr} raw={doc.arr!} phone={phone} />}
+                  {!!doc.cancelled && (
+                    <p className={phone ? 'ms-meta' : 'text-xs text-slate-400 col-span-2'}>
+                      Cancellati {doc.cancelled} voli su {doc.total} nell'ultimo mese.
+                    </p>
+                  )}
+                  {(dep?.level === 'few-data' || arr?.level === 'few-data') && (
+                    <p className={phone ? 'ms-meta' : 'text-xs text-slate-400 col-span-2'}>Voli registrati ancora pochi: le stime sono poco affidabili.</p>
+                  )}
+                  {dep?.level === 'unstable' && (
+                    <p className={phone ? 'ms-meta' : 'text-xs text-slate-400 col-span-2'}>Ritardi molto variabili: tieni un margine in più.</p>
+                  )}
+                </div>
               )}
             </li>
           );
