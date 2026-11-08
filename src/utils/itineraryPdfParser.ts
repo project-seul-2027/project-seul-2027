@@ -112,7 +112,8 @@ const DATE_HEADING = /^(\d{1,2})\s+marzo\s*:\s*(.*)$/i;
 function findAnchor(it: PdfItem, page: number): Anchor | null {
   if (!it.bold) return null;
   if (it.x < 60 && DATE_HEADING.test(it.str.trim())) return { kind: 'date', page, top: it.y + 12, item: it };
-  if (it.x >= 55 && it.x <= 95 && it.h >= 15 && /^\d{1,2}$/.test(it.str.trim())) return { kind: 'card', page, top: it.y + 9, item: it };
+  // Il titolo della scheda è accanto al numero e può stare più in alto della sua base: la soglia segue l'altezza del numero
+  if (it.x >= 55 && it.x <= 95 && it.h >= 15 && /^\d{1,2}$/.test(it.str.trim())) return { kind: 'card', page, top: it.y + Math.max(9, it.h + 2), item: it };
   if (it.x < 60 && it.h >= 13) {
     const t = it.str.trim().toLowerCase();
     return { kind: PHASES[t] ? 'week' : 'other', page, top: it.y + 12, item: it };
@@ -159,8 +160,10 @@ function parseCard(region: Region): { n: number; title: string; bullets: string[
   const bullets: string[] = [];
   for (const line of lines) {
     const first = [...line.items].sort((a, b) => a.x - b.x)[0];
-    if (first.str.trim() === '•') {
-      bullets.push(joinItems(line.items.filter((i) => i !== first)));
+    // Il punto può essere un frammento a sé ("•") oppure stare nello stesso frammento della parola ("• Mattina:")
+    if (/^•/.test(first.str.trim())) {
+      const head = { ...first, str: first.str.trim().replace(/^•\s*/, '') };
+      bullets.push(joinItems([head, ...line.items.filter((i) => i !== first)]));
     } else if (bullets.length > 0) {
       bullets[bullets.length - 1] += ' ' + joinItems(line.items);
     } else if (first.bold) {
