@@ -38,8 +38,21 @@ export function parseMessage(subject, body = '') {
   const hasBullets = lines.some((l) => BULLET.test(l.trim()));
 
   // Messaggi senza punti elenco (commit vecchi): ogni riga diventa una voce, come prima
+  // Testo a capo automatico: una riga che inizia con la minuscola continua la voce precedente,
+  // una riga vuota separa due voci.
   if (!hasBullets) {
-    const items = [...subjectItems, ...lines.map(clean).filter(Boolean)];
+    const items = [...subjectItems];
+    let afterBlank = true;
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) {
+        afterBlank = true;
+        continue;
+      }
+      if (!afterBlank && items.length && /^[a-zà-öø-ÿ(]/.test(line)) items[items.length - 1] += ' ' + clean(line);
+      else items.push(clean(line));
+      afterBlank = false;
+    }
     return { title, items, content: items.length ? [{ kind: 'list', heading: null, items }] : [] };
   }
 
