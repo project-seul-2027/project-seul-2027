@@ -4,7 +4,7 @@ import { compressImage } from '../../services/galleryService';
 import { OPTIONAL_SHARE_FIELDS, type OptionalShareField } from '../../shared/travelerProfile';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../services/authService';
-import { ACCOMMODATIONS } from '../../data/tripData';
+import { ACCOMMODATIONS, formatAccommodationEur } from '../../data/tripData';
 import {
   DAILY_BUDGET_OPTIONS,
   DIETARY_OPTIONS,
@@ -558,7 +558,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
                 >
                   <div className="flex items-center justify-between gap-1 max-lg:flex-col max-lg:items-start max-lg:gap-0">
                     <span className="text-[10px] font-bold font-mono text-cyan-400 max-lg:font-[Outfit] max-lg:text-[17px] max-lg:font-medium">{acc.code}</span>
-                    <span className="text-[10px] font-mono text-emerald-400 max-lg:font-[inherit] max-lg:text-[13px] max-lg:text-[#97a5b9]">{acc.other3Cost17Nights} € a testa</span>
+                    <span className="text-[10px] font-mono text-emerald-400 max-lg:font-[inherit] max-lg:text-[13px] max-lg:text-[#97a5b9]">{formatAccommodationEur(acc.other3Cost17Nights)} a testa</span>
                   </div>
                   <div className="text-[11px] font-semibold text-slate-200 truncate mt-0.5 max-lg:text-[14px] max-lg:font-medium">{acc.district}</div>
                 </button>
