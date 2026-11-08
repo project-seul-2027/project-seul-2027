@@ -79,6 +79,8 @@ interface PdfPageViewerProps {
   targetKey?: number;
   /** Chiamata quando scorrendo cambia la pagina in vista. */
   onPageChange?: (page: number) => void;
+  /** Chiamata quando il documento è stato aperto (per leggerne i titoli). */
+  onDocument?: (doc: pdfjsLib.PDFDocumentProxy) => void;
   /** Pulsanti extra a destra della barra (solo variante desktop). */
   actions?: React.ReactNode;
   /** 'desk': barra e sfondo nello stile delle pagine desktop. */
@@ -86,7 +88,7 @@ interface PdfPageViewerProps {
   className?: string;
 }
 
-export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, targetKey, onPageChange, actions, variant = 'default', className = '' }) => {
+export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, targetKey, onPageChange, onDocument, actions, variant = 'default', className = '' }) => {
   const desk = variant === 'desk';
   const btn = desk ? 'pdfv-btn' : 'w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-800 disabled:opacity-30 transition-colors';
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -161,6 +163,11 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
     });
     setCurrent(idx + 1);
   };
+
+  useEffect(() => {
+    if (pdf) onDocument?.(pdf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdf]);
 
   useEffect(() => {
     if (numPages) onPageChange?.(current);

@@ -67,7 +67,7 @@ const PHASES: Record<string, ItineraryDay['phase']> = {
   'ultima parte': 'Ultima parte'
 };
 
-function joinItems(items: PdfItem[]): string {
+export function joinItems(items: PdfItem[]): string {
   let out = '';
   let prevEnd = -Infinity;
   for (const it of [...items].sort((a, b) => a.x - b.x)) {

@@ -8,6 +8,11 @@ interface PdfjsLike {
 /** Testo del PDF con posizione, dimensione e grassetto di ogni frammento (una lista per pagina). */
 export async function extractPdfPages(pdfjs: PdfjsLike, data: Uint8Array): Promise<PdfPage[]> {
   const doc = await pdfjs.getDocument({ data }).promise;
+  return extractPdfPagesFromDoc(doc);
+}
+
+/** Come extractPdfPages, ma da un documento già aperto (per esempio quello del visualizzatore). */
+export async function extractPdfPagesFromDoc(doc: { numPages: number; getPage(n: number): Promise<any> }): Promise<PdfPage[]> {
   const pages: PdfPage[] = [];
   for (let n = 1; n <= doc.numPages; n++) {
     const page = await doc.getPage(n);
