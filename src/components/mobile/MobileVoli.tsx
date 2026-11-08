@@ -1,5 +1,6 @@
 import React from 'react';
 import { FLIGHTS_SCHEDULE, FLIGHTS_BOOKING_URL } from '../../data/tripData';
+import { FlightReliability } from '../FlightReliability';
 import './mobile.css';
 
 /** Voli del telefono, come nel mockup: codici aeroporto grandi, linea colorata (ciano andata, ambra ritorno), scalo con filetto ambra. */
@@ -45,5 +46,7 @@ export const MobileVoli: React.FC = () => (
     <div style={{ paddingTop: 10 }}>
       <a className="ms-link" href={FLIGHTS_BOOKING_URL} target="_blank" rel="noopener noreferrer">Apri i voli su GoToGate</a>
     </div>
+
+    <FlightReliability phone />
   </div>
 );

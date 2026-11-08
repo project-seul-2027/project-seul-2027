@@ -1,0 +1,55 @@
+# Puntualità dei voli del viaggio: scarica da AeroDataBox i ritardi degli ultimi ~90 giorni e li salva per l'app.
+# Parte da sola ogni giorno fino al 21 marzo 2027 (lo script aggiorna ogni volo al massimo ogni ~40 ore).
+# Prova a mano: GitHub → Actions → "Puntualità dei voli" → Run workflow (con "solo elenco" non salva nulla).
+# Servono i segreti RAPIDAPI_KEY e FIREBASE_SERVICE_ACCOUNT.
+name: Puntualità dei voli
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Solo elenco, non salva niente
+        type: boolean
+        default: true
+      force:
+        description: Scarica anche se aggiornato da poco
+        type: boolean
+        default: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Siamo prima della fine del viaggio?
+        id: window
+        run: |
+          now=$(date -u +%s)
+          to=$(date -u -d '2027-03-21' +%s)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$now" -le "$to" ]; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "Viaggio finito: niente da fare."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.window.outputs.active == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.window.outputs.active == 'true'
+        with:
+          node-version: 22
+      - name: Prepara
+        if: steps.window.outputs.active == 'true'
+        run: |
+          npm install --no-save --no-package-lock firebase-admin@13 esbuild@0.25
+          npx esbuild scripts/flight-stats.mts --bundle --platform=node --format=esm --target=node22 \
+            --external:firebase-admin --outfile=flight-stats.bundle.mjs
+      - name: Aggiorna
+        if: steps.window.outputs.active == 'true'
+        run: node flight-stats.bundle.mjs
+        env:
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force && '1' || '' }}

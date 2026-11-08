@@ -55,6 +55,8 @@ export interface AccommodationOption {
   highlightBadge: string;
   highlightBadgeColor: string;
   importantNotes: string;
+  /** Annuncio su Enko Stay: sul telefono con l'app installata si apre nell'app (Android) */
+  enkoUrl: string;
 }
 
 export interface MapLocation {
@@ -175,7 +177,8 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
     ],
     highlightBadge: 'Il Più Economico (125 €/testa)',
     highlightBadgeColor: 'emerald',
-    importantNotes: 'Consigliatissimo per risparmiare al massimo se non temete le scale del 4° piano e se i posti letto sono idonei.'
+    importantNotes: 'Consigliatissimo per risparmiare al massimo se non temete le scale del 4° piano e se i posti letto sono idonei.',
+    enkoUrl: 'https://stay.enko.kr/house/e2156a11-c45c-4a6a-a807-97973fb9c408'
   },
   {
     id: 'acc_b',
@@ -205,7 +208,8 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
     ],
     highlightBadge: 'Hub Trasporti & Treni',
     highlightBadgeColor: 'sky',
-    importantNotes: 'Ha senso principalmente se date priorità assoluta alla vicinanza ai treni veloci; in generale A o C sono opzioni preferibili.'
+    importantNotes: 'Ha senso principalmente se date priorità assoluta alla vicinanza ai treni veloci; in generale A o C sono opzioni preferibili.',
+    enkoUrl: 'https://stay.enko.kr/house/f132ab7a-e004-4904-bb31-8d188ece90db'
   },
   {
     id: 'acc_c',
@@ -237,7 +241,8 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
     ],
     highlightBadge: 'Top per Movida & Hongdae',
     highlightBadgeColor: 'pink',
-    importantNotes: 'Per i tre che restano costa circa 26-31 € a testa in più rispetto a B e D, ma fa risparmiare tempo e soldi nei taxi notturni dopo le serate.'
+    importantNotes: 'Per i tre che restano costa circa 26-31 € a testa in più rispetto a B e D, ma fa risparmiare tempo e soldi nei taxi notturni dopo le serate.',
+    enkoUrl: 'https://stay.enko.kr/house/3408f082-54d4-487f-a9f3-d0d76ba485c2'
   },
   {
     id: 'acc_d',
@@ -266,7 +271,8 @@ const ACCOMMODATIONS_BASE: Omit<AccommodationOption, 'nightlyRateEur' | 'pietroC
     ],
     highlightBadge: 'Massimo Comfort Letti (3 Queen)',
     highlightBadgeColor: 'purple',
-    importantNotes: 'Ideale se il gruppo privilegia la qualità del sonno e lo spazio vitale, sapendo che le serate fuori richiedono spostamenti più lunghi.'
+    importantNotes: 'Ideale se il gruppo privilegia la qualità del sonno e lo spazio vitale, sapendo che le serate fuori richiedono spostamenti più lunghi.',
+    enkoUrl: 'https://stay.enko.kr/house/c1a86be1-64b9-4832-b14e-217ceec498a4?checkIn=2027-03-02&checkOut=2027-03-19'
   }
 ];
 

@@ -545,3 +545,20 @@
   .ms-upload .bg-red-950\/50 { background: rgba(248,113,113,.10) !important; border: 0 !important; }
   .ms-upload .text-cyan-400 { color: #52d9e6 !important; }
 }
+
+/* Puntualità dei voli (telefono): voci senza riquadri, separate da un filetto, stato in chiaro a destra */
+@media (max-width: 1023px) {
+  .ms-rel-list { list-style: none; margin: 14px 0 0; padding: 0; }
+  .ms-rel-item { padding: 14px 0; border-top: 1px solid var(--ms-line); }
+  .ms-rel-item:first-child { border-top: 0; padding-top: 4px; }
+  .ms-rel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .ms-rel-name { font: 500 17px/1.2 'Outfit', system-ui, sans-serif; color: var(--ms-text); }
+  .ms-rel-badge { font-size: 14px; font-weight: 600; color: var(--ms-mute); white-space: nowrap; }
+  .ms-rel-stable { color: #6ee7b7; }
+  .ms-rel-variable { color: var(--ms-amber); }
+  .ms-rel-unstable { color: #fda4af; }
+  .ms-rel-line { font-size: 14px; line-height: 1.45; color: var(--ms-text); margin: 8px 0 0; }
+  .ms-rel-line strong { font-weight: 600; }
+  .ms-rel-note { font-size: 14px; line-height: 1.45; color: var(--ms-mute); margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--ms-amber); }
+  .ms-rel-note strong { color: var(--ms-text); font-weight: 600; }
+}

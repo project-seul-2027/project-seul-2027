@@ -286,6 +286,14 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
             </div>
             <div className="flex items-center gap-5 shrink-0">
               <VoteLink accId={sel.id} label />
+              <a
+                href={sel.enkoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-cyan-400 hover:text-cyan-300 underline-offset-2 hover:underline"
+              >
+                Apri su Enko Stay
+              </a>
               <button
                 onClick={() => onViewOnMap(sel.id)}
                 className="px-4 py-2 rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm transition-colors"
