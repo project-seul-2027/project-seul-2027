@@ -29,7 +29,7 @@ export const BudgetTrackerView: React.FC = () => {
   const accommodations = ACCOMMODATIONS.map((acc) =>
     accommodationPrices[acc.id] != null ? priceAccommodation(acc, accommodationPrices[acc.id]) : acc
   );
-  const euro = (amount: number) => `${amount.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} €`;
+  const euro = (amount: number) => `${amount.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} €`;
 
   // Fetch live exchange rates on mount
   useEffect(() => {

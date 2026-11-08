@@ -5,7 +5,7 @@ import './mobile.css';
 
 const PHOTO: Record<string, string> = { A: 'assets/alloggi/a.webp', B: 'assets/alloggi/b.webp', C: 'assets/alloggi/c.webp', D: 'assets/alloggi/d.webp' };
 const TONE: Record<string, string> = { A: '#52d9e6', B: '#a78bfa', C: '#f472b6', D: '#fbbf24' };
-const eur = (n: number) => `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n)} €`;
+const eur = (n: number) => `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(n)} €`;
 
 interface Props {
   acc: AccommodationOption;

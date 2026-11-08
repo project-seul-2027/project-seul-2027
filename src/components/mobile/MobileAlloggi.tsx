@@ -3,7 +3,7 @@ import type { AccommodationOption } from '../../data/tripData';
 import './mobile.css';
 
 const TONE: Record<string, string> = { A: '', B: 'ms-vi', C: 'ms-pk', D: 'ms-am' };
-const eur = (n: number) => `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n)} €`;
+const eur = (n: number) => `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(n)} €`;
 
 interface Props {
   accs: AccommodationOption[];
