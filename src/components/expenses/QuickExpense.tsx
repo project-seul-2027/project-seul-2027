@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeftRight, Check, CircleAlert, PlaneTakeoff, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeftRight, CircleAlert, PlaneTakeoff } from 'lucide-react';
 import type { TravelerSlotId } from '../../shared/travelerProfile';
 import type { Traveler } from '../../data/tripData';
 import type { LiveExchangeRates } from '../../services/currencyService';
@@ -69,6 +69,7 @@ export interface QuickDraft {
   participants: TravelerSlotId[];
   /** La lista è stata cambiata a mano (altrimenti si ricalcola con la data) */
   peopleTouched: boolean;
+  isPrivate: boolean;
 }
 
 export const QuickExpenseBody: React.FC<{
@@ -89,6 +90,7 @@ export const QuickExpenseBody: React.FC<{
   const [category, setCategory] = useState<ExpenseCategory>('food');
   const [participants, setParticipants] = useState<TravelerSlotId[]>(present);
   const [peopleTouched, setPeopleTouched] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const amount = parseAmountText(amountText);
@@ -96,6 +98,8 @@ export const QuickExpenseBody: React.FC<{
   const cents = amount > 0 ? toEurCents(amount, rate) : 0;
   const payer: TravelerSlotId = me ?? 't1';
   const leaverGone = !present.includes(LEAVER_SLOT);
+  // Spesa personale: nessuna divisione, la quota è tutta di chi scrive
+  const shareWith = isPrivate ? [payer] : participants;
 
   const input = (): ExpenseInput => ({
     title: title.trim(),
@@ -106,9 +110,10 @@ export const QuickExpenseBody: React.FC<{
     rate,
     paidBy: payer,
     splitMode: 'equal',
-    participants,
+    participants: shareWith,
     exactAmounts: {},
-    note: ''
+    note: '',
+    isPrivate
   });
   const share = cents > 0 && participants.includes(payer) ? sharesFromInput(input())[payer] ?? 0 : 0;
 
@@ -132,13 +137,10 @@ export const QuickExpenseBody: React.FC<{
     setParticipants((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
   };
 
-  const chipOn = 'bg-emerald-500/15 border-emerald-500/60 text-emerald-100';
-  const chipOff = 'bg-slate-950 border-slate-800 text-slate-300';
-
   return (
-    <div className="space-y-4" data-testid="quick-expense">
+    <div className="xp-stack">
       <div>
-        <div className="flex items-stretch gap-2">
+        <div className="xp-amount-row">
           <input
             autoFocus
             inputMode="decimal"
@@ -149,57 +151,52 @@ export const QuickExpenseBody: React.FC<{
               setError(null);
             }}
             aria-label="Importo"
-            className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 h-16 text-3xl font-bold font-mono text-white focus:outline-none focus:border-emerald-500"
+            className="xp-amount"
             data-testid="quick-amount"
           />
-          <div className="flex rounded-xl border border-slate-800 bg-slate-950 p-1 shrink-0" role="group" aria-label="Valuta">
+          <div className="xp-seg" role="group" aria-label="Valuta">
             {(['KRW', 'EUR'] as ExpenseCurrency[]).map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCurrency(c)}
-                aria-pressed={currency === c}
-                className={`w-12 rounded-lg text-base font-bold ${currency === c ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'}`}
-              >
+              <button key={c} type="button" onClick={() => setCurrency(c)} aria-pressed={currency === c}>
                 {CURRENCY_SYMBOL[c]}
               </button>
             ))}
           </div>
         </div>
-        <p className="mt-1.5 text-[11px] font-mono text-slate-400 min-h-[1rem]">
-          {cents > 0 && currency !== 'EUR' && <span className="text-emerald-300 font-bold">≈ {formatEur(cents)}</span>}
-          {share > 0 && participants.length > 1 && <span> · la tua quota {formatEur(share)}</span>}
+        <p className="xp-hint">
+          {cents > 0 && currency !== 'EUR' && <b>≈ {formatEur(cents)}</b>}
+          {share > 0 && participants.length > 1 && (
+            <span>
+              {cents > 0 && currency !== 'EUR' ? ' · ' : ''}la tua quota {formatEur(share)}
+            </span>
+          )}
         </p>
       </div>
 
       <div>
-        <p className="text-xs font-semibold text-slate-400 mb-1.5">Cosa</p>
-        <div className="grid grid-cols-4 gap-1.5">
+        <p className="xp-label">Cosa</p>
+        <div className="xp-chips">
           {QUICK_PRESETS.map((p) => (
             <button
               key={p.id}
               type="button"
               onClick={() => pick({ title: p.label, category: p.category }, p.id)}
               aria-pressed={preset === p.id}
-              className={`min-h-[60px] rounded-xl border flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold leading-tight px-1 text-center ${
-                preset === p.id ? chipOn : chipOff
-              }`}
+              className="xp-chip"
               data-testid={`quick-${p.id}`}
             >
-              <span className="text-xl leading-none">{p.emoji}</span>
               {p.label}
             </button>
           ))}
         </div>
         {recents.length > 0 && (
-          <div className="mt-2 flex gap-1.5 overflow-x-auto -mx-4 px-4 pb-0.5">
+          <div className="xp-chips scroll" style={{ marginTop: 8 }}>
             {recents.map((r, i) => (
               <button
                 key={r.title}
                 type="button"
                 onClick={() => pick(r, `recent-${i}`)}
                 aria-pressed={preset === `recent-${i}`}
-                className={`shrink-0 h-9 px-3 rounded-full text-xs font-semibold border ${preset === `recent-${i}` ? chipOn : chipOff}`}
+                className="xp-chip"
               >
                 ↺ {r.title}
               </button>
@@ -214,65 +211,70 @@ export const QuickExpenseBody: React.FC<{
             setPreset(null);
             setError(null);
           }}
-          placeholder="…oppure scrivi (es. Cena BBQ a Hongdae)"
+          placeholder="Descrizione, per esempio Cena BBQ"
           aria-label="Descrizione"
-          className="mt-2 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 h-11 text-sm text-white focus:outline-none focus:border-emerald-500"
+          className="xp-field"
+          style={{ marginTop: 12 }}
           data-testid="quick-title"
         />
       </div>
 
       <div>
-        <p className="text-xs font-semibold text-slate-400 mb-1.5">Hai pagato tu, diviso in parti uguali tra</p>
-        <div className="flex flex-wrap gap-1.5">
-          {travelers.map((t) => {
-            const s = t.id as TravelerSlotId;
-            const on = participants.includes(s);
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => toggle(s)}
-                aria-pressed={on}
-                className={`h-9 px-3 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${
-                  on ? 'bg-slate-800 border-slate-600 text-white' : 'bg-slate-950 border-slate-800 text-slate-500 line-through'
-                }`}
-              >
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color }} />
-                {nameOf(s)}
-                {on && <Check className="w-3 h-3" strokeWidth={3} />}
-              </button>
-            );
-          })}
-        </div>
-        {leaverGone && (
-          <p className="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1.5">
-            <PlaneTakeoff className="w-3.5 h-3.5" /> {nameOf(LEAVER_SLOT)} è già ripartito: escluso in automatico.
-          </p>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isPrivate}
+          onClick={() => setIsPrivate((v) => !v)}
+          className="xp-row"
+          data-testid="quick-private"
+        >
+          <span>
+            Solo per me
+            <small>Gli altri vedono solo l'importo nei totali</small>
+          </span>
+          <span className="xp-sw" data-on={isPrivate} aria-hidden="true" />
+        </button>
+
+        {!isPrivate && (
+          <div style={{ borderTop: '1px solid var(--ms-line)', paddingTop: 12 }}>
+            <p className="xp-label">Hai pagato tu, diviso in parti uguali tra</p>
+            <div className="xp-chips">
+              {travelers.map((t) => {
+                const s = t.id as TravelerSlotId;
+                return (
+                  <button key={s} type="button" onClick={() => toggle(s)} aria-pressed={participants.includes(s)} className="xp-chip">
+                    <i style={{ background: t.color }} />
+                    {nameOf(s)}
+                  </button>
+                );
+              })}
+            </div>
+            {leaverGone && (
+              <p className="xp-note" style={{ marginTop: 10 }}>
+                <PlaneTakeoff className="w-3.5 h-3.5 shrink-0 mt-px" /> {nameOf(LEAVER_SLOT)} è già ripartito: escluso in automatico.
+              </p>
+            )}
+          </div>
         )}
       </div>
 
       {error && (
-        <p role="alert" className="text-xs text-amber-300 flex items-start gap-1.5">
+        <p role="alert" className="xp-err">
           <CircleAlert className="w-3.5 h-3.5 shrink-0 mt-px" /> {error}
         </p>
       )}
 
-      <div className="grid grid-cols-[auto_1fr] gap-2">
-        <button
-          type="button"
-          onClick={() => onMore({ title: title.trim(), category, currency, amount: amount > 0 ? amount : 0, participants, peopleTouched })}
-          className="h-12 px-3.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-1.5"
-          data-testid="quick-more"
-        >
-          <SlidersHorizontal className="w-4 h-4" /> Più opzioni
+      <div className="xp-actions">
+        <button type="button" onClick={save} className="xp-primary" data-testid="quick-save">
+          Salva spesa
         </button>
         <button
           type="button"
-          onClick={save}
-          className="h-12 rounded-xl bg-emerald-500 text-slate-950 font-bold text-sm active:scale-[0.99] transition-transform"
-          data-testid="quick-save"
+          onClick={() => onMore({ title: title.trim(), category, currency, amount: amount > 0 ? amount : 0, participants, peopleTouched, isPrivate })}
+          className="xp-ghost"
+          data-testid="quick-more"
         >
-          Salva spesa
+          Più opzioni
         </button>
       </div>
     </div>

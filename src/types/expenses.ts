@@ -60,6 +60,18 @@ export interface Expense {
   updatedAt: number | null;
   /** Modifica fatta su questo dispositivo e non ancora salvata nel cloud */
   pending: boolean;
+  /** Spesa personale: visibile solo a chi l'ha inserita; gli altri vedono solo l'importo nei totali */
+  isPrivate?: boolean;
+}
+
+/** Importo di una spesa personale, visibile a tutti senza titolo, categoria, nota né data di dettaglio */
+export interface PrivateSpend {
+  id: string;
+  slot: TravelerSlotId;
+  /** Centesimi di euro */
+  cents: number;
+  /** AAAA-MM-GG */
+  date: string;
 }
 
 /** Dati che l'utente compila nel modulo */
@@ -77,6 +89,8 @@ export interface ExpenseInput {
   /** Modalità "esatto": importo di ciascuno nella valuta della spesa */
   exactAmounts: Partial<Record<TravelerSlotId, number>>;
   note: string;
+  /** Spesa personale (solo chi scrive): niente divisione, nessun debito */
+  isPrivate?: boolean;
 }
 
 export const SLOTS: readonly TravelerSlotId[] = TRAVELER_SLOT_IDS;
@@ -240,12 +254,15 @@ export interface PersonSummary {
   received: number;
   /** Saldo aperto: positivo = deve ricevere, negativo = deve dare */
   net: number;
+  /** Spese personali (solo l'importo, senza dettagli): non entrano nei debiti */
+  personal: number;
 }
 
-export function summarize(expenses: Expense[]): Record<TravelerSlotId, PersonSummary> {
+export function summarize(expenses: Expense[], privates: PrivateSpend[] = []): Record<TravelerSlotId, PersonSummary> {
   const out = Object.fromEntries(
-    SLOTS.map((s) => [s, { slot: s, paid: 0, share: 0, owes: 0, repaidOut: 0, toReceive: 0, received: 0, net: 0 }])
+    SLOTS.map((s) => [s, { slot: s, paid: 0, share: 0, owes: 0, repaidOut: 0, toReceive: 0, received: 0, net: 0, personal: 0 }])
   ) as Record<TravelerSlotId, PersonSummary>;
+  for (const p of privates) out[p.slot].personal += p.cents;
   for (const e of expenses) {
     out[e.paidBy].paid += e.amountCents;
     for (const s of SLOTS) out[s].share += e.shares[s] ?? 0;

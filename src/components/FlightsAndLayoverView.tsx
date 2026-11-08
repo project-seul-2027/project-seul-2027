@@ -36,15 +36,6 @@ export const FlightsAndLayoverView: React.FC = () => {
           </button>
         ))}
       </div>
-      <a
-        href={FLIGHTS_BOOKING_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pb-3 text-sm text-cyan-300 hover:text-cyan-200 transition-colors"
-        title="Apri i voli selezionati su GoToGate in una nuova scheda"
-      >
-        Voli su GoToGate
-      </a>
     </div>
   );
 
@@ -191,16 +182,6 @@ export const FlightsAndLayoverView: React.FC = () => {
               <span className="text-xs text-amber-200/80">
                 Scalo programmato con volo Air China CA 124 (ICN 13:10) e CA 949 (PEK 02:15 per MXP)
               </span>
-              <a
-                href={FLIGHTS_BOOKING_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-500/40 transition-colors"
-              >
-                <Plane className="w-3.5 h-3.5" />
-                <span>Vedi Voli su GoToGate</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
             </div>
           </div>
 

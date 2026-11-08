@@ -280,7 +280,7 @@ export const FlightReliability: React.FC<Props> = ({ phone }) => {
               Coincidenza a Pechino: rischio {formatPercent(connection.miss)}
             </p>
             <p className={phone ? 'ms-rel-alert-text' : 'text-sm text-slate-300 mt-1'}>
-              Scalo di {Math.floor(connection.layover / 60)} h {connection.layover % 60} min, ne servono almeno {MIN_CONNECTION_MIN}. Se {shortName(first.leg.flightNumber)} tarda troppo, perdi {shortName(next.flightNumber)}.
+              Scalo di {Math.floor(connection.layover / 60)} h {connection.layover % 60} min, servono almeno {MIN_CONNECTION_MIN} minuti.
             </p>
           </div>
         </div>
