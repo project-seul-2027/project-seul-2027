@@ -75,10 +75,20 @@ interface PdfPageViewerProps {
   url: string;
   /** Pagina da mostrare quando cambia (es. dal selettore degli argomenti). */
   targetPage?: number;
+  /** Cambiandolo si torna alla pagina scelta anche se è la stessa di prima. */
+  targetKey?: number;
+  /** Chiamata quando scorrendo cambia la pagina in vista. */
+  onPageChange?: (page: number) => void;
+  /** Pulsanti extra a destra della barra (solo variante desktop). */
+  actions?: React.ReactNode;
+  /** 'desk': barra e sfondo nello stile delle pagine desktop. */
+  variant?: 'default' | 'desk';
   className?: string;
 }
 
-export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, className = '' }) => {
+export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, targetKey, onPageChange, actions, variant = 'default', className = '' }) => {
+  const desk = variant === 'desk';
+  const btn = desk ? 'pdfv-btn' : 'w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-800 disabled:opacity-30 transition-colors';
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -138,7 +148,7 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, c
     if (!targetPage || !pdf) return;
     const id = window.setTimeout(() => goToPage(Math.min(targetPage, numPages), false), 50);
     return () => window.clearTimeout(id);
-  }, [targetPage, pdf, numPages, goToPage]);
+  }, [targetPage, targetKey, pdf, numPages, goToPage]);
 
   // Aggiorna il contatore "pagina X di N" mentre si scorre
   const onScroll = () => {
@@ -152,68 +162,50 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, c
     setCurrent(idx + 1);
   };
 
+  useEffect(() => {
+    if (numPages) onPageChange?.(current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, numPages]);
+
   const pages = Array.from({ length: numPages }, (_, i) => i + 1);
 
   return (
     <div className={`flex flex-col h-full min-h-0 ${className}`}>
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-slate-950 border-b border-slate-800 text-slate-300 shrink-0">
+      <div className={desk ? 'pdfv-bar' : 'flex items-center justify-between gap-2 px-3 py-2 bg-slate-950 border-b border-slate-800 text-slate-300 shrink-0'}>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => goToPage(Math.max(1, current - 1))}
-            disabled={current <= 1}
-            aria-label="Pagina precedente"
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-800 disabled:opacity-30 transition-colors"
-          >
+          <button type="button" onClick={() => goToPage(Math.max(1, current - 1))} disabled={current <= 1} aria-label="Pagina precedente" className={btn}>
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-xs font-mono min-w-[4.5rem] text-center tabular-nums">
+          <span className={desk ? 'pdfv-count' : 'text-xs font-mono min-w-[4.5rem] text-center tabular-nums'}>
             {numPages ? `${current} / ${numPages}` : '…'}
           </span>
-          <button
-            type="button"
-            onClick={() => goToPage(Math.min(numPages, current + 1))}
-            disabled={!numPages || current >= numPages}
-            aria-label="Pagina successiva"
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-800 disabled:opacity-30 transition-colors"
-          >
+          <button type="button" onClick={() => goToPage(Math.min(numPages, current + 1))} disabled={!numPages || current >= numPages} aria-label="Pagina successiva" className={btn}>
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))}
-            disabled={zoom <= MIN_ZOOM}
-            aria-label="Riduci zoom"
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-800 disabled:opacity-30 transition-colors"
-          >
+          <button type="button" onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))} disabled={zoom <= MIN_ZOOM} aria-label="Riduci zoom" className={btn}>
             <ZoomOut className="w-5 h-5" />
           </button>
           <button
             type="button"
             onClick={() => setZoom(1)}
             aria-label="Adatta alla larghezza"
-            className="px-2 h-10 rounded-lg text-xs font-mono tabular-nums hover:bg-slate-800 transition-colors"
+            className={desk ? 'pdfv-zoom' : 'px-2 h-10 rounded-lg text-xs font-mono tabular-nums hover:bg-slate-800 transition-colors'}
           >
             {Math.round(zoom * 100)}%
           </button>
-          <button
-            type="button"
-            onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))}
-            disabled={zoom >= MAX_ZOOM}
-            aria-label="Aumenta zoom"
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-800 disabled:opacity-30 transition-colors"
-          >
+          <button type="button" onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))} disabled={zoom >= MAX_ZOOM} aria-label="Aumenta zoom" className={btn}>
             <ZoomIn className="w-5 h-5" />
           </button>
+          {desk && actions}
         </div>
       </div>
 
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="relative flex-1 min-h-0 overflow-auto overscroll-contain bg-slate-800/60"
+        className={`relative flex-1 min-h-0 overflow-auto overscroll-contain ${desk ? 'pdfv-well' : 'bg-slate-800/60'}`}
       >
         {!pdf && !error && (
           <div className="absolute inset-0 flex items-center justify-center text-slate-400 gap-2 text-sm">

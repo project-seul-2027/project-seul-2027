@@ -5,13 +5,16 @@ import { useAuth } from '../auth/AuthContext';
 import { itineraryPdfService, type OverrideReport } from '../services/itineraryPdfService';
 import { useItineraryPdf } from './useItineraryPdf';
 import { PdfPageViewer } from './PdfPageViewer';
-import { FoldText } from './mobile/FoldText';
 import { useMediaQuery } from '../pwa';
 
 export const PdfViewerModal: React.FC = () => {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [selectedPageTopic, setSelectedPageTopic] = useState<number>(1);
   const [fullscreen, setFullscreen] = useState(false);
+  // Pagina in vista nel visualizzatore (segue lo scorrimento) e contatore per tornare alla stessa pagina scelta
+  const [activePage, setActivePage] = useState(1);
+  const [jump, setJump] = useState(0);
+  const listRef = useRef<HTMLOListElement>(null);
   const { user } = useAuth();
   const { url: pdfUrl, custom, meta } = useItineraryPdf();
   const canUpload = user?.travelerId === 't1';
@@ -87,6 +90,16 @@ export const PdfViewerModal: React.FC = () => {
     { page: 13, title: 'Pag. 13: 20 marzo, da Malpensa a Milano Centrale e costi', summary: 'Il rientro: atterraggio alle 06:30, passaporti, bagagli, Malpensa Express verso le 9:00-9:30 e treni di casa non prima delle 11:30, con margini in caso di ritardo. In chiusura "Costi e cose da verificare".' }
   ];
 
+  // L'indice a sinistra segue la pagina in vista (a mano, così la pagina intera non salta)
+  useEffect(() => {
+    const list = listRef.current;
+    const row = list?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!list || !row) return;
+    const top = row.offsetTop - list.offsetTop;
+    if (top < list.scrollTop) list.scrollTop = top - 8;
+    else if (top + row.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = top + row.offsetHeight - list.clientHeight + 8;
+  }, [activePage]);
+
   // Chiudi il pannello a schermo intero con Esc
   useEffect(() => {
     if (!fullscreen) return;
@@ -97,37 +110,8 @@ export const PdfViewerModal: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [fullscreen]);
 
-  // Indice delle pagine: su telefono è una lista compatta sotto il visualizzatore
+  // Indice delle pagine su telefono: lista compatta sotto il visualizzatore
   const topicsBlock = !custom ? (
-    isDesktop ? (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {pageTopics.map((pt) => (
-          <div
-            key={pt.page}
-            onClick={() => setSelectedPageTopic(pt.page)}
-            className={`p-3 transition-all cursor-pointer ${
-              isDesktop
-                ? selectedPageTopic === pt.page
-                  ? 'border-l-2 border-cyan-400 pl-4 text-white'
-                  : 'border-l-2 border-transparent pl-4 text-slate-300 hover:text-white'
-                : `rounded-xl border ${
-                    selectedPageTopic === pt.page
-                      ? 'bg-slate-800 border-cyan-500/50 shadow-md text-white ring-1 ring-cyan-500/20'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
-                  }`
-            }`}
-          >
-            <div className="font-bold text-xs text-cyan-300 mb-1 flex items-center justify-between">
-              <span>{pt.title}</span>
-              <BookOpen className="w-3.5 h-3.5 text-slate-500" />
-            </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              {pt.summary}
-            </p>
-          </div>
-        ))}
-      </div>
-    ) : (
       <ul className="rounded-2xl bg-[#0a1119] border-t border-[rgba(234,240,246,.11)] divide-y divide-[rgba(234,240,246,.11)]" data-testid="pdf-topics">
         {pageTopics.map((pt) => {
           const open = selectedPageTopic === pt.page;
@@ -147,11 +131,10 @@ export const PdfViewerModal: React.FC = () => {
           );
         })}
       </ul>
-    )
   ) : null;
 
   // Riepilogo per il telefono: le cose che servono subito, senza scorrere
-  const quickFacts = !custom && !isDesktop ? (
+  const quickFacts = !custom ? (
     <section className="border-t border-[rgba(234,240,246,.11)] pt-4" data-testid="pdf-facts">
       <h3 className="font-[Outfit] text-[19px] font-medium text-[#eaf0f6] mb-2">Da sapere subito</h3>
       <dl className="divide-y divide-[rgba(234,240,246,.11)]">
@@ -172,16 +155,144 @@ export const PdfViewerModal: React.FC = () => {
     </section>
   ) : null;
 
+  const fullscreenLayer = fullscreen && createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Itinerario Seul 2027 a schermo intero"
+      className="fixed inset-0 z-[200] bg-slate-950 flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+    >
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 shrink-0">
+        <span className="text-sm font-bold text-white font-display truncate">Itinerario Seul 2027</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={pdfUrl}
+            download="Itinerario_Seul_2027_Aggiornato.pdf"
+            aria-label="Scarica PDF"
+            className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center"
+          >
+            <Download className="w-4 h-4" />
+          </a>
+          <button
+            type="button"
+            onClick={() => setFullscreen(false)}
+            aria-label="Chiudi"
+            className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} className="flex-1 min-h-0" />
+    </div>
+    ,
+    document.body
+  );
+
+  const topicTitle = (t: string) => t.replace(/^Pag\. \d+:\s*/, '');
+
+  // Desktop: schermo diviso a metà, a sinistra le parti del PDF, a destra la pagina scelta
+  if (isDesktop) {
+    return (
+      <div className="pdf-split" data-testid="pdf-split">
+        <section className="pdf-index" aria-label="Parti del PDF">
+          <header className="pdf-head">
+            <h2>Itinerario Seul 2027</h2>
+            <p>
+              {custom
+                ? `PDF caricato dal Posto 1 il ${new Date(meta!.updatedAt).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}: ${meta!.name}.`
+                : '13 pagine: voli e ritrovo, alloggi, serate, programma giorno per giorno, scalo a Pechino e rientro.'}
+            </p>
+            <div className="pdf-acts">
+              {canUpload && (
+                <>
+                  <input ref={fileInput} type="file" accept="application/pdf,.pdf" className="hidden" onChange={onPickFile} />
+                  <button type="button" disabled={uploading} onClick={() => fileInput.current?.click()} className="pdf-btn">
+                    <Upload className="w-4 h-4" />
+                    {uploading ? 'Caricamento…' : 'Aggiorna PDF'}
+                  </button>
+                </>
+              )}
+              <a href={pdfUrl} download="Itinerario_Seul_2027_Aggiornato.pdf" className="pdf-btn">
+                <Download className="w-4 h-4" />
+                Scarica PDF
+              </a>
+            </div>
+            {uploadMsg && (
+              <p role="status" className={`pdf-note ${uploadMsg.ok ? '' : 'bad'}`}>
+                {uploadMsg.text}
+              </p>
+            )}
+            {lastRead && (changedDays.length > 0 || lastRead.warnings.length > 0) && (
+              <div className="pdf-note">
+                {changedDays.length > 0 && (
+                  <p>Programma letto dal PDF. Giorni cambiati: {changedDays.map((r) => `${r.n} marzo`).join(', ')}.</p>
+                )}
+                {lastRead.warnings.map((w) => (
+                  <p key={w}>{w}</p>
+                ))}
+                {canUpload && changedDays.length > 0 && (
+                  <button type="button" disabled={uploading} onClick={onReset} className="pdf-link">
+                    Ripristina il programma originale
+                  </button>
+                )}
+              </div>
+            )}
+          </header>
+
+          {!custom && (
+            <ol className="pdf-list" ref={listRef} data-testid="pdf-topics">
+              {pageTopics.map((pt) => {
+                const on = activePage === pt.page;
+                return (
+                  <li key={pt.page}>
+                    <button
+                      type="button"
+                      className="pdf-row"
+                      aria-current={on ? 'page' : undefined}
+                      onClick={() => {
+                        setSelectedPageTopic(pt.page);
+                        setActivePage(pt.page);
+                        setJump((j) => j + 1);
+                      }}
+                    >
+                      <span className="pdf-num">{pt.page}</span>
+                      <span className="pdf-txt">
+                        <span className="pdf-ttl">{topicTitle(pt.title)}</span>
+                        {on && <span className="pdf-sum">{pt.summary}</span>}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
+
+        <section className="pdf-viewer" aria-label="Visualizzatore PDF">
+          <PdfPageViewer
+            variant="desk"
+            url={pdfUrl}
+            targetPage={selectedPageTopic}
+            targetKey={jump}
+            onPageChange={setActivePage}
+            className="flex-1 min-h-0"
+            actions={
+              <button type="button" onClick={() => setFullscreen(true)} aria-label="Schermo intero" title="Schermo intero" className="pdfv-btn">
+                <Maximize2 className="w-5 h-5" />
+              </button>
+            }
+          />
+        </section>
+        {fullscreenLayer}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Banner */}
-      <div
-        className={
-          isDesktop
-            ? 'pb-5 border-b border-white/[0.06] flex flex-row items-center justify-between gap-6'
-            : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4'
-        }
-      >
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-xl bg-red-500/10 text-red-400 shrink-0">
             <FileText className="w-6 h-6" />
@@ -190,11 +301,6 @@ export const PdfViewerModal: React.FC = () => {
             <h3 className="text-base font-bold text-white font-display">
               Documento Ufficiale Aggiornato: Itinerario Seul 2027
             </h3>
-            {isDesktop &&             <FoldText className="text-xs text-slate-400">
-              {custom
-                ? `PDF caricato dal Posto 1 il ${new Date(meta!.updatedAt).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}: ${meta!.name}.`
-                : 'PDF di 13 pagine: voli e ritrovo, alloggi a confronto, serate, programma giorno per giorno, lo scalo di 240 ore a Pechino e il rientro a Milano. Scegli una pagina qui sotto per leggere cosa contiene e aprirla nel visualizzatore.'}
-            </FoldText>}
           </div>
         </div>
 
@@ -257,62 +363,20 @@ export const PdfViewerModal: React.FC = () => {
         </div>
       )}
 
-      {isDesktop && topicsBlock}
       {quickFacts}
 
       {/* Visualizzatore incorporato: le pagine sono disegnate nel sito, senza download */}
-      <div
-        className={`overflow-hidden h-[70svh] md:h-[780px] flex flex-col ${
-          isDesktop ? 'border border-slate-800/80 rounded-2xl' : 'bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl'
-        }`}
-      >
-        <div
-          className={`px-4 py-2.5 flex items-center justify-between text-xs text-slate-400 font-mono gap-2 ${
-            isDesktop ? 'border-b border-white/[0.06]' : 'bg-slate-950 border-b border-slate-800'
-          }`}
-        >
+      <div className="overflow-hidden h-[70svh] md:h-[780px] flex flex-col bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl">
+        <div className="px-4 py-2.5 flex items-center justify-between text-xs text-slate-400 font-mono gap-2 bg-slate-950 border-b border-slate-800">
           <span>Visualizzatore PDF Ufficiale Aggiornato</span>
           <span className="truncate">{custom ? meta!.name : 'Itinerario_Seul_2027_aggiornato.pdf'}</span>
         </div>
         <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} className="flex-1 min-h-0" />
       </div>
 
-      {!isDesktop && topicsBlock}
+      {topicsBlock}
 
-      {/* Pannello a schermo intero dentro l'app */}
-      {fullscreen && createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Itinerario Seul 2027 a schermo intero"
-          className="fixed inset-0 z-[200] bg-slate-950 flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-        >
-          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 shrink-0">
-            <span className="text-sm font-bold text-white font-display truncate">Itinerario Seul 2027</span>
-            <div className="flex items-center gap-2 shrink-0">
-              <a
-                href={pdfUrl}
-                download="Itinerario_Seul_2027_Aggiornato.pdf"
-                aria-label="Scarica PDF"
-                className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center"
-              >
-                <Download className="w-4 h-4" />
-              </a>
-              <button
-                type="button"
-                onClick={() => setFullscreen(false)}
-                aria-label="Chiudi"
-                className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-          <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} className="flex-1 min-h-0" />
-        </div>
-        ,
-        document.body
-      )}
+      {fullscreenLayer}
     </div>
   );
 };
