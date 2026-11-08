@@ -138,6 +138,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Token GitHub per l'avviso immediato del PDF: lo legge e lo scrive solo chi occupa il Posto 1,
+    // così vale su tutti i suoi dispositivi e non è visibile al resto del gruppo.
+    match /appFiles/pdfPushToken {
+      allow read: if isParticipant()
+        && get(/databases/$(database)/documents/slots/t1).data.uid == request.auth.uid;
+      allow create, update: if isParticipant()
+        && get(/databases/$(database)/documents/slots/t1).data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['token'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() <= 300;
+      allow delete: if isParticipant()
+        && get(/databases/$(database)/documents/slots/t1).data.uid == request.auth.uid;
+    }
+
     match /appFiles/itineraryData {
       allow read: if isParticipant();
       allow create, update: if isParticipant()
