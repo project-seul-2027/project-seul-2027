@@ -23,8 +23,12 @@ try {
   process.exit(1);
 }
 
-/** Un PDF caricato da più di quest'ora non si annuncia più (evita avvisi vecchi al primo avvio). */
-const MAX_AGE_MS = 60 * 60 * 1000;
+/**
+ * Un PDF caricato da più di 24 ore non si annuncia più (evita avvisi vecchi al primo avvio).
+ * GitHub fa girare i controlli programmati ogni poche ore, non ogni 5 minuti: con una finestra di un'ora
+ * il PDF veniva scartato come "vecchio" prima ancora che il controllo partisse.
+ */
+const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const siteUrl = (env.SITE_URL || './').trim();
 const dry = env.DRY_RUN === '1';
 const now = Date.now();
@@ -48,7 +52,7 @@ if ((await logRef.get()).exists) {
   process.exit(0);
 }
 if (now - updatedAt > MAX_AGE_MS) {
-  console.log('PDF caricato da più di un\'ora e mai annunciato: lo segno come visto senza avvisare.');
+  console.log('PDF caricato da più di 24 ore e mai annunciato: lo segno come visto senza avvisare.');
   if (!dry) await logRef.set({ at: now, sent: 0, total: 0, skipped: 'old' });
   process.exit(0);
 }

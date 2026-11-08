@@ -107,7 +107,7 @@ export const TripNotifierEngine: React.FC = () => {
 
 const Switch: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: string; testId?: string }> = ({ on, onChange, label, testId }) => (
   <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={`nc-sw relative w-12 h-7 rounded-full shrink-0 transition-colors ${on ? 'bg-cyan-500' : 'bg-slate-700'}`} data-testid={testId}>
-    <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white transition-transform ${on ? 'translate-x-5' : ''}`} />
+    <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white transition-[left] duration-150 ${on ? 'left-[22px]' : 'left-0.5'}`} />
   </button>
 );
 

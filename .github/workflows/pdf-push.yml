@@ -1,6 +1,8 @@
 # Avvisa i telefoni quando il Posto 1 carica un nuovo PDF dell'itinerario dal sito (pagina PDF → "Aggiorna PDF").
-# Controlla ogni ~5 minuti: GitHub può ritardare i controlli programmati di qualche minuto, quindi l'avviso arriva
-# di solito entro 5-15 minuti dal caricamento. Prova a mano: Actions → "Avviso nuovo PDF" → Run workflow.
+# Chiede a GitHub di controllare ogni 5 minuti, ma in pratica i controlli programmati girano ogni poche ore
+# (visto: intervalli di 3-7 ore), quindi l'avviso può arrivare con ore di ritardo. Per l'avviso immediato serve la
+# funzione onPdfUploaded (functions/src/index.ts, piano Blaze). Per mandarlo subito a mano:
+# Actions → "Avviso nuovo PDF" → Run workflow, togliendo la spunta "Solo elenco".
 # Nota: GitHub sospende i workflow programmati dopo 60 giorni senza attività nel repository.
 name: Avviso nuovo PDF
 

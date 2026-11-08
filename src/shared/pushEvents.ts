@@ -76,7 +76,16 @@ export const photoMessage = (id: string, name: string, caption: string, place: s
   route: 'gallery'
 });
 
-export const placeMessage = (id: string, name: string, place: string): PushMessage => ({
+/** Nuovo PDF dell'itinerario caricato dal Posto 1. La chiave è la stessa di scripts/pdf-push.mjs: un solo avviso per caricamento. */
+export const pdfMessage = (updatedAt: number, fileName: string): PushMessage => ({
+  key: `pdf-${updatedAt}`,
+  category: 'updates',
+  title: 'Itinerario aggiornato',
+  body: `È stato caricato un nuovo PDF (${clip(fileName || 'itinerario', 60)}): aprilo per vedere le novità.`,
+  route: 'pdf'
+});
+
+export const placeMessage =(id: string, name: string, place: string): PushMessage => ({
   key: `pl-${id}`,
   category: 'activity',
   title: `${name} ha proposto un luogo`,
