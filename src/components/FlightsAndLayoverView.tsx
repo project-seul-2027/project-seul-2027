@@ -7,6 +7,7 @@ import {
 import { FoldText } from './mobile/FoldText';
 import { useMediaQuery } from '../pwa';
 import { MobileVoli } from './mobile/MobileVoli';
+import { FlightReliability } from './FlightReliability';
 import './mobile/mobile.css';
 
 export const FlightsAndLayoverView: React.FC = () => {
@@ -146,6 +147,8 @@ export const FlightsAndLayoverView: React.FC = () => {
           </div>
         </div>
       </section>
+
+      <FlightReliability phone={false} />
     </div>
   );
 

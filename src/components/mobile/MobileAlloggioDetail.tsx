@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
 import type { AccommodationOption } from '../../data/tripData';
 import './mobile.css';
 
@@ -86,6 +86,15 @@ export const MobileAlloggioDetail: React.FC<Props> = ({ acc, mine, voters, busy,
         <button type="button" onClick={onMap} className="min-h-[48px] rounded-xl bg-[#52d9e6] text-[15px] font-semibold text-[#04242a]" data-testid="alloggio-map">
           Vedi sulla mappa
         </button>
+        <a
+          href={acc.enkoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="col-span-2 min-h-[48px] rounded-xl bg-[rgba(96,150,214,0.13)] text-[15px] font-semibold text-[#eaf0f6] flex items-center justify-center gap-2 active:opacity-70"
+          data-testid="alloggio-enko"
+        >
+          Apri su Enko Stay <ExternalLink className="w-4 h-4 text-[#52d9e6]" aria-hidden="true" />
+        </a>
       </div>
       {voters.length > 0 && (
         <p className="mt-3 text-[14px] text-[#97a5b9]">Votato da {voters.map((v) => v.name).join(', ')}.</p>

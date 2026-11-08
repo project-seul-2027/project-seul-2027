@@ -115,6 +115,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Puntualità dei voli: la scrive solo lo script programmato (account di servizio), la legge tutto il gruppo
+    match /flightStats/{flightId} {
+      allow read: if isParticipant();
+      allow write: if false;
+    }
+
     // PDF dell'itinerario e programma letto da quel PDF: li legge tutto il gruppo,
     // li scrive solo chi occupa il Posto 1 (slots/t1)
     match /appFiles/itineraryPdf {
