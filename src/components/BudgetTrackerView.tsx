@@ -7,6 +7,8 @@ import {
   Calculator, ArrowRightLeft, RefreshCw, PiggyBank
 } from 'lucide-react';
 import { FoldText } from './mobile/FoldText';
+import { ACCOMMODATIONS, priceAccommodation } from '../data/tripData';
+import { accommodationPriceService, type PriceOverrides } from '../services/accommodationPriceService';
 
 export const BudgetTrackerView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'estimates' | 'saver_tips' | 'converter'>('estimates');
@@ -18,6 +20,16 @@ export const BudgetTrackerView: React.FC = () => {
   // Currency Converter state
   const [convertAmount, setConvertAmount] = useState<number>(10000);
   const [convertFrom, setConvertFrom] = useState<'KRW' | 'EUR' | 'CNY'>('KRW');
+  const [accommodationPrices, setAccommodationPrices] = useState<PriceOverrides>({});
+
+  useEffect(
+    () => accommodationPriceService.watch(setAccommodationPrices, (err) => console.warn('Prezzi alloggi non leggibili nel preventivo:', err)),
+    []
+  );
+  const accommodations = ACCOMMODATIONS.map((acc) =>
+    accommodationPrices[acc.id] != null ? priceAccommodation(acc, accommodationPrices[acc.id]) : acc
+  );
+  const euro = (amount: number) => `${amount.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} €`;
 
   // Fetch live exchange rates on mount
   useEffect(() => {
@@ -139,53 +151,19 @@ export const BudgetTrackerView: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
-                <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
-                  <div className="font-bold text-white flex items-center justify-between">
-                    <span>Opzione A: Myeongdong</span>
-                    <span className="font-mono text-emerald-400 font-bold">424 €</span>
+                {accommodations.map((acc) => (
+                  <div key={acc.id} className="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                    <div className="font-bold text-white flex items-center justify-between gap-2">
+                      <span>Opzione {acc.code}: {acc.district}</span>
+                      <span className="font-mono text-emerald-400 font-bold">{euro(acc.totalEur17Nights)}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">{euro(acc.nightlyRateEur)} / notte</div>
+                    <div className="pt-1 border-t border-slate-800/80 flex justify-between gap-2 font-mono">
+                      <span className="text-purple-300">Pietro (8n): <strong>{euro(acc.pietroCost8Nights)}</strong></span>
+                      <span className="text-cyan-300">Ognuno dei 3: <strong>{euro(acc.other3Cost17Nights)}</strong></span>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-slate-400">~25 € / notte</div>
-                  <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (8n): <strong>50 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>125 €</strong></span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
-                  <div className="font-bold text-white flex items-center justify-between">
-                    <span>Opzione B: Stazione Seul</span>
-                    <span className="font-mono text-sky-400 font-bold">659 €</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">~39 € / notte</div>
-                  <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (8n): <strong>78 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>194 €</strong></span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
-                  <div className="font-bold text-white flex items-center justify-between">
-                    <span>Opzione C: Mapo (Hongdae)</span>
-                    <span className="font-mono text-pink-400 font-bold">748 €</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">~44 € / notte</div>
-                  <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (8n): <strong>88 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>220 €</strong></span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
-                  <div className="font-bold text-white flex items-center justify-between">
-                    <span>Opzione D: Sinseol-dong</span>
-                    <span className="font-mono text-purple-400 font-bold">641 €</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">~38 € / notte</div>
-                  <div className="pt-1 border-t border-slate-800/80 flex justify-between font-mono">
-                    <span className="text-purple-300">Pietro (8n): <strong>75 €</strong></span>
-                    <span className="text-cyan-300">Ognuno dei 3: <strong>189 €</strong></span>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
