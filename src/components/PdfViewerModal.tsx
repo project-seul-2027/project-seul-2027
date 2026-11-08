@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FileText, Download, Maximize2, X, BookOpen, Upload, ChevronDown } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { itineraryPdfService, type OverrideReport } from '../services/itineraryPdfService';
 import { useItineraryPdf } from './useItineraryPdf';
 import { PdfPageViewer } from './PdfPageViewer';
+import { derivePageTopics, type PageTopic } from '../utils/pdfPageTopics';
+import { extractPdfPagesFromDoc } from '../utils/pdfTextExtract';
 import { useMediaQuery } from '../pwa';
 
 export const PdfViewerModal: React.FC = () => {
@@ -15,6 +17,8 @@ export const PdfViewerModal: React.FC = () => {
   const [activePage, setActivePage] = useState(1);
   const [jump, setJump] = useState(0);
   const listRef = useRef<HTMLOListElement>(null);
+  // Parti ricavate dal PDF caricato (il PDF originale ha le sue descrizioni scritte a mano)
+  const [derived, setDerived] = useState<{ url: string; topics: PageTopic[] } | null>(null);
   const { user } = useAuth();
   const { url: pdfUrl, custom, meta } = useItineraryPdf();
   const canUpload = user?.travelerId === 't1';
@@ -90,6 +94,21 @@ export const PdfViewerModal: React.FC = () => {
     { page: 13, title: 'Pag. 13: 20 marzo, da Malpensa a Milano Centrale e costi', summary: 'Il rientro: atterraggio alle 06:30, passaporti, bagagli, Malpensa Express verso le 9:00-9:30 e treni di casa non prima delle 11:30, con margini in caso di ritardo. In chiusura "Costi e cose da verificare".' }
   ];
 
+  // Parti da mostrare: quelle scritte a mano per il PDF originale, oppure quelle lette dal PDF caricato
+  const topics: PageTopic[] = custom
+    ? (derived?.url === pdfUrl ? derived.topics.map((t) => ({ ...t, title: `Pag. ${t.page}: ${t.title}` })) : [])
+    : pageTopics;
+
+  const onDocument = useCallback(
+    (doc: Parameters<typeof extractPdfPagesFromDoc>[0]) => {
+      if (!custom) return;
+      extractPdfPagesFromDoc(doc)
+        .then((pages) => setDerived({ url: pdfUrl, topics: derivePageTopics(pages) }))
+        .catch(() => setDerived({ url: pdfUrl, topics: [] }));
+    },
+    [custom, pdfUrl]
+  );
+
   // L'indice a sinistra segue la pagina in vista (a mano, così la pagina intera non salta)
   useEffect(() => {
     const list = listRef.current;
@@ -111,9 +130,9 @@ export const PdfViewerModal: React.FC = () => {
   }, [fullscreen]);
 
   // Indice delle pagine su telefono: lista compatta sotto il visualizzatore
-  const topicsBlock = !custom ? (
+  const topicsBlock = topics.length > 0 ? (
       <ul className="rounded-2xl bg-[#0a1119] border-t border-[rgba(234,240,246,.11)] divide-y divide-[rgba(234,240,246,.11)]" data-testid="pdf-topics">
-        {pageTopics.map((pt) => {
+        {topics.map((pt) => {
           const open = selectedPageTopic === pt.page;
           return (
             <li key={pt.page} className="py-1">
@@ -126,7 +145,7 @@ export const PdfViewerModal: React.FC = () => {
                 <span>{pt.title}</span>
                 <ChevronDown className={`w-4 h-4 shrink-0 text-[#97a5b9] transition-transform ${open ? 'rotate-180' : ''}`} />
               </button>
-              {open && <p className="pb-3 text-[14px] leading-relaxed text-[#97a5b9]">{pt.summary}</p>}
+              {open && pt.summary && <p className="pb-3 text-[14px] leading-relaxed text-[#97a5b9]">{pt.summary}</p>}
             </li>
           );
         })}
@@ -228,8 +247,8 @@ export const PdfViewerModal: React.FC = () => {
                 {changedDays.length > 0 && (
                   <p>Programma letto dal PDF. Giorni cambiati: {changedDays.map((r) => `${r.n} marzo`).join(', ')}.</p>
                 )}
-                {lastRead.warnings.map((w) => (
-                  <p key={w}>{w}</p>
+                {lastRead.warnings.map((w, i) => (
+                  <p key={`${i}-${w}`}>{w}</p>
                 ))}
                 {canUpload && changedDays.length > 0 && (
                   <button type="button" disabled={uploading} onClick={onReset} className="pdf-link">
@@ -240,9 +259,10 @@ export const PdfViewerModal: React.FC = () => {
             )}
           </header>
 
-          {!custom && (
+          {custom && topics.length === 0 && <p className="pdf-note">Leggo le parti del PDF…</p>}
+          {topics.length > 0 && (
             <ol className="pdf-list" ref={listRef} data-testid="pdf-topics">
-              {pageTopics.map((pt) => {
+              {topics.map((pt) => {
                 const on = activePage === pt.page;
                 return (
                   <li key={pt.page}>
@@ -259,7 +279,7 @@ export const PdfViewerModal: React.FC = () => {
                       <span className="pdf-num">{pt.page}</span>
                       <span className="pdf-txt">
                         <span className="pdf-ttl">{topicTitle(pt.title)}</span>
-                        {on && <span className="pdf-sum">{pt.summary}</span>}
+                        {on && pt.summary && <span className="pdf-sum">{pt.summary}</span>}
                       </span>
                     </button>
                   </li>
@@ -276,6 +296,7 @@ export const PdfViewerModal: React.FC = () => {
             targetPage={selectedPageTopic}
             targetKey={jump}
             onPageChange={setActivePage}
+            onDocument={onDocument}
             className="flex-1 min-h-0"
             actions={
               <button type="button" onClick={() => setFullscreen(true)} aria-label="Schermo intero" title="Schermo intero" className="pdfv-btn">
@@ -352,8 +373,8 @@ export const PdfViewerModal: React.FC = () => {
               {changedDays.map((r) => `${r.n} marzo`).join(', ')}.
             </p>
           )}
-          {lastRead.warnings.map((w) => (
-            <p key={w}>{w}</p>
+          {lastRead.warnings.map((w, i) => (
+            <p key={`${i}-${w}`}>{w}</p>
           ))}
           {canUpload && changedDays.length > 0 && (
             <button type="button" disabled={uploading} onClick={onReset} className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2 disabled:opacity-50">
@@ -371,7 +392,7 @@ export const PdfViewerModal: React.FC = () => {
           <span>Visualizzatore PDF Ufficiale Aggiornato</span>
           <span className="truncate">{custom ? meta!.name : 'Itinerario_Seul_2027_aggiornato.pdf'}</span>
         </div>
-        <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} className="flex-1 min-h-0" />
+        <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} onDocument={onDocument} className="flex-1 min-h-0" />
       </div>
 
       {topicsBlock}
