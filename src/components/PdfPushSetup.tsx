@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { pdfPushTrigger } from '../services/pdfPushTrigger';
 
-/** Solo per il Posto 1: attiva l'avviso immediato ai telefoni dopo il caricamento di un PDF. */
+/** Solo per il Posto 1: attiva l'avviso immediato ai telefoni dopo il caricamento di un PDF. Il token vale su tutti i suoi dispositivi. */
 export const PdfPushSetup: React.FC = () => {
-  const [token, setToken] = useState(() => pdfPushTrigger.getToken());
+  const [token, setToken] = useState('');
+  const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    pdfPushTrigger.getToken().then((t) => {
+      if (alive) {
+        setToken(t);
+        setLoaded(true);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!loaded) return null;
 
   if (token) {
     return (
@@ -15,7 +31,7 @@ export const PdfPushSetup: React.FC = () => {
           type="button"
           className="font-semibold text-[#52d9e6]"
           onClick={() => {
-            pdfPushTrigger.clearToken();
+            void pdfPushTrigger.clearToken();
             setToken('');
           }}
         >
@@ -41,7 +57,7 @@ export const PdfPushSetup: React.FC = () => {
       <p>
         Su GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens. Repository: solo{' '}
         <b className="font-semibold text-[#eaf0f6]">project-seul-2027</b>, permesso{' '}
-        <b className="font-semibold text-[#eaf0f6]">Actions: Read and write</b>. Incolla qui il token: resta solo su questo dispositivo.
+        <b className="font-semibold text-[#eaf0f6]">Actions: Read and write</b>. Incolla qui il token: si salva una volta e vale su tutti i tuoi dispositivi.
       </p>
       <div className="mt-2 flex gap-2">
         <input
@@ -58,10 +74,15 @@ export const PdfPushSetup: React.FC = () => {
           disabled={text.trim().length < 20}
           className="h-10 rounded-xl bg-[#52d9e6] px-4 text-[14px] font-semibold text-[#04242a] disabled:opacity-40"
           onClick={() => {
-            pdfPushTrigger.setToken(text);
-            setToken(pdfPushTrigger.getToken());
-            setText('');
-            setOpen(false);
+            const value = text.trim();
+            void pdfPushTrigger.setToken(value).then(
+              () => {
+                setToken(value);
+                setText('');
+                setOpen(false);
+              },
+              () => setToken('')
+            );
           }}
         >
           Salva
