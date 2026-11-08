@@ -297,6 +297,9 @@ export function priceAccommodation(
   };
 }
 
+export const formatAccommodationEur = (amount: number): string =>
+  `${amount.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} €`;
+
 export const ACCOMMODATIONS: AccommodationOption[] = ACCOMMODATIONS_BASE.map((acc) => {
   const nightly = acc.totalEur17Nights / 17;
   const sharedPart = (8 * nightly) / 4;

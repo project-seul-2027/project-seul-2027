@@ -1,9 +1,9 @@
 import React from 'react';
-import type { AccommodationOption } from '../../data/tripData';
+import { formatAccommodationEur, type AccommodationOption } from '../../data/tripData';
 import './mobile.css';
 
 const TONE: Record<string, string> = { A: '', B: 'ms-vi', C: 'ms-pk', D: 'ms-am' };
-const eur = (n: number) => `${new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(n)} €`;
+const eur = formatAccommodationEur;
 
 interface Props {
   accs: AccommodationOption[];

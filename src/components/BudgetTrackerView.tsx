@@ -7,7 +7,7 @@ import {
   Calculator, ArrowRightLeft, RefreshCw, PiggyBank
 } from 'lucide-react';
 import { FoldText } from './mobile/FoldText';
-import { ACCOMMODATIONS, priceAccommodation } from '../data/tripData';
+import { ACCOMMODATIONS, formatAccommodationEur, priceAccommodation } from '../data/tripData';
 import { accommodationPriceService, type PriceOverrides } from '../services/accommodationPriceService';
 
 export const BudgetTrackerView: React.FC = () => {
@@ -29,7 +29,7 @@ export const BudgetTrackerView: React.FC = () => {
   const accommodations = ACCOMMODATIONS.map((acc) =>
     accommodationPrices[acc.id] != null ? priceAccommodation(acc, accommodationPrices[acc.id]) : acc
   );
-  const euro = (amount: number) => `${amount.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} €`;
+  const euro = formatAccommodationEur;
 
   // Fetch live exchange rates on mount
   useEffect(() => {
