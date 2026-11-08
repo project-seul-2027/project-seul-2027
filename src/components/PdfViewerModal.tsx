@@ -5,6 +5,8 @@ import { useAuth } from '../auth/AuthContext';
 import { itineraryPdfService, type OverrideReport } from '../services/itineraryPdfService';
 import { useItineraryPdf } from './useItineraryPdf';
 import { PdfPageViewer } from './PdfPageViewer';
+import { PdfPushSetup } from './PdfPushSetup';
+import { pdfPushTrigger } from '../services/pdfPushTrigger';
 import { derivePageTopics, type PageTopic } from '../utils/pdfPageTopics';
 import { extractPdfPagesFromDoc } from '../utils/pdfTextExtract';
 import { useMediaQuery } from '../pwa';
@@ -58,11 +60,13 @@ export const PdfViewerModal: React.FC = () => {
     try {
       const res = await itineraryPdfService.upload(file);
       const changed = res.report.filter((r) => r.status !== 'invariato' && r.status !== 'non trovato').length;
+      // Fa partire subito il controllo che avvisa i telefoni (se l'avviso immediato è attivo su questo dispositivo)
+      const push = await pdfPushTrigger.fire();
       setUploadMsg({
         ok: true,
-        text: res.analysed
-          ? `PDF aggiornato e programma riletto: ${changed === 0 ? 'nessun giorno è cambiato' : `${changed} giorni cambiati`}. Lo vede subito tutto il gruppo; la notifica ai telefoni arriva entro pochi minuti.`
-          : `PDF aggiornato, ma il programma non è stato cambiato: ${res.warnings[0] ?? 'struttura non riconosciuta'}. Resta quello di prima.`
+        text: `${res.analysed
+          ? `PDF aggiornato e programma riletto: ${changed === 0 ? 'nessun giorno è cambiato' : `${changed} giorni cambiati`}. Lo vede subito tutto il gruppo.`
+          : `PDF aggiornato, ma il programma non è stato cambiato: ${res.warnings[0] ?? 'struttura non riconosciuta'}. Resta quello di prima.`} ${push.message}`
       });
     } catch (err) {
       const code = (err as { code?: string }).code;
@@ -237,6 +241,11 @@ export const PdfViewerModal: React.FC = () => {
                 Scarica PDF
               </a>
             </div>
+            {canUpload && (
+              <div className="mt-3">
+                <PdfPushSetup />
+              </div>
+            )}
             {uploadMsg && (
               <p role="status" className={`pdf-note ${uploadMsg.ok ? '' : 'bad'}`}>
                 {uploadMsg.text}
@@ -358,6 +367,8 @@ export const PdfViewerModal: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {canUpload && <PdfPushSetup />}
 
       {uploadMsg && (
         <p role="status" className={`text-xs ${uploadMsg.ok ? 'text-emerald-300' : 'text-rose-300'}`}>

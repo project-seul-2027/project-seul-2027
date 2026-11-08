@@ -104,7 +104,7 @@ Le notifiche arrivano nella barra del telefono anche con l'app chiusa (Firebase 
 | Nuovo ritrovo o punto fisso · qualcuno è a casa | Gruppo | come sopra | Gruppo |
 | Nuova spesa · nuova foto · nuovo luogo | Novità del gruppo | come sopra | Spese / Galleria / Luoghi |
 | Programma (30 min prima) · voli e prenotazioni | Programma / Prenotazioni | GitHub, ogni ~10 min | Itinerario / Voli |
-| Nuovo PDF dell'itinerario | Aggiornamenti | GitHub, ogni ~5 min | PDF |
+| Nuovo PDF dell'itinerario | Aggiornamenti | subito (funzioni) / ogni poche ore (GitHub) | PDF |
 | Nuova versione dell'app · messaggio a mano | Aggiornamenti | dopo il deploy / a mano | Novità |
 
 Due corsie, senza doppioni (stesse chiavi in `pushLog`, stessi messaggi in `src/shared/pushEvents.ts`):

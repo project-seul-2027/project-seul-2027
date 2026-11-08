@@ -14,7 +14,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { logger } from 'firebase-functions';
-import { expenseMessage, homeMessage, lostMessage, meetupMessage, photoMessage, placeMessage, pushUrl, type PushMessage } from '../../src/shared/pushEvents';
+import { expenseMessage, homeMessage, lostMessage, meetupMessage, pdfMessage, photoMessage, placeMessage, pushUrl, type PushMessage } from '../../src/shared/pushEvents';
 
 // La regione deve essere la stessa (o vicina) del database Firestore: si cambia con FUNCTIONS_REGION in functions/.env
 const region = process.env.FUNCTIONS_REGION ?? 'europe-west1';
@@ -102,7 +102,16 @@ export const onPhotoCreated = onDocumentCreated('gallery/{id}', async (event) =>
   await dispatch(photoMessage(event.params.id, await nameOf(by), String(d.caption ?? ''), String(d.locationName ?? '')), by);
 });
 
-export const onPlaceCreated = onDocumentCreated('places/{id}', async (event) => {
+/** Nuovo PDF dell'itinerario: avviso in pochi secondi (il controllo programmato di GitHub arriva con ore di ritardo) */
+export const onPdfUploaded = onDocumentWritten('appFiles/itineraryPdf', async (event) => {
+  const after = event.data?.after.data();
+  if (!after) return;
+  const updatedAt = Number(after.updatedAt);
+  if (!Number.isFinite(updatedAt) || updatedAt === Number(event.data?.before.data()?.updatedAt)) return;
+  await dispatch(pdfMessage(updatedAt, String(after.name ?? '')), '');
+});
+
+export const onPlaceCreated =onDocumentCreated('places/{id}', async (event) => {
   const d = event.data?.data();
   if (!d) return;
   const by = String(d.addedBy ?? '');
