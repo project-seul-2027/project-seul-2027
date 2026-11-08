@@ -289,11 +289,11 @@ export function priceAccommodation(
   return {
     ...acc,
     totalEur17Nights,
-    nightlyRateEur: Math.round(nightly),
-    pietroCost8Nights: Math.round(sharedPart),
-    other3Cost17Nights: Math.round(sharedPart + (9 * nightly) / 3),
-    costPerPerson4: Math.round(totalEur17Nights / 4),
-    costPerPerson3: Math.round(totalEur17Nights / 3)
+    nightlyRateEur: nightly,
+    pietroCost8Nights: sharedPart,
+    other3Cost17Nights: sharedPart + (9 * nightly) / 3,
+    costPerPerson4: totalEur17Nights / 4,
+    costPerPerson3: totalEur17Nights / 3
   };
 }
 
@@ -302,9 +302,9 @@ export const ACCOMMODATIONS: AccommodationOption[] = ACCOMMODATIONS_BASE.map((ac
   const sharedPart = (8 * nightly) / 4;
   return {
     ...acc,
-    nightlyRateEur: Math.round(nightly),
-    pietroCost8Nights: Math.round(sharedPart),
-    other3Cost17Nights: Math.round(sharedPart + (9 * nightly) / 3)
+    nightlyRateEur: nightly,
+    pietroCost8Nights: sharedPart,
+    other3Cost17Nights: sharedPart + (9 * nightly) / 3
   };
 });
 
