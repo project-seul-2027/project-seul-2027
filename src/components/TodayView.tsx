@@ -819,7 +819,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
         onOpenItinerary={() => onGoTo('itinerary')}
         simNow={sim}
         program={items.slice(0, 4).map((t) => ({ time: t.clock || timeLabel(t.item.time), title: briefOf(t.item), sub: zoneLabel(t.zone) }))}
-        greeting={`${firstName ? `Ciao ${firstName}` : 'Oggi'} · Seul ${seoulTime} · Italia ${romeTime}`}
+        greeting={`Ciao ${firstName}`}
         shortcuts={dQuick}
       />
       <div className="px-10 pb-12" style={{ borderTop: RULE }}>
