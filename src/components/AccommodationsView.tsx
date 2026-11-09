@@ -538,7 +538,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
                       { l: 'Ognuno dei 3', v: acc.other3Cost17Nights }
                     ].map((m) => (
                       <span key={m.l} className="block">
-                        <span className="block font-[Outfit] text-[20px] font-medium leading-none text-[#eaf0f6]">{m.v} €</span>
+                        <span className="block font-[Outfit] text-[clamp(17px,5.3vw,22px)] font-medium leading-tight tracking-[-0.03em] text-[#eaf0f6] whitespace-nowrap">{formatAccommodationEur(m.v)}</span>
                         <span className="block mt-1 text-[13px] text-[#97a5b9]">{m.l}</span>
                       </span>
                     ))}
