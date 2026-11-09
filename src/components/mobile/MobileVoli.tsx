@@ -1,5 +1,5 @@
 import React from 'react';
-import { FLIGHTS_SCHEDULE, FLIGHTS_BOOKING_URL } from '../../data/tripData';
+import { FLIGHTS_SCHEDULE } from '../../data/tripData';
 import { FlightReliability, LegStatsToggle } from '../FlightReliability';
 import './mobile.css';
 
@@ -43,10 +43,6 @@ export const MobileVoli: React.FC = () => (
     </div>
     <div className="ms-stop"><strong>Rientro a Pechino entro le 22:45.</strong> Partenza dal centro alle 21:15, check-in al T3.</div>
     <Leg id="fl_inbound_2" color="var(--ms-amber)" meta="Air China · 11 h 35 · bagagli ritirati a Malpensa" />
-
-    <div style={{ paddingTop: 10 }}>
-      <a className="ms-link" href={FLIGHTS_BOOKING_URL} target="_blank" rel="noopener noreferrer">Apri i voli su GoToGate</a>
-    </div>
 
     <FlightReliability phone />
   </div>
