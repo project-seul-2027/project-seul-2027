@@ -54,7 +54,9 @@ interface InteractiveMapProps {
 export type MapInteractionMode = 'explore' | 'route';
 
 // Google Maps English Tiles (Forces English labels across Seoul, subway stations, roads & districts via hl=en)
-const GOOGLE_EN_TILE_URL = 'https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
+// Sugli schermi ad alta densità (telefoni) chiede i riquadri a doppia risoluzione (scale=2: 512 px mostrati in 256), altrimenti la mappa sgrana.
+const RETINA = typeof window !== 'undefined' && (window.devicePixelRatio || 1) > 1.25 ? '&scale=2' : '';
+const GOOGLE_EN_TILE_URL = `https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}${RETINA}`;
 // Stessa mappa senza le linee dei trasporti (stile "transit.line: off"): le linee metro le disegna
 // il sito sopra la mappa, così si possono selezionare e nascondere una per una.
 const GOOGLE_EN_NO_TRANSIT_TILE_URL = `${GOOGLE_EN_TILE_URL}&apistyle=s.t%3A65%7Cp.v%3Aoff`;
@@ -153,6 +155,9 @@ function makeMarkerIcon(
     iconAnchor: [size / 2, size / 2]
   });
 }
+
+/** Vero se il dispositivo non ha un puntatore con hover (telefono, tablet touch): lì niente tooltip al passaggio. */
+const noHoverDevice = (): boolean => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
 function makeGpsMarkerIcon(isSimulated: boolean): L.DivIcon {
   const color = isSimulated ? '#f59e0b' : '#06b6d4';
@@ -954,20 +959,41 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       if (placesFilter === 'todo' && p.visited && !isRouteEnd) continue;
       const c = categoryOf(p.category);
       const role = mapMode === 'route' ? (locId === selectedOriginId ? 'origin' : locId === selectedDestinationId ? 'destination' : null) : null;
-      const ring = role === 'origin' ? '#22d3ee' : role === 'destination' ? '#34d399' : p.priority === 'must' ? '#c4b5fd' : '#ffffff';
-      const icon = L.divIcon({
-        className: '',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-        html: `<div style="width:30px;height:30px;border-radius:9px;background:${p.visited ? '#475569' : '#7c3aed'};border:${role ? 3.5 : 2.5}px solid ${ring};box-shadow:0 3px 10px #0009${role ? ',0 0 0 4px ' + ring + '55' : ''};display:flex;align-items:center;justify-content:center;font-size:15px;opacity:${p.visited ? 0.7 : 1}">${categoryIconSvg(c.id, 16)}</div>`
-      });
+      // Stessa forma e lo stesso comportamento delle tappe dell'itinerario (cerchio scuro, icona, bordo colorato);
+      // il viola resta il colore dei luoghi salvati, il grigio quelli già visitati.
+      const border = role === 'origin' ? '#38bdf8' : role === 'destination' ? '#34d399' : p.visited ? '#475569' : CATEGORY_STYLE.luogo.badge;
+      const glow = role === 'origin' || role === 'destination' ? border : CATEGORY_STYLE.luogo.ring;
+      const d = role ? 38 : isMobile ? 24 : 30;
+      const iconSize = role ? 18 : isMobile ? 14 : 16;
+      const icon = isMobile
+        ? L.divIcon({
+            className: 'custom-map-marker',
+            html: `<div style="width:${d}px;height:${d}px;border-radius:50%;background:#0d1824;border:${role ? 3 : 2}px solid ${border};color:#fff;display:flex;align-items:center;justify-content:center;opacity:${p.visited ? 0.55 : 1};cursor:pointer;box-sizing:border-box"><span style="display:flex;line-height:0">${categoryIconSvg(c.id, iconSize)}</span></div>`,
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+          })
+        : L.divIcon({
+            className: 'custom-map-marker',
+            html: `<div style="display:flex;align-items:center;justify-content:center;width:${d}px;height:${d}px;background-color:#090d16;border:${role ? 3 : 2}px solid ${border};border-radius:50%;box-shadow:0 0 ${role ? 20 : 8}px ${glow};color:#fff;opacity:${p.visited ? 0.55 : 1};cursor:pointer"><span style="display:flex">${categoryIconSvg(c.id, iconSize)}</span></div>`,
+            iconSize: [d, d],
+            iconAnchor: [d / 2, d / 2]
+          });
       const marker = L.marker([p.lat, p.lng], { icon, zIndexOffset: role ? 900 : 700 })
-        .bindTooltip(esc(p.name) + (p.address ? `<div style="font-size:11px;opacity:.75">${esc(p.address)}</div>` : ''), { direction: 'top', offset: [0, -14] })
         .on('click', () => handleSelectLocationRef.current(placeToLocation(p)))
         .addTo(layer);
+      // Come per le tappe: il passaggio del mouse esiste solo con il puntatore, mai sul telefono
+      // Stesso riquadro delle tappe dell'itinerario (poiTooltipHtml), così il passaggio è identico
+      if (!isMobile && !noHoverDevice()) {
+        marker.bindTooltip(poiTooltipHtml(placeToLocation(p), mapMode, selectedOriginId === 'gps_origin'), {
+          direction: 'top',
+          offset: [0, -16],
+          className: 'poi-tooltip',
+          opacity: 1
+        });
+      }
       placeMarkersRef.current.set(p.id, marker);
     }
-  }, [sharedPlaces.places, placesFilter, mapMode, selectedOriginId, selectedDestinationId]);
+  }, [sharedPlaces.places, placesFilter, mapMode, selectedOriginId, selectedDestinationId, isMobile]);
   useEffect(() => {
     const map = mapInstanceRef.current;
     const id = sharedPlaces.focusId;
@@ -1157,7 +1183,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       });
 
       // Sul telefono non c'è il passaggio del mouse: i dettagli stanno nel foglio in basso
-      if (!isMobile) {
+      if (!isMobile && !noHoverDevice()) {
         marker.bindTooltip(poiTooltipHtml(loc, mapMode, isGpsOriginActive), {
           direction: 'top',
           offset: [0, -16],

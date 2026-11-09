@@ -5,7 +5,8 @@ import L from 'leaflet';
  * Mini mappa per controllare e correggere la posizione di un posto: si trascina il segnaposto
  * oppure si tocca il punto giusto. Stesse mappe del resto del sito, così si riconoscono i nomi dei locali.
  */
-const TILE_URL = 'https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
+const RETINA = typeof window !== 'undefined' && (window.devicePixelRatio || 1) > 1.25 ? '&scale=2' : '';
+const TILE_URL = `https://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}${RETINA}`;
 
 export const LocationPicker: React.FC<{ lat: number; lng: number; onChange: (lat: number, lng: number) => void }> = ({ lat, lng, onChange }) => {
   const box = useRef<HTMLDivElement>(null);
