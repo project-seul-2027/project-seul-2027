@@ -114,13 +114,14 @@ function makeMarkerIcon(
       : style.badge;
   const opacity = routeRole === 'dimmed' ? 0.55 : 1;
 
-  // Telefono: segnaposto piatto (fondo scuro, anello colorato, nessun bagliore), come nel mockup
+  // Telefono: mantiene lo stile piatto, ma mostra l'icona della categoria come su desktop.
   if (touch) {
     const ring = isRouteActiveNode ? borderColor : mobileCategoryColor(loc.category);
-    const d = isRouteActiveNode ? 22 : isSelected ? 20 : 16;
+    const d = isRouteActiveNode ? 30 : isSelected ? 28 : 24;
+    const iconSize = isRouteActiveNode || isSelected ? 16 : 14;
     return L.divIcon({
       className: 'custom-map-marker',
-      html: `<div style="width:${d}px;height:${d}px;border-radius:50%;background:#0d1824;border:${isSelected || isRouteActiveNode ? 3.5 : 2.6}px solid ${ring};opacity:${opacity};cursor:pointer;box-sizing:border-box"></div>`,
+      html: `<div style="width:${d}px;height:${d}px;border-radius:50%;background:#0d1824;border:${isSelected || isRouteActiveNode ? 3 : 2}px solid ${ring};color:#fff;display:flex;align-items:center;justify-content:center;opacity:${opacity};cursor:pointer;box-sizing:border-box"><span style="display:flex;line-height:0">${categoryIconSvg(loc.category, iconSize)}</span></div>`,
       iconSize: [44, 44],
       iconAnchor: [22, 22]
     });
