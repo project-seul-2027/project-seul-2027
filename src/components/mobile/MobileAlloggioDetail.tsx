@@ -64,15 +64,15 @@ export const MobileAlloggioDetail: React.FC<Props> = ({ acc, mine, voters, busy,
         </div>
       </section>
 
-      <div className="mt-5 grid grid-cols-3 gap-3 tabular-nums">
+      <div className="mt-5 grid grid-cols-3 gap-2 tabular-nums">
         {[
           { l: 'Totale 17 notti', v: acc.totalEur17Nights },
           { l: 'Pietro, 8 notti', v: acc.pietroCost8Nights },
           { l: 'Ognuno dei 3', v: acc.other3Cost17Nights }
         ].map((m) => (
-          <div key={m.l}>
-            <p className="font-[Outfit] text-[24px] font-medium leading-none text-[#eaf0f6]">{eur(m.v)}</p>
-            <p className="mt-1 text-[13px] text-[#97a5b9]">{m.l}</p>
+          <div key={m.l} className="min-w-0">
+            <p className="font-[Outfit] text-[clamp(17px,5.3vw,22px)] font-medium leading-tight tracking-[-0.03em] text-[#eaf0f6] whitespace-nowrap">{eur(m.v)}</p>
+            <p className="mt-1 text-[12px] leading-tight text-[#97a5b9]">{m.l}</p>
           </div>
         ))}
       </div>
