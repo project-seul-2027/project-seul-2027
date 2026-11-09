@@ -38,7 +38,16 @@ const clock = (hhmm: string, delta: number) => {
   return dayShift === 0 ? time : `${time} (${dayShift > 0 ? '+' : ''}${dayShift})`;
 };
 
-const signed = (n: number) => `${n > 0 ? '+' : ''}${Math.round(n)} min`;
+// Un anticipo si dice "anticipo", non "ritardo di -20 min": il valore resta positivo e cambia il nome.
+const early = (n: number) => Math.round(n) < 0;
+const signed = (n: number) => (early(n) ? `${-Math.round(n)} min` : `${Math.round(n) > 0 ? '+' : ''}${Math.round(n)} min`);
+/** "Ritardo tipico" o "Anticipo tipico", secondo il segno del valore */
+const kind = (n: number, rest: string) => `${early(n) ? 'Anticipo' : 'Ritardo'} ${rest}`;
+/** Frase completa per chi legge con lo screen reader: "20 min in anticipo", "15 min di ritardo", "in orario" */
+const spoken = (n: number) => {
+  const r = Math.round(n);
+  return r === 0 ? 'in orario' : r < 0 ? `${-r} min in anticipo` : `${r} min di ritardo`;
+};
 const shortName = (flightNumber: string) => flightNumber.replace(/ \(.*\)$/, '');
 
 interface Props {
@@ -70,7 +79,7 @@ const DelayBar: React.FC<{ s: LegSummary; tone: Tone; phone: boolean }> = ({ s, 
     <div
       className={phone ? 'ms-rel-scale' : 'mt-5'}
       role="img"
-      aria-label={`Ritardo tipico ${signed(s.median)}; 9 voli su 10 tra ${signed(s.p10)} e ${signed(s.p90)}`}
+      aria-label={`Tipicamente ${spoken(s.median)}; 9 voli su 10 tra ${spoken(s.p10)} e ${spoken(s.p90)}`}
     >
       <div className={phone ? 'ms-rel-track' : 'relative h-2 rounded-full bg-slate-800'}>
         <span className={phone ? `ms-rel-band ms-rel-${tone}` : `absolute top-0 h-2 rounded-full ${d.band}`} style={{ left, width }} />
@@ -78,9 +87,9 @@ const DelayBar: React.FC<{ s: LegSummary; tone: Tone; phone: boolean }> = ({ s, 
         <span className={phone ? `ms-rel-dot ms-rel-${tone}` : `absolute -top-0.5 h-3 w-3 -ml-1.5 rounded-full border-2 border-slate-900 ${d.dot}`} style={{ left: pos(s.median) }} />
       </div>
       <div className={phone ? 'ms-rel-axis' : 'relative mt-1 h-4 text-xs text-slate-500'}>
-        <span className={phone ? undefined : 'absolute top-0'} style={{ left: 0 }}>{lo}</span>
+        <span className={phone ? undefined : 'absolute top-0'} style={{ left: 0 }}>{-lo} min prima</span>
         <span className={phone ? undefined : 'absolute top-0'} style={{ left: pos(0), transform: 'translateX(-50%)' }}>orario</span>
-        <span className={phone ? undefined : 'absolute top-0'} style={{ right: 0 }}>+{hi}</span>
+        <span className={phone ? undefined : 'absolute top-0'} style={{ right: 0 }}>{hi} min dopo</span>
       </div>
     </div>
   );
@@ -92,8 +101,8 @@ const LegDetails: React.FC<{ label: string; scheduled: string; s: LegSummary; ra
     ['Orario programmato', scheduled],
     ['Orario tipico (mediana)', clock(scheduled, s.median)],
     ['Orario medio', clock(scheduled, s.mean)],
-    ['Ritardo tipico (mediana)', signed(s.median)],
-    ['Ritardo medio', signed(s.mean)],
+    [kind(s.median, 'tipico (mediana)'), signed(s.median)],
+    [kind(s.mean, 'medio'), signed(s.mean)],
     ['Deviazione standard', `±${Math.round(s.sigma)} min`],
     ['Fascia 10°–90°', `${clock(scheduled, s.p10)} – ${clock(scheduled, s.p90)}`],
     ['Fascia 5°–95°', `${clock(scheduled, raw.percentiles[0])} – ${clock(scheduled, raw.percentiles[18])}`],
@@ -180,7 +189,7 @@ export const LegStatsToggle: React.FC<{ legId: string; phone: boolean }> = ({ le
         <span className={phone ? 'ms-leg-stats-text' : 'flex-1'}>
           {main ? (
             <>
-              Ritardo tipico <strong className={phone ? 'ms-rel-strong' : DESK_TONE[tone].text}>{signed(main.median)}</strong>
+              {kind(main.median, 'tipico')} <strong className={phone ? 'ms-rel-strong' : DESK_TONE[tone].text}>{signed(main.median)}</strong>
             </>
           ) : (
             'Puntualità del volo'
