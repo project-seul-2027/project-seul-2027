@@ -72,14 +72,20 @@ function kakaoHits(data: { documents?: Array<Record<string, unknown>> }, q: stri
 async function kakaoSearch(q: string, key: string, isAddress: boolean): Promise<Hit[]> {
   const endpoint = isAddress ? 'address' : 'keyword';
   const response = await fetch(`https://dapi.kakao.com/v2/local/search/${endpoint}.json?${new URLSearchParams({ query: q, size: '5' })}`, { headers: { Authorization: `KakaoAK ${key}` }, signal: AbortSignal.timeout(7000) });
-  if (!response.ok) throw new Error('Kakao unavailable');
+  if (!response.ok) {
+    console.warn('Map search provider returned HTTP error', { provider: 'kakao', status: response.status });
+    throw new Error('Kakao unavailable');
+  }
   return kakaoHits(await response.json() as { documents?: Array<Record<string, unknown>> }, q, isAddress);
 }
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const origin = request.headers.get('Origin') || '';
     const origins = env.APP_ORIGINS.split(',').map((item) => item.trim());
-    if (!origins.includes(origin)) return new Response('Origin not allowed', { status: 403 });
+    if (!origins.includes(origin)) {
+      console.warn('Map search request rejected: origin is not allowlisted');
+      return new Response('Origin not allowed', { status: 403 });
+    }
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) });
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, origin);
     try {
@@ -96,8 +102,16 @@ export default {
       const query = typeof body.query === 'string' ? body.query.normalize('NFKC').replace(/[‐‑‒–—]/g, '-').replace(/[\s,]+/g, ' ').trim().slice(0, 160) : '';
       if (query.length < 3) return json({ error: 'Enter at least 3 characters' }, 400, origin);
       const isAddress = addressQuery(query);
-      const sets = await Promise.allSettled(env.KAKAO_REST_API_KEY ? variants(query).map((q) => kakaoSearch(q, env.KAKAO_REST_API_KEY!, isAddress)) : []);
+      const searches = env.KAKAO_REST_API_KEY ? variants(query).map((q) => kakaoSearch(q, env.KAKAO_REST_API_KEY!, isAddress)) : [];
+      const sets = await Promise.allSettled(searches);
       const hits = sets.flatMap((set) => set.status === 'fulfilled' ? set.value : []);
+      console.info('Map search request completed', {
+        providerConfigured: Boolean(env.KAKAO_REST_API_KEY),
+        queryKind: isAddress ? 'road-address' : 'place',
+        providerRequests: searches.length,
+        successfulRequests: sets.filter((set) => set.status === 'fulfilled').length,
+        resultCount: hits.length
+      });
       const unique: Hit[] = [];
       for (const hit of hits) {
         const index = unique.findIndex((item) => Math.hypot((item.lat - hit.lat) * 111320, (item.lng - hit.lng) * 88000) < 25);
@@ -105,7 +119,8 @@ export default {
         else if (hit.precision === 'address' && unique[index].precision !== 'address') unique[index] = hit;
       }
       return json({ hits: unique.slice(0, 10), providers: [...new Set(hits.map((hit) => hit.source))] }, 200, origin);
-    } catch {
+    } catch (error) {
+      console.warn('Map search request rejected or failed', { reason: error instanceof Error ? error.message : 'unknown' });
       return json({ error: 'Search failed' }, 401, origin);
     }
   }
