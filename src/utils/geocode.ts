@@ -10,6 +10,8 @@ export interface GeocodeHit {
   lng: number;
   /** true se è un edificio, un locale o un civico; false se è solo una via o un quartiere */
   precise: boolean;
+  precision?: 'place' | 'address' | 'street' | 'area' | 'unknown';
+  houseNumber?: string;
 }
 
 interface Raw {
@@ -19,18 +21,25 @@ interface Raw {
   category?: string;
   addresstype?: string;
   type?: string;
+  address?: { house_number?: string };
 }
 
-const PRECISE_TYPES = new Set(['house', 'building', 'shop', 'amenity', 'tourism', 'leisure', 'office', 'craft', 'historic', 'railway', 'public_transport', 'place_of_worship', 'restaurant', 'cafe', 'hotel']);
+const precisionOf = (d: Raw): NonNullable<GeocodeHit['precision']> => {
+  if (d.address?.house_number || ['house', 'building'].includes(String(d.addresstype ?? '')) || d.type === 'house' || d.type === 'building') return 'address';
+  if (['shop', 'amenity', 'tourism', 'leisure', 'office', 'craft', 'historic', 'railway', 'public_transport', 'place_of_worship', 'restaurant', 'cafe', 'hotel'].includes(String(d.category ?? ''))) return 'place';
+  if (d.addresstype === 'road' || d.type === 'road') return 'street';
+  return 'area';
+};
 
-const isPrecise = (d: Raw): boolean =>
-  PRECISE_TYPES.has(String(d.addresstype ?? '')) || PRECISE_TYPES.has(String(d.type ?? '')) || ['shop', 'amenity', 'tourism', 'leisure', 'office', 'building', 'railway'].includes(String(d.category ?? ''));
+const isPrecise = (d: Raw): boolean => ['place', 'address'].includes(precisionOf(d));
 
 const SEOUL_BOX = '126.4,37.8,127.6,37.2';
 
-async function search(q: string, bounded: boolean, signal?: AbortSignal): Promise<GeocodeHit[]> {
-  const params = new URLSearchParams({ format: 'jsonv2', limit: '5', 'accept-language': 'it', addressdetails: '0', viewbox: SEOUL_BOX, q });
+async function search(q: string, bounded: boolean, signal?: AbortSignal, koreaAddress = false): Promise<GeocodeHit[]> {
+  const params = new URLSearchParams({ format: 'jsonv2', limit: '5', 'accept-language': koreaAddress ? 'en,ko,it' : 'it', addressdetails: koreaAddress ? '1' : '0', viewbox: SEOUL_BOX, q });
+  if (koreaAddress) params.set('countrycodes', 'kr');
   if (bounded) params.set('bounded', '1');
+  await waitForNominatimSlot(signal);
   let res: Response;
   try {
     res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, { signal, headers: { Accept: 'application/json' } });
@@ -40,8 +49,80 @@ async function search(q: string, bounded: boolean, signal?: AbortSignal): Promis
   if (!res.ok) throw new Error('Il servizio di ricerca indirizzi non risponde adesso. Riprova tra poco.');
   const data = (await res.json()) as Raw[];
   return data
-    .map((d) => ({ label: String(d.display_name ?? ''), lat: Number(d.lat), lng: Number(d.lon), precise: isPrecise(d) }))
+    .map((d) => ({
+      label: String(d.display_name ?? ''),
+      lat: Number(d.lat),
+      lng: Number(d.lon),
+      precise: isPrecise(d),
+      precision: precisionOf(d),
+      houseNumber: d.address?.house_number
+    }))
     .filter((d) => d.label && Number.isFinite(d.lat) && Number.isFinite(d.lng));
+}
+
+let nextNominatimRequestAt = 0;
+let nominatimQueue: Promise<void> = Promise.resolve();
+
+async function waitForNominatimSlot(signal?: AbortSignal) {
+  let release!: () => void;
+  const previous = nominatimQueue;
+  nominatimQueue = new Promise<void>((resolve) => { release = resolve; });
+  await previous;
+  try {
+    if (signal?.aborted) throw new DOMException('Ricerca annullata', 'AbortError');
+    const waitMs = Math.max(0, nextNominatimRequestAt - Date.now());
+    if (waitMs > 0) {
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => signal?.removeEventListener('abort', abort);
+        const timer = window.setTimeout(() => {
+          cleanup();
+          resolve();
+        }, waitMs);
+        const abort = () => {
+          window.clearTimeout(timer);
+          cleanup();
+          reject(new DOMException('Ricerca annullata', 'AbortError'));
+        };
+        signal?.addEventListener('abort', abort, { once: true });
+        if (signal?.aborted) abort();
+      });
+    }
+    if (signal?.aborted) throw new DOMException('Ricerca annullata', 'AbortError');
+    nextNominatimRequestAt = Date.now() + 1_100;
+  } finally {
+    release();
+  }
+}
+
+/** Ricerca mappa: aggiunge contesto coreano agli indirizzi stradali romanizzati e limita gli omonimi alla Corea. */
+export async function geocodeMapAddress(query: string, signal?: AbortSignal): Promise<GeocodeHit[]> {
+  const q = query.normalize('NFKC').replace(/[‐‑‒–—]/g, '-').replace(/[\s,]+/g, ' ').trim();
+  if (q.length < 3) return [];
+  const roadAddress = /^\d+(?:-\d+)?\s+.+(?:-ro|-gil)\b/i.test(q);
+  const hasRegion = /\b(seoul|busan|incheon|daegu|daejeon|gwangju|ulsan|jeju|korea|korean)\b/i.test(q);
+  const first = await search(q, false, signal, roadAddress);
+  const needsContext = roadAddress && !hasRegion && !first.some((hit) => hit.precision === 'address');
+  if (!needsContext) return validateRequestedHouseNumber(first, q);
+
+  // Public Nominatim is called only on explicit submit, with at least 1.1s between requests.
+  const romanized = q.replace(/([a-z])dong-(gil|ro)\b/gi, '$1-dong-$2');
+  const contextual = await search(`${romanized}, Seoul, South Korea`, false, signal, true);
+  const merged: GeocodeHit[] = [];
+  for (const hit of [...first, ...contextual]) {
+    if (merged.some((item) => Math.abs(item.lat - hit.lat) < 0.0003 && Math.abs(item.lng - hit.lng) < 0.0003)) continue;
+    merged.push(hit);
+  }
+  return validateRequestedHouseNumber(merged.sort((a, b) => Number(b.precise) - Number(a.precise)).slice(0, 6), q);
+}
+
+function validateRequestedHouseNumber(hits: GeocodeHit[], query: string): GeocodeHit[] {
+  const requested = query.match(/(?:^|\s)(\d+(?:-\d+)?)(?=\s|$)/)?.[1];
+  if (!requested) return hits;
+  const normalize = (value: string) => value.replace(/\s+/g, '').replace(/\.0$/, '').toLowerCase();
+  return hits.map((hit) => {
+    if (!hit.houseNumber || normalize(hit.houseNumber) === normalize(requested)) return hit;
+    return { ...hit, precise: false, precision: 'street' };
+  });
 }
 
 /**
@@ -55,7 +136,6 @@ export async function geocodeAddress(query: string, name = '', signal?: AbortSig
   const byAddress = q.length >= 3 ? await search(q, false, signal) : [];
   let byName: GeocodeHit[] = [];
   if (n.length >= 3) {
-    await new Promise((r) => setTimeout(r, 1100));
     byName = await search(n, true, signal).catch(() => []);
   }
   const out: GeocodeHit[] = [];

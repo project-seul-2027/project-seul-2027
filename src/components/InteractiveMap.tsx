@@ -42,6 +42,13 @@ import { MetroRoutePanel, type LiveGeoState } from './map/MetroRoutePanel';
 import { RealMetroDataDrawer } from './map/RealMetroDataDrawer';
 import { CATEGORY_STYLE, mobileCategoryColor, originLabel } from './map/categoryStyle';
 import { MobileMapOverlay, sheetHeight, useIsMobileMap, type SheetSnap } from './map/MobileMapUI';
+import { MapSearch, OSM_ID_PREFIX } from '../map/MapSearch';
+import { NearbyList, type NearbyEntry, type NearbyFriend } from '../map/NearbyList';
+import type { WalkState } from '../map/WalkPanel';
+import { buildSearchIndex, STATION_ID_PREFIX } from '../map/searchIndex';
+import { progressAlong, walkRoute as fetchWalkRoute, type WalkRoute } from '../map/walkRoute';
+import { distanceMeters } from '../map/geo';
+import { savePlace } from './places/placesStore';
 
 interface InteractiveMapProps {
   selectedLocationId?: string | null;
@@ -51,7 +58,24 @@ interface InteractiveMapProps {
   routeRequest?: { destinationId: string; nonce: number } | null;
 }
 
-export type MapInteractionMode = 'explore' | 'route';
+export type MapInteractionMode = 'explore' | 'route' | 'walk';
+
+/** Punto toccato a lungo sulla mappa, o qualsiasi posto non nostro (stazione, OpenStreetMap): id "pin:", "station:", "osm:" */
+export const PIN_ID_PREFIX = 'pin:';
+const isSyntheticLoc = (loc: MapLocation | null): boolean =>
+  !!loc && (loc.id.startsWith(PIN_ID_PREFIX) || loc.id.startsWith(STATION_ID_PREFIX) || loc.id.startsWith(OSM_ID_PREFIX));
+const pinLocation = (lat: number, lng: number): MapLocation => ({
+  id: `${PIN_ID_PREFIX}${lat.toFixed(5)},${lng.toFixed(5)}`,
+  name: 'Punto sulla mappa',
+  italianName: 'Punto sulla mappa',
+  district: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+  city: 'Seul',
+  category: 'luogo',
+  lat,
+  lng,
+  dayNumbers: [],
+  description: 'Un punto scelto tenendo premuto sulla mappa. Puoi andarci a piedi, in metro, o salvarlo tra i luoghi.'
+});
 
 // Google Maps English Tiles (Forces English labels across Seoul, subway stations, roads & districts via hl=en)
 // Sugli schermi ad alta densità (telefoni) chiede i riquadri a doppia risoluzione (scale=2: 512 px mostrati in 256), altrimenti la mappa sgrana.
@@ -159,12 +183,17 @@ function makeMarkerIcon(
 /** Vero se il dispositivo non ha un puntatore con hover (telefono, tablet touch): lì niente tooltip al passaggio. */
 const noHoverDevice = (): boolean => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
-function makeGpsMarkerIcon(isSimulated: boolean): L.DivIcon {
+function makeGpsMarkerIcon(isSimulated: boolean, heading: number | null = null): L.DivIcon {
   const color = isSimulated ? '#f59e0b' : '#06b6d4';
   const glow = isSimulated ? 'rgba(245, 158, 11, 0.65)' : 'rgba(6, 182, 212, 0.7)';
+  // Cono della bussola: dove guarda il telefono (solo con l'orientamento disponibile)
+  const cone =
+    heading === null
+      ? ''
+      : `<div style="position:absolute;left:-28px;top:-28px;width:80px;height:80px;border-radius:50%;background:conic-gradient(from ${Math.round(heading) - 30}deg, ${color}66 0deg, ${color}66 60deg, transparent 60deg);pointer-events:none"></div>`;
   return L.divIcon({
     className: 'custom-gps-marker',
-    html: `
+    html: `${cone}
       <div style="
         display: flex;
         align-items: center;
@@ -253,7 +282,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   /** Cambia modalità; sul telefono porta il foglio all'altezza giusta (percorso: a metà) */
   const setMapMode = useCallback((m: MapInteractionMode) => {
     setMapModeState(m);
-    setSheetSnap(m === 'route' ? 'mid' : selectedIdRef.current ? 'mid' : 'peek');
+    setSheetSnap(m === 'route' ? 'mid' : m === 'walk' ? 'peek' : selectedIdRef.current ? 'mid' : 'peek');
   }, []);
   const [isRealDataOpen, setIsRealDataOpen] = useState<boolean>(false);
 
@@ -272,13 +301,18 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   // Luoghi aggiunti dal gruppo: anche questi possono essere partenza o destinazione
   const sharedPlaces = usePlaces();
   const sharedLocs = useMemo(() => sharedPlaces.places.map(placeToLocation), [sharedPlaces.places]);
+  // Il posto non nostro aperto adesso (stazione, risultato di ricerca, punto toccato): può essere meta del percorso
+  const [extraLoc, setExtraLoc] = useState<MapLocation | null>(null);
   const koreanDestinations = useMemo(
     () => [
       ...MAP_LOCATIONS.filter((l) => l.city === 'Seul' || l.city === 'Dintorni / Gite'),
-      ...sharedLocs
+      ...sharedLocs,
+      ...(extraLoc ? [extraLoc] : [])
     ],
-    [sharedLocs]
+    [sharedLocs, extraLoc]
   );
+  // Direzione del telefono (bussola), in gradi da nord; null se non disponibile
+  const [heading, setHeading] = useState<number | null>(null);
   // Qualsiasi punto della Corea del Sud raggiungibile in metro può fare da partenza (oltre ad alloggi e GPS)
   const originCandidates = useMemo(
     () => [
@@ -539,7 +573,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   // ── Linee metro ──
   const initialPrefs = useMemo(readMetroPrefs, []);
-  const [sidebarTab, setSidebarTab] = useState<'places' | 'metro'>('places');
+  const [sidebarTab, setSidebarTab] = useState<'nearby' | 'places' | 'metro'>('places');
   const [metroNetwork, setMetroNetwork] = useState<MetroNetwork | null>(null);
   const [metroError, setMetroError] = useState<string | null>(null);
   const [metroAttempt, setMetroAttempt] = useState(0);
@@ -553,10 +587,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   // Calcolo in tempo reale della tratta metro quando si è in modalità 'route'
   const currentMetroRoute = useMemo(() => {
     if (mapMode !== 'route' || !metroNetwork) return null;
-    const dest =
-      MAP_LOCATIONS.find((d) => d.id === selectedDestinationId) ??
-      sharedLocs.find((d) => d.id === selectedDestinationId) ??
-      koreanDestinations[0];
+    const dest = koreanDestinations.find((d) => d.id === selectedDestinationId) ?? koreanDestinations[0];
     if (!activeOriginLocation || !dest) return null;
     return computeMetroRoute(metroNetwork, activeOriginLocation, dest, routeOptions);
   }, [mapMode, metroNetwork, activeOriginLocation, koreanDestinations, sharedLocs, selectedDestinationId, routeOptions]);
@@ -707,6 +738,14 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
       mapInstanceRef.current = map;
 
+      // Telefono: tenendo premuto un punto si apre la sua scheda (Leaflet manda contextmenu al tocco lungo)
+      map.on('contextmenu', (e: L.LeafletMouseEvent) => {
+        if (!isMobileRef.current || mapModeRef.current === 'route') return;
+        const loc = pinLocation(e.latlng.lat, e.latlng.lng);
+        setExtraLoc(loc);
+        handleSelectLocationRef.current(loc);
+      });
+
       if (pendingFocusRef.current) {
         const { latlng, zoom } = pendingFocusRef.current;
         pendingFocusRef.current = null;
@@ -755,7 +794,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
       if (!gpsMarkerRef.current) {
         gpsMarkerRef.current = L.marker([lat, lng], {
-          icon: makeGpsMarkerIcon(geoState.isSimulated),
+          icon: makeGpsMarkerIcon(geoState.isSimulated, heading),
           zIndexOffset: 900
         })
           .bindTooltip(tooltipText, {
@@ -767,7 +806,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           .addTo(map);
       } else {
         gpsMarkerRef.current.setLatLng([lat, lng]);
-        gpsMarkerRef.current.setIcon(makeGpsMarkerIcon(geoState.isSimulated));
+        gpsMarkerRef.current.setIcon(makeGpsMarkerIcon(geoState.isSimulated, heading));
         gpsMarkerRef.current.setTooltipContent(tooltipText);
       }
     } else {
@@ -780,7 +819,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         gpsAccuracyCircleRef.current = null;
       }
     }
-  }, [geoState]);
+  }, [geoState, heading]);
 
   // Sfondo di riserva senza rete: riquadri OpenFreeMap salvati con il pulsante "Scarica lo sfondo della mappa"
   const [offlineBg, setOfflineBg] = useState(false);
@@ -940,6 +979,289 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         .addTo(layer);
     }
   }, [groupLive.live, groupLive.meetups, authUser, authTravelers]);
+
+  /* ────────────────────────────────────────────────────────────────────────
+   * Telefono: ricerca unica, vicino a me, segnaposto dei posti non nostri, navigazione a piedi
+   * ──────────────────────────────────────────────────────────────────────── */
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchItems = useMemo(
+    () => buildSearchIndex(MAP_LOCATIONS.filter((l) => l.city === 'Seul' || l.city === 'Dintorni / Gite'), sharedPlaces.places, metroNetwork),
+    [sharedPlaces.places, metroNetwork]
+  );
+  const here: LatLng | null = geoState.status === 'active' && geoState.coords ? geoState.coords : null;
+
+  /** Apre un posto dalla ricerca o dalla lista vicino a me: i posti non nostri hanno un segnaposto temporaneo */
+  const openLocation = (loc: MapLocation, zoom = 16) => {
+    setExtraLoc(isSyntheticLoc(loc) ? loc : null);
+    handleSelectLocationRef.current(loc);
+    // Con la ricerca aperta il blocco in alto è altissimo e il foglio è nascosto: il primo centraggio usa margini sbagliati.
+    // Quando la ricerca si è chiusa e il foglio ha finito di salire, si centra di nuovo con i margini giusti.
+    window.setTimeout(() => {
+      if (isMobileRef.current) focusRef.current([loc.lat, loc.lng], zoom, 'mid');
+    }, 420);
+  };
+
+  // Segnaposto temporaneo del posto non nostro aperto
+  const extraMarkerRef = useRef<L.Marker | null>(null);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    extraMarkerRef.current?.remove();
+    extraMarkerRef.current = null;
+    if (!extraLoc) return;
+    const m = L.marker([extraLoc.lat, extraLoc.lng], { icon: makeMarkerIcon(extraLoc, currentSelectedLoc?.id === extraLoc.id, null, isMobile), zIndexOffset: 800 })
+      .on('click', () => handleSelectLocationRef.current(extraLoc))
+      .addTo(map);
+    extraMarkerRef.current = m;
+    return () => {
+      m.remove();
+    };
+  }, [extraLoc, currentSelectedLoc, isMobile]);
+
+  // Vicino a me: tappe e luoghi salvati entro 5 km in ordine di distanza, e gli amici con posizione condivisa
+  const nearbyEntries = useMemo<NearbyEntry[]>(() => {
+    if (!here) return [];
+    return koreanDestinations
+      .filter((l) => !isSyntheticLoc(l))
+      .map((loc) => ({ loc, meters: distanceMeters(here, [loc.lat, loc.lng]), saved: loc.id.startsWith(PLACE_ID_PREFIX) }))
+      .filter((e) => e.meters <= 5000)
+      .sort((a, b) => a.meters - b.meters)
+      .slice(0, 40);
+  }, [here, koreanDestinations]);
+  const nearbyFriends = useMemo<NearbyFriend[]>(() => {
+    if (!here) return [];
+    const now = Date.now();
+    return groupLive.live
+      .map((d) => {
+        const sh = activeShare(d, now);
+        if (!sh || d.uid === authUser?.id) return null;
+        const t = authTravelers.find((x) => x.id === d.slot);
+        return { name: t?.name ?? 'Amico', color: t?.color ?? '#22d3ee', meters: distanceMeters(here, [sh.lat, sh.lng]), ago: formatAgo(now - sh.at), lost: isLost(d, now) };
+      })
+      .filter((x): x is NearbyFriend => x !== null)
+      .sort((a, b) => a.meters - b.meters);
+  }, [here, groupLive.live, authUser, authTravelers]);
+
+  /** Salva tra i luoghi del gruppo un posto non nostro (stazione, risultato, punto toccato) */
+  const savePlaceFromMap = async (loc: MapLocation) => {
+    if (!authUser?.id || !authUser.travelerId) {
+      showNotice('Per salvare un luogo serve il profilo viaggiatore.');
+      return;
+    }
+    try {
+      await savePlace(authUser.id, authUser.travelerId, {
+        name: loc.italianName,
+        category: 'other',
+        priority: 'nice',
+        lat: loc.lat,
+        lng: loc.lng,
+        address: loc.id.startsWith(PIN_ID_PREFIX) ? '' : loc.district,
+        link: '',
+        note: loc.koreanName ?? ''
+      });
+      showNotice(`“${loc.italianName}” salvato tra i luoghi del gruppo.`);
+      setExtraLoc(null);
+      selectLocation(null);
+      setSheetSnap('peek');
+    } catch {
+      /* l'errore è già nello stato dei luoghi */
+    }
+  };
+
+  // ── Navigazione a piedi ──
+  const [walkTarget, setWalkTarget] = useState<MapLocation | null>(null);
+  const [walkRoute, setWalkRoute] = useState<WalkRoute | null>(null);
+  const [walkLoading, setWalkLoading] = useState(false);
+  const [walkFollow, setWalkFollow] = useState(true);
+  const walkLineRef = useRef<L.Polyline | null>(null);
+  const walkFetchAtRef = useRef(0);
+  const walkFromRef = useRef<LatLng | null>(null);
+  const walkBusyRef = useRef(false);
+
+  const startWalkTo = (loc: MapLocation) => {
+    setExtraLoc(isSyntheticLoc(loc) ? loc : null);
+    setWalkTarget(loc);
+    setWalkRoute(null);
+    setWalkFollow(true);
+    setMapMode('walk');
+    if (geoState.status !== 'active') handleActivateRealGps({ route: false, recenter: false });
+    // iOS chiede il permesso per la bussola, e solo dentro un tocco dell'utente
+    const DOE = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
+    DOE?.requestPermission?.().catch(() => undefined);
+  };
+  const exitWalk = () => {
+    setWalkTarget(null);
+    setWalkRoute(null);
+    setMapMode('explore');
+    if (walkTarget) setSheetSnap('mid');
+  };
+
+  // Percorso: calcolato appena c'è la posizione; ricalcolato se ci si allontana dal tracciato (al più ogni 30 s)
+  const walkProgress = useMemo(() => {
+    if (!walkTarget || !here) return null;
+    const direct = distanceMeters(here, [walkTarget.lat, walkTarget.lng]);
+    if (!walkRoute) return { meters: direct, nextStep: null, offRoute: false, arrived: direct < 25 };
+    const p = progressAlong(walkRoute, here);
+    return { ...p, arrived: direct < 25 };
+  }, [walkTarget, walkRoute, here]);
+
+  useEffect(() => {
+    if (mapMode !== 'walk' || !walkTarget || !here) return;
+    const stale = walkRoute && walkProgress?.offRoute && Date.now() - walkFetchAtRef.current > 30000;
+    const fromFar = walkFromRef.current && distanceMeters(walkFromRef.current, here) > 150 && walkRoute?.estimated;
+    if (walkRoute && !stale && !fromFar) return;
+    if (walkBusyRef.current && !stale) return;
+    walkBusyRef.current = true;
+    const ctrl = new AbortController();
+    walkFetchAtRef.current = Date.now();
+    walkFromRef.current = here;
+    setWalkLoading(true);
+    fetchWalkRoute(here, [walkTarget.lat, walkTarget.lng], ctrl.signal)
+      .then((r) => {
+        if (!ctrl.signal.aborted) setWalkRoute(r);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        walkBusyRef.current = false;
+        if (!ctrl.signal.aborted) setWalkLoading(false);
+      });
+    return () => {
+      if (!walkBusyRef.current) ctrl.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapMode, walkTarget, here, walkProgress?.offRoute]);
+
+  // Tracciato sulla mappa
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    walkLineRef.current?.remove();
+    walkLineRef.current = null;
+    if (mapMode !== 'walk' || !walkRoute) return;
+    const line = L.polyline(walkRoute.coords, {
+      color: '#52d9e6',
+      weight: 6,
+      opacity: 0.95,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: walkRoute.estimated ? '2 12' : undefined,
+      interactive: false
+    }).addTo(map);
+    walkLineRef.current = line;
+    if (!walkFollow || !here) {
+      map.fitBounds(line.getBounds(), { paddingTopLeft: [40, topInset + 40], paddingBottomRight: [40, sheetHeight('peek', shellH, topInset) + 40] });
+    }
+    return () => {
+      line.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapMode, walkRoute]);
+
+  // La mappa segue la posizione; trascinandola si smette di seguire
+  useEffect(() => {
+    if (mapMode !== 'walk' || !walkFollow || !here) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    focusRef.current(here, Math.max(map.getZoom(), 16), 'peek');
+  }, [mapMode, walkFollow, here]);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || mapMode !== 'walk') return;
+    const stop = () => setWalkFollow(false);
+    map.on('dragstart', stop);
+    return () => {
+      map.off('dragstart', stop);
+    };
+  }, [mapMode]);
+
+  // Bussola e schermo acceso, solo mentre si naviga
+  useEffect(() => {
+    if (mapMode !== 'walk') {
+      setHeading(null);
+      return;
+    }
+    const onOrient = (e: DeviceOrientationEvent) => {
+      const webkit = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading;
+      const h = typeof webkit === 'number' ? webkit : e.absolute && e.alpha !== null ? (360 - e.alpha) % 360 : null;
+      if (h !== null) setHeading((prev) => (prev !== null && Math.abs(prev - h) < 3 ? prev : h));
+    };
+    window.addEventListener('deviceorientationabsolute', onOrient as EventListener);
+    window.addEventListener('deviceorientation', onOrient as EventListener);
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } };
+    let lock: { release: () => Promise<void> } | null = null;
+    const acquire = () => nav.wakeLock?.request('screen').then((l) => (lock = l)).catch(() => undefined);
+    void acquire();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void acquire();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('deviceorientationabsolute', onOrient as EventListener);
+      window.removeEventListener('deviceorientation', onOrient as EventListener);
+      document.removeEventListener('visibilitychange', onVis);
+      void lock?.release();
+    };
+  }, [mapMode]);
+
+  const walkState: WalkState | null =
+    mapMode === 'walk' && walkTarget
+      ? {
+          target: walkTarget,
+          route: walkRoute,
+          loading: walkLoading && !walkRoute,
+          remainingMeters: walkProgress?.meters ?? null,
+          nextStep: walkProgress?.nextStep ?? null,
+          offRoute: walkProgress?.offRoute ?? false,
+          arrived: walkProgress?.arrived ?? false,
+          follow: walkFollow,
+          gpsActive: geoState.status === 'active' && !!geoState.coords
+        }
+      : null;
+
+  // Uscite della metro (OpenStreetMap, salvate nell'app): numeri sulla mappa da zoom 16, solo sul telefono
+  const exitsLayerRef = useRef<L.LayerGroup | null>(null);
+  const exitsDataRef = useRef<[number, number, string][] | null>(null);
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !isMobile) return;
+    const layer = L.layerGroup().addTo(map);
+    exitsLayerRef.current = layer;
+    let alive = true;
+    const draw = () => {
+      layer.clearLayers();
+      const data = exitsDataRef.current;
+      if (!data || map.getZoom() < 16) return;
+      const b = map.getBounds().pad(0.1);
+      let n = 0;
+      for (const [lat, lng, ref] of data) {
+        if (!b.contains([lat, lng])) continue;
+        if (++n > 250) break;
+        L.marker([lat, lng], {
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: '',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
+            html: `<div style="width:20px;height:20px;border-radius:6px;background:#0d1824;border:1.5px solid #52d9e6;color:#eaf0f6;font:700 10px/17px system-ui;text-align:center">${ref}</div>`
+          })
+        }).addTo(layer);
+      }
+    };
+    const load = async () => {
+      if (!exitsDataRef.current && map.getZoom() >= 16) {
+        exitsDataRef.current = (await import('../data/seoulMetroExits.json')).default as [number, number, string][];
+      }
+      if (alive) draw();
+    };
+    map.on('moveend zoomend', load);
+    void load();
+    return () => {
+      alive = false;
+      map.off('moveend zoomend', load);
+      layer.remove();
+    };
+  }, [isMobile]);
 
   // Luoghi condivisi: in viola, diversi dalle tappe ufficiali. Toccandone uno si apre la scheda con Percorso e Partenza.
   const placesLayerRef = useRef<L.LayerGroup | null>(null);
@@ -1340,10 +1662,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }
   };
 
-  const activeDestObj =
-    MAP_LOCATIONS.find((d) => d.id === selectedDestinationId) ??
-    sharedLocs.find((d) => d.id === selectedDestinationId) ??
-    koreanDestinations[0];
+  const activeDestObj = koreanDestinations.find((d) => d.id === selectedDestinationId) ?? koreanDestinations[0];
 
   const routePanelEl = (
     <MetroRoutePanel
@@ -2160,6 +2479,26 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               mapMode={mapMode}
               onExitRoute={() => setMapMode('explore')}
               onStartRoute={startRouteFromUi}
+              searchSlot={
+                <MapSearch
+                  items={searchItems}
+                  here={here}
+                  open={searchOpen}
+                  onOpen={() => setSearchOpen(true)}
+                  onClose={() => setSearchOpen(false)}
+                  onPick={openLocation}
+                  panelHeight={Math.max(200, shellH - 140)}
+                />
+              }
+              searchOpen={searchOpen}
+              here={here}
+              onWalkTo={startWalkTo}
+              onSavePlace={currentSelectedLoc && isSyntheticLoc(currentSelectedLoc) ? savePlaceFromMap : undefined}
+              nearbyPanel={<NearbyList gpsActive={!!here} onLocate={handleLocate} entries={nearbyEntries} friends={nearbyFriends} onPick={openLocation} />}
+              walk={walkState}
+              onExitWalk={exitWalk}
+              onEnableGps={() => handleActivateRealGps({ route: false, recenter: false })}
+              onToggleFollow={() => setWalkFollow((v) => !v)}
               searchQuery={searchQuery}
               onSearchQuery={setSearchQuery}
               activeCategory={activeCategory}
