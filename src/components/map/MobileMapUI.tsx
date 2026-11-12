@@ -2,7 +2,9 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { categoryIconSvg } from './categoryIcons';
 import {
   ArrowLeft,
+  Bookmark,
   BookOpen,
+  Footprints,
   Calendar,
   ChevronDown,
   Crosshair,
@@ -24,6 +26,10 @@ import type { MetroRouteResult } from '../../data/metroRouter';
 import { CATEGORY_LABEL, CATEGORY_STYLE, mobileCategoryColor } from './categoryStyle';
 import { LineBadge } from './MetroPanel';
 import type { LiveGeoState } from './MetroRoutePanel';
+import type { LatLng } from '../../data/seoulMetro';
+import { WalkSteps, WalkTop, type WalkState } from '../../map/WalkPanel';
+import { distanceMeters, formatMeters, formatMinutes, walkMinutes } from '../../map/geo';
+import { kakaoMapUrl } from '../../map/searchIndex';
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Mappa per telefono: mappa a tutto schermo con barra di ricerca e chip in alto,
@@ -103,9 +109,23 @@ export interface MobileMapOverlayProps {
   snap: SheetSnap;
   onSnap: (s: SheetSnap) => void;
 
-  mapMode: 'explore' | 'route';
+  mapMode: 'explore' | 'route' | 'walk';
   onExitRoute: () => void;
   onStartRoute: () => void;
+
+  /** Barra di ricerca unica (MapSearch) e, quando è aperta, il suo pannello: sostituiscono il vecchio campo */
+  searchSlot: React.ReactNode;
+  searchOpen: boolean;
+  /** Dove sei, se il GPS è attivo: per distanze e minuti a piedi */
+  here: LatLng | null;
+  onWalkTo: (loc: MapLocation) => void;
+  /** Presente solo per i posti non ancora nostri (stazioni, risultati, punti sulla mappa) */
+  onSavePlace?: (loc: MapLocation) => void;
+  nearbyPanel: React.ReactNode;
+  walk: WalkState | null;
+  onExitWalk: () => void;
+  onEnableGps: () => void;
+  onToggleFollow: () => void;
 
   searchQuery: string;
   onSearchQuery: (q: string) => void;
@@ -126,8 +146,8 @@ export interface MobileMapOverlayProps {
   onRouteTo: (loc: MapLocation) => void;
   onRouteFrom: (loc: MapLocation) => void;
 
-  sheetTab: 'places' | 'metro';
-  onSheetTab: (t: 'places' | 'metro') => void;
+  sheetTab: 'nearby' | 'places' | 'metro';
+  onSheetTab: (t: 'nearby' | 'places' | 'metro') => void;
   metroReady: boolean;
   /** Sfondo offline (OpenFreeMap) al posto di Google */
   offlineBg?: boolean;
@@ -303,6 +323,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
 
   const searching = p.searchQuery.trim() !== '';
   const inRoute = p.mapMode === 'route';
+  const inWalk = p.mapMode === 'walk' && p.walk !== null;
   const dockHidden = p.snap === 'full';
   // I pulsanti seguono il foglio, ma spariscono se non c'è più spazio sotto il pulsante dei livelli
   const fabStackH = inRoute ? 190 : 206;
@@ -313,7 +334,17 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
   let header: React.ReactNode;
   let body: React.ReactNode;
 
-  if (inRoute) {
+  if (inWalk && p.walk) {
+    header = (
+      <div className="px-5 pb-3">
+        <p className="font-[Outfit] text-[17px] font-medium text-[#eaf0f6]">Svolte</p>
+        <p className="text-[13px] text-[#97a5b9]">
+          {p.walk.route && !p.walk.route.estimated ? 'Percorso su strada da OpenStreetMap' : 'Linea diretta, tempo stimato'}
+        </p>
+      </div>
+    );
+    body = <WalkSteps w={p.walk} />;
+  } else if (inRoute) {
     const r = p.route;
     header = (
       <div className="px-5 pb-3 min-h-[84px]">
@@ -352,6 +383,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
     const loc = p.selected;
     const canRoute = loc.city === 'Seul' || loc.city === 'Dintorni / Gite';
     const days = ITINERARY_DAYS.filter((d) => loc.dayNumbers.includes(d.id));
+    const meters = p.here ? distanceMeters(p.here, [loc.lat, loc.lng]) : null;
     header = (
       <div className="pb-3">
         <div className="px-5 flex items-start gap-3">
@@ -363,6 +395,11 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               </span>{' '}
               · {loc.district} · {loc.city}
             </p>
+            {meters !== null && (
+              <p className="text-[14px] text-[#eaf0f6] mt-1 tabular-nums" data-testid="place-distance">
+                {formatMeters(meters)} · circa {formatMinutes(walkMinutes(meters * 1.25))} a piedi
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -375,8 +412,18 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         </div>
         <div data-no-drag className="flex gap-2 overflow-x-auto scrollbar-none px-5 mt-3 touch-pan-x">
           {canRoute && (
-            <button type="button" onClick={() => p.onRouteTo(loc)} className={pillPrimary}>
-              <Navigation className="w-4 h-4" /> Percorso
+            <button type="button" onClick={() => p.onWalkTo(loc)} className={pillPrimary} data-testid="place-walk">
+              <Footprints className="w-4 h-4" /> Vai a piedi
+            </button>
+          )}
+          {canRoute && (
+            <button type="button" onClick={() => p.onRouteTo(loc)} className={pillSecondary} data-testid="place-metro">
+              <TrainFront className="w-4 h-4 text-cyan-400" /> Metro
+            </button>
+          )}
+          {p.onSavePlace && (
+            <button type="button" onClick={() => p.onSavePlace?.(loc)} className={pillSecondary} data-testid="place-save">
+              <Bookmark className="w-4 h-4 text-cyan-400" /> Salva
             </button>
           )}
           {canRoute && (
@@ -390,7 +437,10 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             </button>
           )}
           <a href={getNaverMapSearchUrl(loc)} target="_blank" rel="noopener noreferrer" className={pillSecondary}>
-            Naver Map <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            Naver <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+          </a>
+          <a href={kakaoMapUrl(loc)} target="_blank" rel="noopener noreferrer" className={pillSecondary}>
+            Kakao <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
           </a>
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`}
@@ -398,7 +448,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             rel="noopener noreferrer"
             className={pillSecondary}
           >
-            Google Maps <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            Google <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
           </a>
         </div>
       </div>
@@ -454,6 +504,17 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         <div role="tablist" aria-label="Contenuto del pannello" className="flex gap-6 border-b border-[rgba(234,240,246,.11)]" data-no-drag>
           <button
             role="tab"
+            aria-selected={p.sheetTab === 'nearby'}
+            onClick={() => p.onSheetTab('nearby')}
+            data-testid="sheet-tab-nearby"
+            className={`h-11 text-[15px] ${
+              p.sheetTab === 'nearby' ? 'text-[#eaf0f6] font-semibold shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
+            }`}
+          >
+            Vicino
+          </button>
+          <button
+            role="tab"
             aria-selected={p.sheetTab === 'places'}
             onClick={() => p.onSheetTab('places')}
             className={`h-11 text-[15px] ${
@@ -470,7 +531,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               p.sheetTab === 'metro' ? 'text-[#eaf0f6] font-semibold shadow-[inset_0_-2px_0_#52d9e6]' : 'text-[#97a5b9]'
             }`}
           >
-            Metro e AREX
+            Metro
             {p.metroReady && (
               <span className="font-normal text-[#97a5b9] ml-1">
                 {p.metroVisibleCount}/{p.metroLineCount}
@@ -483,6 +544,8 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
     body =
       p.sheetTab === 'metro' ? (
         <div className="ms-skin flex flex-col flex-1 min-h-0">{p.metroPanel}</div>
+      ) : p.sheetTab === 'nearby' ? (
+        <div className="flex flex-col flex-1 min-h-0">{p.nearbyPanel}</div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {p.places.map((loc) => (
@@ -508,39 +571,13 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
     <>
       {/* ── In alto: ricerca e chip (Esplora) oppure partenza e arrivo (Percorso) ── */}
       <div ref={topRef} className="absolute top-0 inset-x-0 z-[450] px-3 pt-3 pointer-events-none">
-        {!inRoute ? (
+        {inWalk && p.walk ? (
+          <WalkTop w={p.walk} onExit={p.onExitWalk} onEnableGps={p.onEnableGps} onToggleFollow={p.onToggleFollow} />
+        ) : !inRoute ? (
           <div className="space-y-2">
-            <div className="pointer-events-auto h-12 rounded-xl bg-[#152231] flex items-center gap-2.5 pl-3.5 pr-1.5 focus-within:shadow-[inset_0_0_0_1.5px_#52d9e6]">
-              <Search className="w-[22px] h-[22px] text-[#97a5b9] shrink-0" strokeWidth={1.6} />
-              <input
-                type="text"
-                inputMode="search"
-                enterKeyHint="search"
-                autoComplete="off"
-                autoCorrect="off"
-                value={p.searchQuery}
-                onChange={(e) => p.onSearchQuery(e.target.value)}
-                onFocus={() => {
-                  p.onSheetTab('places');
-                  if (p.snap === 'peek') p.onSnap('mid');
-                }}
-                placeholder="Cerca tappe, quartieri, cibo…"
-                aria-label="Cerca tra le tappe"
-                className="flex-1 min-w-0 bg-transparent text-[15px] text-[#eaf0f6] placeholder:text-[#97a5b9] focus:outline-none"
-              />
-              {searching && (
-                <button
-                  type="button"
-                  onClick={() => p.onSearchQuery('')}
-                  aria-label="Cancella ricerca"
-                  className="w-11 h-11 flex items-center justify-center text-[#97a5b9] active:opacity-70"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+            {p.searchSlot}
 
-            {!isShortShell(p.shellH) && (
+            {!isShortShell(p.shellH) && !p.searchOpen && (
             <div data-chips className="pointer-events-auto flex gap-5 overflow-x-auto scrollbar-none px-4 rounded-xl bg-[#0a1119]/90 touch-pan-x">
               <button
                 type="button"
@@ -798,8 +835,8 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         style={{
           transform: `translateY(${-h}px)`,
           transition: DOCK_TRANSITION,
-          opacity: dockHidden ? 0 : 1,
-          visibility: dockHidden ? 'hidden' : 'visible'
+          opacity: dockHidden || p.searchOpen ? 0 : 1,
+          visibility: dockHidden || p.searchOpen ? 'hidden' : 'visible'
         }}
       >
         <div className="text-[10px] leading-tight text-slate-300 bg-slate-950/75 rounded-md px-1.5 py-1 backdrop-blur-sm max-w-[55%] pointer-events-auto">
@@ -833,7 +870,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
             <LocateFixed className={`w-5 h-5 ${gpsActive ? 'text-cyan-400' : 'text-slate-300'}`} />
           </button>
           )}
-          {!inRoute && (
+          {!inRoute && !inWalk && (
             <button
               type="button"
               onClick={p.onStartRoute}
@@ -850,9 +887,9 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
       <div
         ref={sheetRef}
         role="region"
-        aria-label={inRoute ? 'Percorso metro' : p.selected ? p.selected.italianName : 'Tappe e metro'}
+        aria-label={inWalk ? 'Navigazione a piedi' : inRoute ? 'Percorso metro' : p.selected ? p.selected.italianName : 'Vicino a me, tappe e metro'}
         className="absolute bottom-0 inset-x-0 z-[500] rounded-t-2xl bg-[#0a1119] shadow-[0_-6px_24px_rgba(0,0,0,0.4)] flex flex-col overflow-hidden"
-        style={{ height: h, transition: SHEET_TRANSITION }}
+        style={{ height: h, transition: SHEET_TRANSITION, visibility: p.searchOpen ? 'hidden' : 'visible' }}
       >
         <div
           className="shrink-0 select-none"
