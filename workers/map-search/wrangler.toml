@@ -1,0 +1,7 @@
+name = "seul-map-search"
+main = "src/index.ts"
+compatibility_date = "2026-11-12"
+
+[vars]
+FIREBASE_PROJECT_ID = "seul2027-5edd9"
+APP_ORIGINS = "https://seul2027-5edd9.web.app,https://seul2027-5edd9.firebaseapp.com,http://localhost:3000"

@@ -1,0 +1,5 @@
+{
+  "name": "seul-map-search-worker",
+  "private": true,
+  "type": "module"
+}
