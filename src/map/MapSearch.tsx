@@ -34,7 +34,7 @@ function cityForPoint(lat: number, lng: number): MapLocation['city'] {
   return 'Altrove';
 }
 
-function resultToLocation(hit: RemoteMapSearchHit): MapLocation {
+export function resultToLocation(hit: RemoteMapSearchHit): MapLocation {
   return {
     id: `${OSM_ID_PREFIX}${hit.source}:${hit.id}`,
     name: hit.title,
@@ -76,7 +76,8 @@ function osmDisplayHit(hit: GeocodeHit): DisplayHit {
 
 function isAddressLike(query: string) {
   const normalized = query.normalize('NFKC').replace(/[‐‑‒–—]/g, '-').trim();
-  return /(?:^|\b)\d+(?:-\d+)?\s+.+(?:-ro|-gil)\b/i.test(normalized);
+  // "-ro", "-gil" e anche "-daero" (Sejong-daero), "-daegil"
+  return /(?:^|\b)\d+(?:-\d+)?\s+.+-[a-z]*(?:ro|gil)\b/i.test(normalized);
 }
 
 function zoomForPrecision(precision: MapSearchPrecision) {

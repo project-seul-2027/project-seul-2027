@@ -1,6 +1,8 @@
 name = "project-seul-2027"
 main = "src/index.ts"
 compatibility_date = "2026-11-12"
+# Le variabili messe dal pannello di Cloudflare (es. ALLOWED_EMAILS) non vengono cancellate a ogni deploy
+keep_vars = true
 
 [vars]
 FIREBASE_PROJECT_ID = "seul2027-5edd9"

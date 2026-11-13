@@ -6,7 +6,7 @@ import { ACCOMMODATIONS, ITINERARY_DAYS, MAP_LOCATIONS, getNaverMapSearchUrl, ty
 import { useAuth } from '../auth/AuthContext';
 import {
   ALLERGEN_OPTIONS, EMERGENCY_NUMBERS, PHRASE_GROUPS, buildDietCard, cleanKoreanName, dietKind, hasHangul,
-  withDirectionParticle, type Phrase
+  withDirectionParticle, spokenPlaceName, type Phrase
 } from '../data/koreanHelp';
 import { FreeTranslate } from './FreeTranslate';
 import { locateNow } from '../utils/tripClock';
@@ -129,8 +129,8 @@ export const ShowKoreanView: React.FC = () => {
     const ko = cleanKoreanName(d.koreanName ?? '');
     setOverlay({
       kicker: 'Per il tassista',
-      place: { ko, it: d.italianName, naver: getNaverMapSearchUrl(d) },
-      lines: [{ ko: `${withDirectionParticle(ko)} 가 주세요.`, rom: '', it: `Mi porti a: ${d.italianName}, per favore.` }]
+      place: { ko, it: spokenPlaceName(d.italianName), naver: getNaverMapSearchUrl(d) },
+      lines: [{ ko: `${withDirectionParticle(ko)} 가 주세요.`, rom: '', it: `Mi porti a: ${spokenPlaceName(d.italianName)}, per favore.` }]
     });
   };
 

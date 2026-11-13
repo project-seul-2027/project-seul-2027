@@ -64,6 +64,8 @@ export interface MapLocation {
   name: string;
   italianName: string;
   koreanName?: string;
+  /** Indirizzo stradale in coreano, da mostrare al tassista quando il nome coreano è solo la stazione */
+  koreanAddress?: string;
   district: string;
   city: 'Seul' | 'Dintorni / Gite' | 'Pechino' | 'Milano' | 'Altrove';
   category: 'alloggio' | 'cultura' | 'nightlife' | 'food' | 'natura' | 'gita' | 'logistica' | 'luogo';
@@ -363,6 +365,7 @@ export const MAP_LOCATIONS: MapLocation[] = [
     name: 'Alloggio D: Sinseol-dong',
     italianName: 'Alloggio D: Sinseol-dong (Kimsfamily)',
     koreanName: '신설동역',
+    koreanAddress: '서울 종로구 숭인동길 26-8',
     district: 'Sinseol-dong & Dongdaemun',
     city: 'Seul',
     category: 'alloggio',
