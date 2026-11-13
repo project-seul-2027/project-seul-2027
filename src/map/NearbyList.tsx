@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LocateFixed, Users } from 'lucide-react';
 import type { MapLocation } from '../data/tripData';
 import { categoryIconSvg } from '../components/map/categoryIcons';
 import { CATEGORY_LABEL, mobileCategoryColor } from '../components/map/categoryStyle';
 import { formatMeters, formatMinutes, walkMinutes } from './geo';
+import type { LatLng } from '../data/seoulMetro';
+import { searchNearbyNeeds, type NearbyNeed } from './mapSearchService';
+import { resultToLocation } from './MapSearch';
+import type { RemoteMapSearchHit } from '../shared/mapSearch';
+
+const NEEDS: { id: NearbyNeed; label: string }[] = [
+  { id: 'toilet', label: 'Bagno' },
+  { id: 'pharmacy', label: 'Farmacia' },
+  { id: 'convenience', label: 'Minimarket' },
+  { id: 'atm', label: 'Bancomat' },
+  { id: 'cafe', label: 'Caffè' }
+];
+
+type NeedState = { need: NearbyNeed; loading: boolean; hits: RemoteMapSearchHit[]; message: string | null };
 
 /** Scheda "Vicino a me" del foglio: cosa abbiamo intorno in ordine di distanza, e chi del gruppo è vicino. */
 export interface NearbyEntry {
@@ -27,11 +41,40 @@ interface Props {
   entries: NearbyEntry[];
   friends: NearbyFriend[];
   onPick: (loc: MapLocation) => void;
+  /** Posizione attuale, per cercare bagni, farmacie e simili intorno */
+  here?: LatLng | null;
 }
 
 const row = 'w-full flex items-center gap-3 px-5 min-h-[60px] text-left border-t border-[rgba(234,240,246,.11)] first:border-t-0 active:bg-[rgba(234,240,246,.05)]';
 
-export const NearbyList: React.FC<Props> = ({ gpsActive, onLocate, entries, friends, onPick }) => {
+export const NearbyList: React.FC<Props> = ({ gpsActive, onLocate, entries, friends, onPick, here = null }) => {
+  const [needState, setNeedState] = useState<NeedState | null>(null);
+  const runRef = useRef(0);
+  useEffect(() => () => { runRef.current += 1; }, []);
+
+  const pickNeed = async (need: NearbyNeed) => {
+    if (needState?.need === need) {
+      runRef.current += 1;
+      setNeedState(null);
+      return;
+    }
+    if (!here) return;
+    const run = ++runRef.current;
+    setNeedState({ need, loading: true, hits: [], message: null });
+    try {
+      const res = await searchNearbyNeeds(need, here[0], here[1]);
+      if (run !== runRef.current) return;
+      const message = res.providerConfigured === false
+        ? 'La ricerca per bisogni non è ancora attiva: manca la chiave Kakao nel servizio.'
+        : res.providerErrors?.length
+          ? 'Il servizio di ricerca non risponde adesso. Riprova tra poco.'
+          : res.hits.length === 0 ? 'Niente entro 800 m da qui.' : null;
+      setNeedState({ need, loading: false, hits: res.hits, message });
+    } catch {
+      if (run === runRef.current) setNeedState({ need, loading: false, hits: [], message: 'Ricerca non disponibile adesso: serve internet e l’accesso.' });
+    }
+  };
+
   if (!gpsActive) {
     return (
       <div className="px-5 py-8 text-center space-y-4">
@@ -44,6 +87,41 @@ export const NearbyList: React.FC<Props> = ({ gpsActive, onLocate, entries, frie
   }
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6" data-testid="nearby-list">
+      <div data-no-drag className="flex gap-2 overflow-x-auto scrollbar-none px-5 pt-3 pb-1 touch-pan-x" role="group" aria-label="Cerca vicino a te">
+        {NEEDS.map((n) => (
+          <button
+            key={n.id}
+            type="button"
+            onClick={() => void pickNeed(n.id)}
+            aria-pressed={needState?.need === n.id}
+            data-testid={`need-${n.id}`}
+            className={`h-11 px-4 rounded-xl text-[15px] whitespace-nowrap shrink-0 active:opacity-80 ${needState?.need === n.id ? 'bg-[#52d9e6] text-[#04242a] font-semibold' : 'bg-[rgba(96,150,214,0.13)] text-[#eaf0f6] font-medium'}`}
+          >
+            {n.label}
+          </button>
+        ))}
+      </div>
+      {needState ? (
+        <div data-testid="need-results">
+          {needState.loading && <p className="px-5 py-4 text-[14px] text-[#97a5b9]">Cerco intorno a te…</p>}
+          {needState.message && <p className="px-5 py-4 text-[14px] text-[#fbbf24] leading-snug" role="status">{needState.message}</p>}
+          {needState.hits.map((hit) => (
+            <button key={hit.id} type="button" className={row} onClick={() => onPick(resultToLocation(hit))}>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] text-[#eaf0f6] truncate">{hit.title}</span>
+                <span className="block text-[13px] text-[#97a5b9] truncate">{hit.address}</span>
+              </span>
+              {typeof hit.distance === 'number' && (
+                <span className="text-right shrink-0">
+                  <span className="block text-[15px] text-[#eaf0f6] tabular-nums">{formatMinutes(walkMinutes(hit.distance * 1.25))}</span>
+                  <span className="block text-[12px] text-[#97a5b9] tabular-nums">{formatMeters(hit.distance)} a piedi</span>
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      ) : (
+      <>
       {friends.length > 0 && (
         <>
           <p className="px-5 pt-3 pb-1 text-[13px] text-[#97a5b9] flex items-center gap-1.5">
@@ -84,6 +162,8 @@ export const NearbyList: React.FC<Props> = ({ gpsActive, onLocate, entries, frie
         </button>
       ))}
       {entries.length === 0 && <p className="px-5 py-6 text-[14px] text-[#97a5b9]">Niente di nostro entro qualche chilometro da qui.</p>}
+      </>
+      )}
     </div>
   );
 };

@@ -28,6 +28,10 @@ import { LineBadge } from './MetroPanel';
 import type { LiveGeoState } from './MetroRoutePanel';
 import type { LatLng } from '../../data/seoulMetro';
 import { WalkSteps, WalkTop, type WalkState } from '../../map/WalkPanel';
+import type { LastMetroInfo } from '../../map/lastMetro';
+import type { MapCondition } from '../../map/conditions';
+import type { ExitAdvice } from '../../map/exits';
+import { cleanKoreanName, hasHangul, spokenPlaceName, withDirectionParticle } from '../../data/koreanHelp';
 import { distanceMeters, formatMeters, formatMinutes, walkMinutes } from '../../map/geo';
 import { kakaoMapUrl } from '../../map/searchIndex';
 
@@ -183,6 +187,29 @@ export interface MobileMapOverlayProps {
 
   metroPanel: React.ReactNode;
   routePanel: React.ReactNode;
+  /** Alloggio scelto come casa (tasto Casa) */
+  homeId: string | null;
+  onGoHome: () => void;
+  onSetHome: (loc: MapLocation) => void;
+  /** Prossima tappa di oggi, se il viaggio è in corso o è scelto un giorno */
+  nextStop: NextStop | null;
+  onNextStopOpen: () => void;
+  onNextStopDone: () => void;
+  /** Ultima corsa del percorso mostrato (stima per linea) */
+  lastMetro: LastMetroInfo | null;
+  routeToHome: boolean;
+  /** Aria scarsa o pioggia in arrivo */
+  conditions: MapCondition[];
+  /** Uscita della stazione d'arrivo più vicina alla meta */
+  exitAdvice: ExitAdvice | null;
+}
+
+export interface NextStop {
+  loc: MapLocation;
+  /** posizione nell'elenco di oggi, da 1 */
+  index: number;
+  total: number;
+  meters: number | null;
 }
 
 /** Campo a tendina nativo (sul telefono si apre il selettore del sistema) */
@@ -238,6 +265,9 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   const [layersOpen, setLayersOpen] = useState(false);
+  /** Scheda a tutto schermo da far leggere al tassista */
+  const [taxiFor, setTaxiFor] = useState<MapLocation | null>(null);
+  const [dismissedConditions, setDismissedConditions] = useState<string[]>([]);
 
   // Altezza del blocco in alto (ricerca + chip, oppure percorso): serve al foglio e alle inquadrature
   const { onTopInset } = p;
@@ -326,7 +356,7 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
   const inWalk = p.mapMode === 'walk' && p.walk !== null;
   const dockHidden = p.snap === 'full';
   // I pulsanti seguono il foglio, ma spariscono se non c'è più spazio sotto il pulsante dei livelli
-  const fabStackH = inRoute ? 190 : 206;
+  const fabStackH = inRoute ? 190 : 262;
   // in Esplora i pulsanti ci sono sempre a foglio chiuso; in Percorso solo se resta spazio sotto il pulsante dei livelli
   const fabsFit = !inRoute && p.snap === 'peek' ? true : p.shellH - p.topInset - (inRoute ? 60 : 8) - h >= fabStackH;
 
@@ -368,6 +398,26 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               ))}
               <span className="text-[13px] text-[#97a5b9] ml-1">{r.totalWalkMeters} m a piedi</span>
             </div>
+            {p.exitAdvice && (
+              <p className="text-[13px] mt-1.5 text-[#eaf0f6] tabular-nums" data-testid="exit-advice">
+                Esci dall'uscita <span className="font-semibold text-[#52d9e6]">{p.exitAdvice.ref}</span> · {formatMeters(p.exitAdvice.toDestination)} dalla meta
+              </p>
+            )}
+            {p.lastMetro?.passed && hasHangul(r.destination.koreanName) && (
+              <button type="button" onClick={() => setTaxiFor(r.destination)} className={`${pillSecondary} mt-2`} data-testid="route-taxi">
+                Mostra al tassista
+              </button>
+            )}
+            {p.lastMetro && (
+              <p
+                className={`text-[13px] mt-1.5 tabular-nums ${p.lastMetro.passed ? 'text-[#fbbf24]' : p.lastMetro.minutesLeft <= 60 ? 'text-[#fbbf24]' : 'text-[#97a5b9]'}`}
+                data-testid="last-metro"
+              >
+                {p.lastMetro.passed
+                  ? `Metro finita (ultima corsa circa ${p.lastMetro.limit}): serve un taxi o il bus notturno`
+                  : `Ultima metro${p.routeToHome ? ' verso casa' : ''} entro ${p.lastMetro.limit} circa${p.lastMetro.minutesLeft <= 180 ? `, tra ${formatMinutes(p.lastMetro.minutesLeft)}` : ''}`}
+              </p>
+            )}
           </>
         ) : (
           <div className="text-[15px] text-[#fbbf24] pt-2 leading-snug">
@@ -424,6 +474,22 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
           {p.onSavePlace && (
             <button type="button" onClick={() => p.onSavePlace?.(loc)} className={pillSecondary} data-testid="place-save">
               <Bookmark className="w-4 h-4 text-cyan-400" /> Salva
+            </button>
+          )}
+          {hasHangul(loc.koreanName) && (
+            <button type="button" onClick={() => setTaxiFor(loc)} className={pillSecondary} data-testid="place-taxi">
+              <span aria-hidden="true" className="text-[15px] leading-none text-cyan-400">가</span> Mostra al tassista
+            </button>
+          )}
+          {loc.category === 'alloggio' && (
+            <button
+              type="button"
+              onClick={() => p.onSetHome(loc)}
+              aria-pressed={p.homeId === loc.id}
+              className={p.homeId === loc.id ? pillPrimary : pillSecondary}
+              data-testid="place-home"
+            >
+              <Home className="w-4 h-4" /> {p.homeId === loc.id ? 'Casa' : 'Usa come casa'}
             </button>
           )}
           {canRoute && (
@@ -743,6 +809,51 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
               </button>
             </div>
           )}
+          {!inRoute && !inWalk && !p.selected && p.nextStop && (
+            <div
+              className="pointer-events-auto bg-[#0a1119]/95 rounded-2xl pl-3 pr-1 flex items-center gap-1 backdrop-blur-md shadow-xl max-w-[calc(100vw-1.5rem)]"
+              data-testid="next-stop"
+            >
+              <button type="button" onClick={p.onNextStopOpen} className="min-w-0 py-2 text-left active:opacity-70">
+                <span className="block text-[12px] text-[#97a5b9] leading-tight">
+                  Prossima tappa · {p.nextStop.index} di {p.nextStop.total}
+                </span>
+                <span className="block text-[15px] font-semibold text-[#eaf0f6] leading-tight truncate">{p.nextStop.loc.italianName}</span>
+                {p.nextStop.meters !== null && (
+                  <span className="block text-[12px] text-[#97a5b9] leading-tight tabular-nums">
+                    {formatMeters(p.nextStop.meters)}
+                    {p.nextStop.meters < 2000 ? ` · ${formatMinutes(walkMinutes(p.nextStop.meters * 1.25))} a piedi` : ''}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={p.onNextStopDone}
+                aria-label="Segna la tappa come fatta"
+                className="h-11 px-3 text-[14px] font-semibold text-[#52d9e6] shrink-0 active:opacity-70"
+              >
+                Fatto
+              </button>
+            </div>
+          )}
+          {!inRoute && !inWalk && !p.selected && p.conditions.filter((c) => !dismissedConditions.includes(c.kind)).map((c) => (
+            <div
+              key={c.kind}
+              role="status"
+              className="pointer-events-auto bg-[#0a1119]/95 rounded-full pl-3 pr-1 flex items-center gap-1 backdrop-blur-md shadow-xl max-w-[calc(100vw-1.5rem)]"
+              data-testid={`condition-${c.kind}`}
+            >
+              <span className="py-2 text-[13px] text-[#eaf0f6] leading-tight">{c.text}</span>
+              <button
+                type="button"
+                onClick={() => setDismissedConditions((prev) => [...prev, c.kind])}
+                aria-label="Nascondi avviso"
+                className="w-9 h-9 flex items-center justify-center text-[#97a5b9] shrink-0 active:opacity-70"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
           {p.notice && (
             <div
               role="status"
@@ -828,6 +939,37 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
         </>
       )}
 
+      {taxiFor && (
+        <div role="dialog" aria-label="Da mostrare al tassista" className="absolute inset-0 z-[700] bg-[#0a1119] flex flex-col" data-testid="taxi-card">
+          <div className="flex items-center justify-between px-5 pt-3">
+            <p className="text-[15px] text-[#97a5b9]">Da mostrare al tassista</p>
+            <button type="button" onClick={() => setTaxiFor(null)} aria-label="Chiudi" className="w-11 h-11 -mr-3 flex items-center justify-center text-[#97a5b9] active:opacity-70">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 flex flex-col justify-center px-6 pb-10">
+            <p lang="ko" className="font-[Outfit] text-[44px] leading-[1.15] font-medium text-[#eaf0f6] break-keep">
+              {cleanKoreanName(taxiFor.koreanName ?? '')}
+            </p>
+            <p lang="ko" className="mt-5 text-[26px] leading-snug text-[#eaf0f6] break-keep">
+              {withDirectionParticle(cleanKoreanName(taxiFor.koreanName ?? ''))} 가 주세요.
+            </p>
+            {taxiFor.koreanAddress && (
+              <p lang="ko" className="mt-4 text-[22px] leading-snug text-[#eaf0f6] break-keep" data-testid="taxi-address">{taxiFor.koreanAddress}</p>
+            )}
+            <p className="mt-6 text-[17px] text-[#97a5b9]">Mi porti a: {spokenPlaceName(taxiFor.italianName)}, per favore.</p>
+            <div className="mt-8 flex gap-2 flex-wrap">
+              <a href={getNaverMapSearchUrl(taxiFor)} target="_blank" rel="noopener noreferrer" className={pillPrimary}>
+                Mostra su Naver <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <a href={kakaoMapUrl(taxiFor)} target="_blank" rel="noopener noreferrer" className={pillSecondary}>
+                Kakao <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── In basso a destra: posizione e percorso (seguono il foglio) ── */}
       <div
         ref={dockRef}
@@ -869,6 +1011,11 @@ export const MobileMapOverlay: React.FC<MobileMapOverlayProps> = (p) => {
           >
             <LocateFixed className={`w-5 h-5 ${gpsActive ? 'text-cyan-400' : 'text-slate-300'}`} />
           </button>
+          )}
+          {!inRoute && !inWalk && p.homeId && (
+            <button type="button" onClick={p.onGoHome} aria-label="Torna a casa" data-testid="go-home" className={fabClass}>
+              <Home className="w-5 h-5 text-cyan-400" />
+            </button>
           )}
           {!inRoute && !inWalk && (
             <button

@@ -45,6 +45,8 @@ export function withSubjectParticle(word: string): string {
 export const hasHangul = (s?: string) => !!s && /[가-힣]/.test(s);
 
 /** Prima parte del nome coreano (alcuni hanno varianti separate da "/"). */
+/** Nome da leggere a voce o mostrare: senza la sigla dell'annuncio ("Alloggio D: Sinseol-dong" → "Sinseol-dong"). */
+export const spokenPlaceName = (s: string) => s.replace(/^Alloggio [A-D]:\s*/i, '').trim();
 export const cleanKoreanName = (s: string) => s.split('/')[0].trim();
 
 /* ---------- Allergeni: dall'italiano al coreano ---------- */

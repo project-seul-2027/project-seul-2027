@@ -98,7 +98,8 @@ async function waitForNominatimSlot(signal?: AbortSignal) {
 export async function geocodeMapAddress(query: string, signal?: AbortSignal): Promise<GeocodeHit[]> {
   const q = query.normalize('NFKC').replace(/[‐‑‒–—]/g, '-').replace(/[\s,]+/g, ' ').trim();
   if (q.length < 3) return [];
-  const roadAddress = /^\d+(?:-\d+)?\s+.+(?:-ro|-gil)\b/i.test(q);
+  // "-ro", "-gil" e anche "-daero" (Sejong-daero), "-daegil"
+  const roadAddress = /^\d+(?:-\d+)?\s+.+-[a-z]*(?:ro|gil)\b/i.test(q);
   const hasRegion = /\b(seoul|busan|incheon|daegu|daejeon|gwangju|ulsan|jeju|korea|korean)\b/i.test(q);
   const first = await search(q, false, signal, roadAddress);
   const needsContext = roadAddress && !hasRegion && !first.some((hit) => hit.precision === 'address');

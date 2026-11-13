@@ -6,7 +6,38 @@ interface Env {
 }
 
 type Precision = 'place' | 'address' | 'street' | 'area' | 'unknown';
-type Hit = { id: string; title: string; address: string; lat: number; lng: number; source: 'kakao' | 'openstreetmap'; precision: Precision };
+type Hit = { id: string; title: string; address: string; lat: number; lng: number; source: 'kakao' | 'openstreetmap'; precision: Precision; distance?: number };
+
+/** Bisogni da cercare vicino a un punto: codice categoria Kakao oppure parola chiave coreana. */
+const NEEDS: Record<string, { code?: string; keyword?: string }> = {
+  toilet: { keyword: '화장실' },
+  pharmacy: { code: 'PM9' },
+  convenience: { code: 'CS2' },
+  atm: { keyword: 'ATM' },
+  cafe: { code: 'CE7' }
+};
+
+async function kakaoNearby(need: { code?: string; keyword?: string }, lat: number, lng: number, key: string): Promise<Hit[]> {
+  const common = { x: String(lng), y: String(lat), radius: '800', sort: 'distance', size: '8' };
+  const url = need.code
+    ? `https://dapi.kakao.com/v2/local/search/category.json?${new URLSearchParams({ ...common, category_group_code: need.code })}`
+    : `https://dapi.kakao.com/v2/local/search/keyword.json?${new URLSearchParams({ ...common, query: need.keyword ?? '' })}`;
+  const response = await fetch(url, { headers: { Authorization: `KakaoAK ${key}` }, signal: AbortSignal.timeout(7000) });
+  if (!response.ok) throw new ProviderError(`kakao:${response.status}`);
+  const data = await response.json() as { documents?: Array<Record<string, unknown>> };
+  return (data.documents ?? []).flatMap((doc) => {
+    const hitLat = Number(doc.y), hitLng = Number(doc.x);
+    if (!Number.isFinite(hitLat) || !Number.isFinite(hitLng)) return [];
+    const distance = Number(doc.distance);
+    return [{
+      id: `kakao:${String(doc.id || `${hitLat},${hitLng}`)}`,
+      title: String(doc.place_name || ''),
+      address: String(doc.road_address_name || doc.address_name || ''),
+      lat: hitLat, lng: hitLng, source: 'kakao' as const, precision: 'place' as const,
+      ...(Number.isFinite(distance) ? { distance } : {})
+    }];
+  }).filter((hit) => hit.title);
+}
 type Claims = { aud: string; iss: string; sub: string; exp: number; iat: number; email?: string; email_verified?: boolean; firebase?: { sign_in_provider?: string } };
 
 type FirebaseJwk = JsonWebKey & { kid?: string };
@@ -51,11 +82,16 @@ async function firebaseClaims(token: string, projectId: string): Promise<Claims>
 
 function variants(query: string): string[] {
   const romanized = query.replace(/([a-z])dong-(gil|ro)\b/gi, '$1-dong-$2');
-  const road = /^\d+(?:-\d+)?\s+.+(?:-ro|-gil)\b/i.test(query);
-  const hasRegion = /\b(seoul|busan|incheon|daegu|daejeon|gwangju|ulsan|jeju|korea)\b/i.test(query);
-  return [...new Set([query, romanized, ...(road && !hasRegion ? [`${romanized}, Seoul, South Korea`] : [])])];
+  return [...new Set([query, romanized])];
 }
-function addressQuery(q: string) { return /^\d+(?:-\d+)?\s+.+(?:-ro|-gil)\b/i.test(q); }
+/** Indirizzo stradale: romanizzato ("110 Sejong-daero") o coreano ("세종대로 110", "서울 중구 세종대로 110"), oppure a lotto ("동교동 160-1"). */
+function addressQuery(q: string) {
+  return (
+    /^\d+(?:-\d+)?\s+.+-[a-z]*(?:ro|gil)\b/i.test(q) ||
+    /(?:로|길)\s*\d+(?:-\d+)?(?:\s|$)/.test(q) ||
+    /(?:동|리|가)\s+\d+(?:-\d+)?(?:\s|$)/.test(q)
+  );
+}
 function kakaoHits(data: { documents?: Array<Record<string, unknown>> }, q: string, isAddress: boolean): Hit[] {
   return (data.documents ?? []).flatMap((doc) => {
     const lat = Number(doc.y), lng = Number(doc.x);
@@ -69,20 +105,28 @@ function kakaoHits(data: { documents?: Array<Record<string, unknown>> }, q: stri
     return [{ id: `kakao:${String(doc.id || `${lat},${lng}`)}`, title, address, lat, lng, source: 'kakao' as const, precision }];
   });
 }
+/** Errore del fornitore: il messaggio è solo stato e tipo (es. "kakao:403:NotAuthorizedError"), mai la query o la chiave. */
+class ProviderError extends Error {}
+const AUTH_ERRORS = new Set(['token', 'keys', 'key', 'signature', 'claims', 'account']);
+
 async function kakaoSearch(q: string, key: string, isAddress: boolean): Promise<Hit[]> {
   const endpoint = isAddress ? 'address' : 'keyword';
   const response = await fetch(`https://dapi.kakao.com/v2/local/search/${endpoint}.json?${new URLSearchParams({ query: q, size: '5' })}`, { headers: { Authorization: `KakaoAK ${key}` }, signal: AbortSignal.timeout(7000) });
   if (!response.ok) {
     // Kakao returns a small JSON error object (usually `code` and `msg`).
     // Log only those fields: never log the search query or request headers/key.
-    let providerCode: number | undefined;
+    let providerCode: number | string | undefined;
     let providerMessage: string | undefined;
     try {
-      const detail = await response.json() as { code?: unknown; msg?: unknown };
+      const body = await response.text();
+      const detail = JSON.parse(body) as { code?: unknown; msg?: unknown; errorType?: unknown; message?: unknown };
       if (typeof detail.code === 'number') providerCode = detail.code;
-      if (typeof detail.msg === 'string') providerMessage = detail.msg.slice(0, 160);
+      else if (typeof detail.errorType === 'string') providerCode = detail.errorType.slice(0, 60);
+      const text = typeof detail.msg === 'string' ? detail.msg : typeof detail.message === 'string' ? detail.message : undefined;
+      // Con una chiave sbagliata Kakao la ripete nel messaggio ("appKey(…) does not exist"): la si oscura sempre
+      if (text) providerMessage = text.replace(/appKey\([^)]*\)/gi, 'appKey(***)').replace(/[0-9a-f]{32}/gi, '***').slice(0, 160);
     } catch {
-      // Keep the HTTP status useful even if Kakao returns a non-JSON error.
+      // A non-JSON provider response still leaves status as useful diagnostic data.
     }
     console.warn('Map search provider returned HTTP error', {
       provider: 'kakao',
@@ -90,7 +134,7 @@ async function kakaoSearch(q: string, key: string, isAddress: boolean): Promise<
       ...(providerCode === undefined ? {} : { providerCode }),
       ...(providerMessage === undefined ? {} : { providerMessage })
     });
-    throw new Error('Kakao unavailable');
+    throw new ProviderError(`kakao:${response.status}${providerCode !== undefined ? `:${providerCode}` : ''}`);
   }
   return kakaoHits(await response.json() as { documents?: Array<Record<string, unknown>> }, q, isAddress);
 }
@@ -114,19 +158,44 @@ export default {
       const now = Date.now(), window = windows.get(claims.sub);
       if (window && now - window.start < 60_000 && window.count >= 12) return json({ error: 'Rate limit' }, 429, origin);
       windows.set(claims.sub, !window || now - window.start >= 60_000 ? { start: now, count: 1 } : { ...window, count: window.count + 1 });
-      const body = await request.json() as { query?: unknown };
+      const body = await request.json() as { query?: unknown; need?: unknown; lat?: unknown; lng?: unknown };
+      if (typeof body.need === 'string') {
+        // Ricerca per bisogno: solo punti in Corea, solo bisogni dell'elenco
+        const need = NEEDS[body.need];
+        const lat = Number(body.lat), lng = Number(body.lng);
+        if (!need || !(lat >= 33 && lat <= 39 && lng >= 124 && lng <= 132)) return json({ error: 'Bad request' }, 400, origin);
+        const nearbyKey = env.KAKAO_REST_API_KEY?.trim();
+        if (!nearbyKey) return json({ hits: [], providers: [], providerConfigured: false, providerErrors: [] }, 200, origin);
+        try {
+          const found = await kakaoNearby(need, lat, lng, nearbyKey);
+          console.info('Map nearby request completed', { need: body.need, resultCount: found.length });
+          return json({ hits: found, providers: found.length ? ['kakao'] : [], providerConfigured: true, providerErrors: [] }, 200, origin);
+        } catch (error) {
+          const reason = error instanceof ProviderError ? error.message : 'kakao:network';
+          console.warn('Map nearby request failed', { reason });
+          return json({ hits: [], providers: [], providerConfigured: true, providerErrors: [reason] }, 200, origin);
+        }
+      }
       const query = typeof body.query === 'string' ? body.query.normalize('NFKC').replace(/[‐‑‒–—]/g, '-').replace(/[\s,]+/g, ' ').trim().slice(0, 160) : '';
       if (query.length < 3) return json({ error: 'Enter at least 3 characters' }, 400, origin);
       const isAddress = addressQuery(query);
-      const searches = env.KAKAO_REST_API_KEY ? variants(query).map((q) => kakaoSearch(q, env.KAKAO_REST_API_KEY!, isAddress)) : [];
+      const key = env.KAKAO_REST_API_KEY?.trim();
+      const searches = key
+        ? [
+            ...(isAddress ? variants(query).map((q) => kakaoSearch(q, key, true)) : []),
+            kakaoSearch(query, key, false)
+          ]
+        : [];
       const sets = await Promise.allSettled(searches);
       const hits = sets.flatMap((set) => set.status === 'fulfilled' ? set.value : []);
+      const providerErrors = [...new Set(sets.flatMap((set) => set.status === 'rejected' ? [set.reason instanceof ProviderError ? set.reason.message : 'kakao:network'] : []))];
       console.info('Map search request completed', {
         providerConfigured: Boolean(env.KAKAO_REST_API_KEY),
         queryKind: isAddress ? 'road-address' : 'place',
         providerRequests: searches.length,
         successfulRequests: sets.filter((set) => set.status === 'fulfilled').length,
-        resultCount: hits.length
+        resultCount: hits.length,
+        ...(providerErrors.length ? { providerErrors } : {})
       });
       const unique: Hit[] = [];
       for (const hit of hits) {
@@ -134,10 +203,14 @@ export default {
         if (index < 0) unique.push(hit);
         else if (hit.precision === 'address' && unique[index].precision !== 'address') unique[index] = hit;
       }
-      return json({ hits: unique.slice(0, 10), providers: [...new Set(hits.map((hit) => hit.source))] }, 200, origin);
+      // providerErrors e providerConfigured aiutano l'app (e chi fa debug) a capire perché Kakao non risponde
+      return json({ hits: unique.slice(0, 10), providers: [...new Set(hits.map((hit) => hit.source))], providerConfigured: Boolean(key), providerErrors }, 200, origin);
     } catch (error) {
-      console.warn('Map search request rejected or failed', { reason: error instanceof Error ? error.message : 'unknown' });
-      return json({ error: 'Search failed' }, 401, origin);
+      const reason = error instanceof Error ? error.message : 'unknown';
+      console.warn('Map search request rejected or failed', { reason });
+      if (AUTH_ERRORS.has(reason)) return json({ error: 'Not signed in' }, 401, origin);
+      if (error instanceof SyntaxError) return json({ error: 'Bad request' }, 400, origin);
+      return json({ error: 'Search failed' }, 500, origin);
     }
   }
 };

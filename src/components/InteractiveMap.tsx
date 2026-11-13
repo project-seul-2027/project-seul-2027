@@ -41,13 +41,17 @@ import { MetroPanel, LineBadge } from './map/MetroPanel';
 import { MetroRoutePanel, type LiveGeoState } from './map/MetroRoutePanel';
 import { RealMetroDataDrawer } from './map/RealMetroDataDrawer';
 import { CATEGORY_STYLE, mobileCategoryColor, originLabel } from './map/categoryStyle';
-import { MobileMapOverlay, sheetHeight, useIsMobileMap, type SheetSnap } from './map/MobileMapUI';
+import { MobileMapOverlay, sheetHeight, useIsMobileMap, type NextStop, type SheetSnap } from './map/MobileMapUI';
 import { MapSearch, OSM_ID_PREFIX } from '../map/MapSearch';
 import { NearbyList, type NearbyEntry, type NearbyFriend } from '../map/NearbyList';
 import type { WalkState } from '../map/WalkPanel';
 import { buildSearchIndex, STATION_ID_PREFIX } from '../map/searchIndex';
 import { progressAlong, walkRoute as fetchWalkRoute, type WalkRoute } from '../map/walkRoute';
 import { distanceMeters } from '../map/geo';
+import { lastMetroForRoute } from '../map/lastMetro';
+import { useMapConditions } from '../map/conditions';
+import { exitForRoute, type ExitAdvice } from '../map/exits';
+import { ARRIVED_METERS, defaultHomeId, loadDone, loadHomeId, saveDone, saveHomeId, stopsOfDay, tripDayAt } from '../map/tripToday';
 import { savePlace } from './places/placesStore';
 
 interface InteractiveMapProps {
@@ -1616,6 +1620,116 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }
   };
 
+  // ── Casa e prossima tappa (telefono) ──
+  const [homeId, setHomeId] = useState<string | null>(() => loadHomeId() ?? defaultHomeId());
+  const homeChosenRef = useRef<boolean>(loadHomeId() !== null);
+  const homeLoc = useMemo(() => accommodations.find((a) => a.id === homeId) ?? null, [accommodations, homeId]);
+  const setHome = (loc: MapLocation) => {
+    saveHomeId(loc.id);
+    homeChosenRef.current = true;
+    setHomeId(loc.id);
+    showNotice(`Casa: ${loc.italianName}`);
+  };
+  const goHome = () => {
+    if (!homeLoc) return;
+    if (!homeChosenRef.current) showNotice(`Casa: ${homeLoc.italianName}. Per cambiarla apri un alloggio e tocca "Usa come casa".`);
+    setSelectedDestinationId(homeLoc.id);
+    if (geoState.status === 'active') {
+      setSelectedOriginId('gps_origin');
+      setMapMode('route');
+    } else {
+      handleActivateRealGps({ route: true, recenter: false });
+    }
+  };
+
+  // Con un giorno scelto nei filtri vale quello (anche per provare), altrimenti il giorno del viaggio in corso
+  const stopsDay = useMemo(
+    () => (activeDay !== 'all' ? ITINERARY_DAYS.find((d) => d.id === activeDay) ?? null : tripDayAt()),
+    [activeDay]
+  );
+  const todayStops = useMemo(() => stopsOfDay(stopsDay), [stopsDay]);
+  const [doneStops, setDoneStops] = useState<string[]>([]);
+  useEffect(() => {
+    setDoneStops(stopsDay ? loadDone(stopsDay.id) : []);
+  }, [stopsDay]);
+  const markStopDone = useCallback(
+    (id: string) => {
+      if (!stopsDay) return;
+      setDoneStops((prev) => {
+        if (prev.includes(id)) return prev;
+        const next = [...prev, id];
+        saveDone(stopsDay.id, next);
+        return next;
+      });
+    },
+    [stopsDay]
+  );
+  const nextStopLoc = useMemo(() => todayStops.find((l) => !doneStops.includes(l.id)) ?? null, [todayStops, doneStops]);
+  const nextStop: NextStop | null = nextStopLoc
+    ? {
+        loc: nextStopLoc,
+        index: todayStops.indexOf(nextStopLoc) + 1,
+        total: todayStops.length,
+        meters: here ? distanceMeters(here, [nextStopLoc.lat, nextStopLoc.lng]) : null
+      }
+    : null;
+  // Arrivato vicino alla tappa: segnata da sola (solo nel giorno vero del viaggio)
+  useEffect(() => {
+    if (!nextStopLoc || !here || stopsDay !== tripDayAt()) return;
+    if (distanceMeters(here, [nextStopLoc.lat, nextStopLoc.lng]) < ARRIVED_METERS) markStopDone(nextStopLoc.id);
+  }, [here, nextStopLoc, stopsDay, markStopDone]);
+
+  // A piedi lo schermo resta acceso (dove il telefono lo permette), anche dopo un cambio di app
+  const walking = mapMode === 'walk';
+  useEffect(() => {
+    if (!walking || typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let cancelled = false;
+    const acquire = async () => {
+      try {
+        const next = await navigator.wakeLock.request('screen');
+        if (cancelled) void next.release().catch(() => undefined);
+        else lock = next;
+      } catch {
+        /* non concesso (risparmio energetico): resta il comportamento normale */
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible' && (!lock || lock.released)) void acquire(); };
+    void acquire();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      void lock?.release().catch(() => undefined);
+    };
+  }, [walking]);
+
+  const conditions = useMapConditions(isMobile);
+
+  // Uscita consigliata all'arrivo: i dati delle uscite si scaricano solo quando serve un percorso
+  const [exitAdvice, setExitAdvice] = useState<ExitAdvice | null>(null);
+  useEffect(() => {
+    if (!isMobile || mapMode !== 'route' || !currentMetroRoute?.reachable) {
+      setExitAdvice(null);
+      return;
+    }
+    let alive = true;
+    void import('../data/seoulMetroExits.json').then((m) => {
+      if (alive) setExitAdvice(exitForRoute(m.default as [number, number, string][], currentMetroRoute));
+    });
+    return () => { alive = false; };
+  }, [isMobile, mapMode, currentMetroRoute]);
+
+  // L'ultima corsa dipende dall'ora: si aggiorna ogni 30 secondi mentre il percorso è aperto
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    if (mapMode !== 'route') return;
+    const t = window.setInterval(() => setClockTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(t);
+  }, [mapMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const lastMetro = useMemo(() => lastMetroForRoute(mapMode === 'route' ? currentMetroRoute : null), [currentMetroRoute, mapMode, clockTick]);
+
   const handleLocate = () => {
     if (geoState.status === 'active' && geoState.coords) {
       focusLatLng(geoState.coords, 15);
@@ -2494,7 +2608,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               here={here}
               onWalkTo={startWalkTo}
               onSavePlace={currentSelectedLoc && isSyntheticLoc(currentSelectedLoc) ? savePlaceFromMap : undefined}
-              nearbyPanel={<NearbyList gpsActive={!!here} onLocate={handleLocate} entries={nearbyEntries} friends={nearbyFriends} onPick={openLocation} />}
+              nearbyPanel={<NearbyList gpsActive={!!here} here={here} onLocate={handleLocate} entries={nearbyEntries} friends={nearbyFriends} onPick={openLocation} />}
               walk={walkState}
               onExitWalk={exitWalk}
               onEnableGps={() => handleActivateRealGps({ route: false, recenter: false })}
@@ -2560,6 +2674,16 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               }}
               metroPanel={metroPanelEl}
               routePanel={routePanelEl}
+              homeId={homeLoc?.id ?? null}
+              onGoHome={goHome}
+              onSetHome={setHome}
+              nextStop={nextStop}
+              onNextStopOpen={() => nextStopLoc && openLocation(nextStopLoc)}
+              onNextStopDone={() => nextStopLoc && markStopDone(nextStopLoc.id)}
+              lastMetro={lastMetro}
+              conditions={conditions}
+              exitAdvice={exitAdvice}
+              routeToHome={!!homeLoc && selectedDestinationId === homeLoc.id}
             />
 
             {isRealDataOpen && (

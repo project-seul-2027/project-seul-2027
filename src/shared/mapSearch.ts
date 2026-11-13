@@ -10,11 +10,17 @@ export interface RemoteMapSearchHit {
   lng: number;
   source: MapSearchSource;
   precision: MapSearchPrecision;
+  /** Metri dal punto cercato, quando la ricerca è "vicino a me" */
+  distance?: number;
 }
 
 export interface RemoteMapSearchResponse {
   hits: RemoteMapSearchHit[];
   providers: MapSearchSource[];
+  /** Il Worker ha la chiave Kakao */
+  providerConfigured?: boolean;
+  /** Errori dei fornitori, solo stato e tipo (es. "kakao:403:NotAuthorizedError") */
+  providerErrors?: string[];
 }
 
 const precisionRank: Record<MapSearchPrecision, number> = {
