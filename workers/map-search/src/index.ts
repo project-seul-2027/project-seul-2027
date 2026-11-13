@@ -73,7 +73,23 @@ async function kakaoSearch(q: string, key: string, isAddress: boolean): Promise<
   const endpoint = isAddress ? 'address' : 'keyword';
   const response = await fetch(`https://dapi.kakao.com/v2/local/search/${endpoint}.json?${new URLSearchParams({ query: q, size: '5' })}`, { headers: { Authorization: `KakaoAK ${key}` }, signal: AbortSignal.timeout(7000) });
   if (!response.ok) {
-    console.warn('Map search provider returned HTTP error', { provider: 'kakao', status: response.status });
+    // Kakao returns a small JSON error object (usually `code` and `msg`).
+    // Log only those fields: never log the search query or request headers/key.
+    let providerCode: number | undefined;
+    let providerMessage: string | undefined;
+    try {
+      const detail = await response.json() as { code?: unknown; msg?: unknown };
+      if (typeof detail.code === 'number') providerCode = detail.code;
+      if (typeof detail.msg === 'string') providerMessage = detail.msg.slice(0, 160);
+    } catch {
+      // Keep the HTTP status useful even if Kakao returns a non-JSON error.
+    }
+    console.warn('Map search provider returned HTTP error', {
+      provider: 'kakao',
+      status: response.status,
+      ...(providerCode === undefined ? {} : { providerCode }),
+      ...(providerMessage === undefined ? {} : { providerMessage })
+    });
     throw new Error('Kakao unavailable');
   }
   return kakaoHits(await response.json() as { documents?: Array<Record<string, unknown>> }, q, isAddress);
