@@ -5,3 +5,9 @@ compatibility_date = "2026-11-12"
 [vars]
 FIREBASE_PROJECT_ID = "seul2027-5edd9"
 APP_ORIGINS = "https://project-seul-2027.github.io,https://seul2027-5edd9.web.app,https://seul2027-5edd9.firebaseapp.com,http://localhost:3000"
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
