@@ -33,6 +33,63 @@ const formatValue = (key: OptionalShareField, value: unknown): string => {
   return String(value);
 };
 
+const MobileMemberSheet: React.FC<{ member: GroupMember; shown: OptionalShareField[]; hidden: number; onClose: () => void }> = ({ member, shown, hidden, onClose }) => (
+  <div className="fixed inset-0 z-[70] flex items-end" role="dialog" aria-modal="true" aria-labelledby="member-sheet-title" data-testid="member-sheet">
+    <button type="button" aria-label="Chiudi" onClick={onClose} className="absolute inset-0 bg-black/60 motion-safe:animate-in motion-safe:fade-in duration-200" />
+    <section className="relative flex w-full max-h-[92dvh] min-h-[58dvh] flex-col overflow-hidden rounded-t-2xl bg-[#0a1119] opacity-100 shadow-[0_-8px_30px_rgba(0,0,0,0.38)] motion-safe:animate-in motion-safe:slide-in-from-bottom-4 duration-200">
+      <div className="shrink-0 bg-[#0a1119] px-5 pt-3">
+        <div className="mx-auto h-1 w-9 rounded-full bg-white/20" aria-hidden />
+        <div className="mt-3 flex items-start justify-between gap-4 pb-5">
+          <div className="flex min-w-0 items-center gap-3.5">
+            {member.avatarUrl ? (
+              <img src={member.avatarUrl} alt="" referrerPolicy="no-referrer" className="h-16 w-16 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#152231] text-[17px] font-bold text-[#eaf0f6]">
+                {member.firstName.slice(0, 1)}{member.lastName.slice(0, 1)}
+              </span>
+            )}
+            <div className="min-w-0">
+              <h2 id="member-sheet-title" className="font-['Outfit'] text-[26px] font-medium tracking-[-0.025em] text-[#eaf0f6] truncate">{member.firstName} {member.lastName}</h2>
+              {member.displayName !== `${member.firstName} ${member.lastName}` && <p className="mt-0.5 text-[13px] text-[#97a5b9] truncate">{member.displayName}</p>}
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#c3cfdd] transition-colors active:bg-[#152231] focus-visible:outline-2 focus-visible:outline-[#52d9e6]" aria-label="Chiudi">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        {shown.length > 0 ? (
+          <section className="pt-1">
+            <h3 className="mb-3 text-[17px] font-semibold tracking-[-0.02em] text-[#eaf0f6]">Informazioni condivise</h3>
+            <dl className="overflow-hidden rounded-xl bg-[#101c29] divide-y divide-white/10">
+              {shown.map((key) => (
+                <div key={key} className="px-4 py-3.5">
+                  <dt className="text-[12px] font-medium text-[#97a5b9]">{FIELD_LABELS[key]}</dt>
+                  <dd className="mt-1 text-[15px] leading-snug text-[#eaf0f6] break-words whitespace-pre-wrap">{formatValue(key, member[key])}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : (
+          <section className="pt-1">
+            <h3 className="mb-3 text-[17px] font-semibold tracking-[-0.02em] text-[#eaf0f6]">Informazioni condivise</h3>
+            <p className="rounded-xl bg-[#101c29] px-4 py-4 text-[14px] leading-snug text-[#97a5b9]">Non ha condiviso altre informazioni con il gruppo.</p>
+          </section>
+        )}
+
+        {hidden > 0 && (
+          <p className="mt-5 flex items-start gap-2 rounded-xl bg-[#152231] px-4 py-3.5 text-[13px] leading-snug text-[#97a5b9]">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[#c3cfdd]" />
+            {hidden} {hidden === 1 ? 'informazione resta privata' : 'informazioni restano private'}.
+          </p>
+        )}
+      </div>
+    </section>
+  </div>
+);
+
 /** Dettaglio di un partecipante: solo i campi opzionali che ha deciso di rendere visibili al gruppo. */
 const MemberSheet: React.FC<{ member: GroupMember; color: string; onClose: () => void }> = ({
   member,
@@ -49,23 +106,27 @@ const MemberSheet: React.FC<{ member: GroupMember; color: string; onClose: () =>
   const sharedList = member.shared ?? [];
   const shown = OPTIONAL_SHARE_FIELDS.filter((k) => sharedList.includes(k));
   const hidden = OPTIONAL_SHARE_FIELDS.length - shown.length;
+  const isMobile = useMediaQuery('(max-width: 1023.98px)');
+
+  if (isMobile) return <MobileMemberSheet member={member} shown={shown} hidden={hidden} onClose={onClose} />;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true">
-      <button type="button" aria-label="Chiudi" onClick={onClose} className="absolute inset-0 bg-black/70" />
-      <div className="relative w-full sm:max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-slate-900 border border-slate-800 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5 space-y-4">
-        <div className="flex items-start gap-3">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" data-testid="member-sheet">
+      <button type="button" aria-label="Chiudi" onClick={onClose} className="absolute inset-0 bg-black/70 max-lg:bg-black/55 motion-safe:animate-in motion-safe:fade-in duration-200" />
+      <div className="relative w-full sm:max-w-md max-h-[85vh] max-lg:max-h-[88vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-slate-900 border border-slate-800 max-lg:bg-[#0a1119] max-lg:border-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5 space-y-4 motion-safe:animate-in motion-safe:slide-in-from-bottom-4 duration-200">
+        <div className="sm:hidden w-9 h-1 rounded-full bg-white/20 mx-auto -mt-1 mb-4" aria-hidden />
+        <div className="flex items-start gap-3.5">
           {member.avatarUrl ? (
             <img
               src={member.avatarUrl}
               alt=""
               referrerPolicy="no-referrer"
-              className="w-12 h-12 rounded-full border-2 shrink-0"
+              className="w-12 h-12 max-lg:w-14 max-lg:h-14 rounded-full border-2 max-lg:border-0 shrink-0"
               style={{ borderColor: color }}
             />
           ) : (
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shrink-0"
+              className="w-12 h-12 max-lg:w-14 max-lg:h-14 rounded-full flex items-center justify-center font-bold text-white shrink-0"
               style={{ backgroundColor: color }}
             >
               {member.firstName.slice(0, 1)}
@@ -73,31 +134,31 @@ const MemberSheet: React.FC<{ member: GroupMember; color: string; onClose: () =>
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="font-bold text-white truncate">
+            <div className="font-bold max-lg:font-['Outfit'] max-lg:text-[24px] max-lg:tracking-[-0.02em] text-white truncate">
               {member.firstName} {member.lastName}
             </div>
-            <div className="text-xs text-slate-400">“{member.displayName}”</div>
+            {member.displayName !== `${member.firstName} ${member.lastName}` && <div className="mt-0.5 text-xs max-lg:text-[13px] text-slate-400 max-lg:text-[#97a5b9] truncate">{member.displayName}</div>}
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white" aria-label="Chiudi">
+          <button type="button" onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 max-lg:text-[#c3cfdd] transition-colors active:bg-[#152231] hover:text-white" aria-label="Chiudi">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {shown.length > 0 ? (
-          <dl className="grid gap-3 text-sm">
+          <dl className="grid gap-3 max-lg:mt-2 max-lg:gap-0 max-lg:border-t max-lg:border-white/10 max-lg:divide-y max-lg:divide-white/10 text-sm">
             {shown.map((key) => (
-              <div key={key} className="grid grid-cols-[9rem_1fr] gap-2">
-                <dt className="text-xs text-slate-400">{FIELD_LABELS[key]}</dt>
-                <dd className="text-slate-100 break-words whitespace-pre-wrap">{formatValue(key, member[key])}</dd>
+              <div key={key} className="grid grid-cols-[9rem_1fr] gap-2 max-lg:grid-cols-1 max-lg:gap-1 max-lg:py-3.5">
+                <dt className="text-xs max-lg:text-[12px] max-lg:font-medium text-slate-400 max-lg:text-[#97a5b9]">{FIELD_LABELS[key]}</dt>
+                <dd className="text-slate-100 max-lg:text-[#eaf0f6] break-words whitespace-pre-wrap">{formatValue(key, member[key])}</dd>
               </div>
             ))}
           </dl>
         ) : (
-          <p className="text-sm text-slate-400">Non ha condiviso altre informazioni.</p>
+          <p className="border-t border-white/10 pt-4 text-sm text-slate-400 max-lg:text-[#97a5b9]">Non ha condiviso altre informazioni.</p>
         )}
 
         {hidden > 0 && (
-          <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
+          <p className="flex items-center gap-1.5 pt-1 text-[11px] max-lg:text-[12px] text-slate-500 max-lg:text-[#97a5b9]">
             <Lock className="w-3 h-3" />
             {hidden} {hidden === 1 ? 'informazione resta privata' : 'informazioni restano private'}
           </p>
