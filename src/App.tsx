@@ -112,10 +112,11 @@ function pageTransition(from: Tab, to: Tab, desktop: boolean): PageAnimKind {
 
 const ALL_TABS: Tab[] = ['today', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
 
-/** Scheda iniziale dall'indirizzo (?tab=map), usata anche dalle scorciatoie dell'app installata. */
+/** Desktop may open a page from its URL. Mobile cold launches always start at Oggi. */
 function initialTab(): Tab {
   if (typeof window === 'undefined') return 'itinerary';
-  const fromUrl = pageFromUrl(window.location.search);
+  const isPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 1023.98px)').matches;
+  const fromUrl = isPhone ? null : pageFromUrl(window.location.search);
   if (fromUrl && (ALL_TABS as string[]).includes(fromUrl)) return fromUrl as Tab;
   // Ritorno dal login senza indirizzo: riapri la pagina richiesta prima dell'accesso
   const remembered = takeRememberedPage();
@@ -132,7 +133,6 @@ function initialTab(): Tab {
   const t = Date.now();
   const inTripWindow = t >= Date.parse('2027-02-28T00:00:00+01:00') && t <= Date.parse('2027-03-21T00:00:00+01:00');
   // Telefono: "Oggi" è la schermata di partenza anche prima del viaggio (conto alla rovescia)
-  const isPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 1023.98px)').matches;
   // Desktop: si apre la copertina; telefono: Oggi
   return params.has('sim') || inTripWindow || isPhone ? 'today' : 'cover';
 }
