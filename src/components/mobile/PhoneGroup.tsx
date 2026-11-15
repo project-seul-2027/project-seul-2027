@@ -42,15 +42,15 @@ interface Props {
 
 const DOT: Record<StatusKind, string> = {
   lost: 'bg-fam-sos',
-  home: 'bg-fam-group',
-  live: 'bg-fam-group',
+  home: 'bg-[#52d9e6]',
+  live: 'bg-[#52d9e6]',
   stale: 'bg-app-muted',
   out: 'bg-app-muted',
-  none: 'bg-app-surface border border-app-control'
+  none: 'bg-[#152231]'
 };
 const TEXT: Record<StatusKind, string> = {
   lost: 'text-fam-sos font-semibold',
-  home: 'text-fam-group',
+  home: 'text-[#52d9e6]',
   live: 'text-slate-200',
   stale: 'text-app-muted',
   out: 'text-slate-300',
@@ -72,24 +72,23 @@ const Person: React.FC<{ name: string; url?: string; color?: string; size?: stri
 
 const Heading: React.FC<{ children: React.ReactNode; aside?: React.ReactNode }> = ({ children, aside }) => (
   <div className="flex items-center justify-between gap-2 px-1">
-    <h3 className="text-[12px] font-bold uppercase tracking-widest text-app-muted">{children}</h3>
+    <h3 className="font-['Outfit'] text-[18px] font-medium tracking-[-0.02em] text-[#eaf0f6]">{children}</h3>
     {aside}
   </div>
 );
 
-const btnRaised = 'min-h-[52px] rounded-2xl bg-app-raised border border-app-control text-app-text text-[14.5px] font-semibold flex items-center justify-center gap-2 px-3 active:scale-[0.99] disabled:opacity-50';
-const btnAccent = 'min-h-[52px] rounded-2xl bg-app-accent text-app-on-accent text-[14.5px] font-bold flex items-center justify-center gap-2 px-3 active:scale-[0.99]';
+const btnRaised = 'min-h-[52px] rounded-xl bg-[#152231] text-[#eaf0f6] text-[14.5px] font-semibold flex items-center justify-center gap-2 px-3 active:scale-[0.97] transition-[background-color,transform] duration-150 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6]';
+const btnAccent = 'min-h-[52px] rounded-xl bg-[#52d9e6] text-[#04242a] text-[14.5px] font-bold flex items-center justify-center gap-2 px-3 active:scale-[0.97] transition-[background-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6]';
 
 /* ---------- Ritrovi ---------- */
 
 const FixedCard: React.FC<{ m: Meetup; myUid: string; onRoute?: (placeId: string) => void }> = ({ m, myUid, onRoute }) => (
-  <div className="rounded-2xl bg-app-surface border border-app-line p-4" data-testid="fixed-card">
+  <div className="rounded-xl bg-[#101c29] p-4" data-testid="fixed-card">
     <div className="flex items-start gap-3">
-      <span className="w-10 h-10 rounded-xl bg-fam-group/15 text-fam-group flex items-center justify-center shrink-0"><Flag className="w-5 h-5" /></span>
+      <span className="w-10 h-10 rounded-xl bg-[#152231] text-[#52d9e6] flex items-center justify-center shrink-0"><Flag className="w-5 h-5" /></span>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-fam-group">Se ci perdiamo, ci vediamo qui</p>
-        <p className="mt-0.5 text-[16px] font-bold text-app-text leading-snug">{m.label}</p>
-        {m.note && <p className="mt-1 text-[13px] text-app-muted leading-snug">{m.note}</p>}
+        <p className="text-[16px] font-semibold text-[#eaf0f6] leading-snug">{m.label}</p>
+        <p className="mt-1 text-[13px] text-[#97a5b9] leading-snug">{m.note || 'Se ci perdiamo, ci vediamo qui.'}</p>
       </div>
       {m.createdBy === myUid && (
         <button type="button" onClick={() => removeMeetup(m.id)} className="w-11 h-11 -mr-1 -mt-1 rounded-xl text-app-muted flex items-center justify-center" aria-label="Togli il punto fisso">
@@ -111,9 +110,9 @@ const MeetupCard: React.FC<{ m: Meetup; model: Model; byName: (s: string) => str
   const left = m.at - now;
   const past = left < 0;
   return (
-    <div className="rounded-2xl bg-app-surface border border-app-line p-4" data-testid="meetup-card">
+    <div className="rounded-xl bg-[#101c29] p-4" data-testid="meetup-card">
       <div className="flex items-start gap-3">
-        <span className="w-10 h-10 rounded-xl bg-fam-group/15 text-fam-group flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
+        <span className="w-10 h-10 rounded-xl bg-[#152231] text-[#52d9e6] flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
         <div className="min-w-0 flex-1">
           <p className="text-[16px] font-bold text-app-text leading-snug">{m.label}</p>
           <p className="mt-0.5 text-[13.5px] text-slate-300 flex items-center gap-1.5">
@@ -130,9 +129,9 @@ const MeetupCard: React.FC<{ m: Meetup; model: Model; byName: (s: string) => str
       <div className="mt-3 flex flex-wrap gap-1.5">
         {slots.map((s) => {
           const a = m.answers[s];
-          const tone = a === 'ok' ? 'bg-fam-group/15 text-fam-group border-fam-group/40' : a === 'late' ? 'bg-fam-weather/15 text-fam-weather border-fam-weather/40' : a === 'no' ? 'bg-fam-sos/10 text-fam-sos border-fam-sos/40 line-through' : 'bg-app-bg text-app-muted border-app-line';
+          const tone = a === 'ok' ? 'bg-[#18343a] text-[#52d9e6]' : a === 'late' ? 'bg-[#2d2918] text-[#fbbf24]' : a === 'no' ? 'bg-[#351b23] text-[#fca5a5] line-through' : 'bg-[#152231] text-[#97a5b9]';
           return (
-            <span key={s} className={`text-[12px] font-semibold rounded-full border px-2.5 py-1 ${tone}`}>
+            <span key={s} className={`text-[12px] font-semibold rounded-full px-2.5 py-1 ${tone}`}>
               {s === slot ? 'Tu' : byName(s)}{a ? ` · ${ANSWER_LABEL[a].toLowerCase()}` : ''}
             </span>
           );
@@ -147,7 +146,7 @@ const MeetupCard: React.FC<{ m: Meetup; model: Model; byName: (s: string) => str
               onClick={() => answer(m.id, a)}
               aria-pressed={mine === a}
               data-testid={`meetup-answer-${a}`}
-              className={`min-h-[46px] rounded-xl text-[13.5px] font-bold border ${mine === a ? 'bg-app-accent border-app-accent text-app-on-accent' : 'bg-app-raised border-app-control text-app-text'}`}
+              className={`min-h-[46px] rounded-xl text-[13.5px] font-bold active:scale-[0.97] transition-[background-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6] ${mine === a ? 'bg-[#52d9e6] text-[#04242a]' : 'bg-[#152231] text-[#eaf0f6]'}`}
             >
               {ANSWER_LABEL[a]}
             </button>
@@ -171,7 +170,7 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
   const avatarOf = (s: string) => group.find((x) => x.travelerId === s)?.avatarUrl;
   const colorOf = (s: string) => travelers.find((t) => t.id === s)?.color;
   if (!user || !slot) {
-    return <p className="rounded-2xl bg-app-surface border border-app-line p-4 text-[14px] text-app-muted">Il gruppo in tempo reale si attiva quando il tuo profilo è collegato a uno dei 4 posti del viaggio.</p>;
+    return <p className="rounded-xl bg-[#101c29] p-4 text-[14px] text-app-muted">Il gruppo in tempo reale si attiva quando il tuo profilo è collegato a uno dei 4 posti del viaggio.</p>;
   }
   const lostOthers = slots.filter((s) => s !== slot && m.statusOf(s).lost);
 
@@ -179,7 +178,7 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
     <div className="space-y-5">
       {/* Urgente: io o un altro abbiamo perso il gruppo */}
       {m.iAmLost && (
-        <section className="rounded-2xl border border-fam-sos/50 bg-fam-sos/10 p-4 space-y-3" data-testid="lost-panel">
+        <section className="rounded-xl bg-[#31151b] p-4 space-y-3" data-testid="lost-panel">
           <p className="text-[15px] font-bold text-app-text flex items-center gap-2"><LifeBuoy className="w-5 h-5 text-fam-sos" /> Il gruppo sa che li hai persi</p>
           <p className="text-[13.5px] text-slate-200 leading-snug">
             {g.sharingUntil ? 'Vedono la tua posizione precisa per 2 ore.' : 'La posizione è spenta: dì al gruppo dove sei, oppure raggiungi il punto fisso.'}
@@ -192,7 +191,7 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
       {lostOthers.map((s) => {
         const st = m.statusOf(s);
         return (
-          <section key={s} className="rounded-2xl border border-fam-sos/50 bg-fam-sos/10 p-4 space-y-3" data-testid="group-row-lost">
+          <section key={s} className="rounded-xl bg-[#31151b] p-4 space-y-3" data-testid="group-row-lost">
             <div className="flex items-start gap-3">
               <Person name={nameOf(s).slice(0, 2)} url={avatarOf(s)} color={colorOf(s)} />
               <div className="min-w-0 flex-1">
@@ -215,18 +214,49 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
       })}
       {m.helpError && <p className="text-[13px] text-fam-weather flex gap-1.5" role="alert"><CircleAlert className="w-4 h-4 shrink-0 mt-0.5" />{m.helpError}</p>}
 
+      {!m.iAmLost && (
+        <section aria-label="Emergenza">
+          {m.lostConfirm ? (
+            <div className="rounded-xl bg-[#101c29] p-4 space-y-4" data-testid="lost-confirm">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#351b23] text-[#fca5a5]"><LifeBuoy className="w-[18px] h-[18px]" /></span>
+                <div>
+                  <p className="text-[16px] font-semibold text-[#eaf0f6]">Avvisare il gruppo?</p>
+                  <p className="mt-1 text-[13px] text-[#c3cfdd] leading-snug">
+                  {allowed ? 'Avviso il gruppo e condivido la tua posizione per 2 ore.' : 'Avviso il gruppo: la posizione resta spenta.'}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => m.setLostConfirm(false)} className={`${btnRaised} min-h-[48px]`}>Annulla</button>
+                <button type="button" onClick={() => { m.setLostConfirm(false); reportLost(); }} className="min-h-[48px] rounded-xl bg-[#dc2626] text-white text-[14.5px] font-bold active:scale-[0.97] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fca5a5]" data-testid="lost-send">Avvisa il gruppo</button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => m.setLostConfirm(true)} className="w-full min-h-[64px] rounded-xl bg-[#101c29] px-3.5 text-left text-[#eaf0f6] flex items-center gap-3 active:scale-[0.985] active:bg-[#152231] transition-[background-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-[#fca5a5]" data-testid="lost-open">
+              <span className="w-10 h-10 rounded-xl bg-[#351b23] text-[#fca5a5] flex items-center justify-center shrink-0"><LifeBuoy className="w-5 h-5" /></span>
+              <span className="min-w-0">
+                <span className="block text-[16px] font-semibold leading-tight">Ho perso il gruppo</span>
+                <span className="mt-0.5 block text-[13px] text-[#c3cfdd] leading-snug">Avvisa gli altri e chiedi aiuto.</span>
+              </span>
+              <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-[#fca5a5]" aria-hidden />
+            </button>
+          )}
+        </section>
+      )}
+
       {/* Chi è dove */}
       <section className="space-y-2">
         <Heading
           aside={g.sharingUntil ? (
-            <span className="text-[12px] font-semibold rounded-full px-2.5 py-1 bg-fam-group/15 text-fam-group flex items-center gap-1.5" data-testid="sharing-badge">
-              <Radio className="w-3.5 h-3.5 motion-safe:animate-pulse" /> Condivisa fino alle {seoulClock(g.sharingUntil)}
+            <span className="text-[12px] font-semibold rounded-full px-2.5 py-1 bg-[#18343a] text-[#52d9e6] flex items-center gap-1.5" data-testid="sharing-badge">
+              <Radio className="w-3.5 h-3.5" /> Condivisa fino alle {seoulClock(g.sharingUntil)}
             </span>
           ) : null}
         >
           Chi è dove
         </Heading>
-        <ul className="rounded-2xl bg-app-surface border border-app-line divide-y divide-app-line overflow-hidden">
+        <ul className="rounded-xl bg-[#101c29] divide-y divide-white/10 overflow-hidden">
           {slots.map((s) => {
             const st = m.statusOf(s);
             return (
@@ -237,7 +267,7 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
                   <p className={`text-[13px] leading-snug ${TEXT[st.kind]}`}>{st.text}</p>
                 </div>
                 {!st.lost && st.share && s !== slot && onShowMap && (
-                  <button type="button" onClick={onShowMap} className="min-h-[44px] px-3 rounded-xl bg-app-raised border border-app-control text-app-text text-[13px] font-semibold flex items-center gap-1.5 shrink-0">
+                <button type="button" onClick={onShowMap} className="min-h-[44px] px-3 rounded-xl bg-[#152231] text-[#eaf0f6] text-[13px] font-semibold flex items-center gap-1.5 shrink-0 active:scale-[0.97] transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6]">
                     <MapIcon className="w-4 h-4" /> Mappa
                   </button>
                 )}
@@ -251,14 +281,35 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
 
       {/* Azioni */}
       <section className="space-y-2.5">
+        <Heading>La tua posizione</Heading>
+        <div className="rounded-xl bg-[#101c29] p-4 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[14.5px] font-semibold text-[#eaf0f6]">Posizione condivisibile</p>
+            <p className="mt-0.5 whitespace-nowrap text-[13px] text-[#97a5b9]" data-testid="share-allowed-hint">
+              {allowed ? 'La attivi quando vuoi.' : 'Spenta: nessuno ti vede.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={allowed}
+            aria-label="Posizione condivisibile"
+            onClick={() => setSharingAllowed(!allowed)}
+            className={`relative w-14 h-8 rounded-full shrink-0 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6] ${allowed ? 'bg-[#52d9e6]' : 'bg-[#152231]'}`}
+            data-testid="share-allowed"
+            data-keep-color
+          >
+            <span className={`absolute top-1 left-1 w-6 h-6 rounded-full transition-transform ${allowed ? 'translate-x-6 bg-[#04242a]' : 'bg-[#c3cfdd]'}`} />
+          </button>
+        </div>
         {g.nearHome && !m.iAmHome && (
-          <p className="rounded-2xl bg-fam-group/10 border border-fam-group/40 p-3 text-[13.5px] text-app-text flex items-center gap-2" data-testid="near-home">
-            <Home className="w-4 h-4 text-fam-group shrink-0" /> Sei vicino a {m.homeAcc?.name ?? 'casa'}: sei arrivato?
+          <p className="rounded-xl bg-[#152231] p-3 text-[13.5px] text-[#eaf0f6] flex items-center gap-2" data-testid="near-home">
+            <Home className="w-4 h-4 text-[#52d9e6] shrink-0" /> Sei vicino a {m.homeAcc?.name ?? 'casa'}: sei arrivato?
           </p>
         )}
         <div className="grid grid-cols-2 gap-2.5">
           {m.iAmHome ? (
-            <button type="button" onClick={() => markOut()} className={btnRaised} data-testid="mark-out"><Check className="w-[18px] h-[18px] text-fam-group" /> A casa · esco</button>
+            <button type="button" onClick={() => markOut()} className={btnRaised} data-testid="mark-out"><Check className="w-[18px] h-[18px] text-[#52d9e6]" /> A casa · esco</button>
           ) : (
             <button type="button" onClick={() => markHome()} className={g.nearHome ? btnAccent : btnRaised} data-testid="mark-home"><Home className="w-[18px] h-[18px]" /> Sono a casa</button>
           )}
@@ -270,15 +321,15 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
         </div>
 
         {m.suggestShare && m.nextMeetup && (
-          <div className="rounded-2xl bg-app-surface border border-app-line p-3 flex items-center gap-3" data-testid="share-suggest">
-            <MapPin className="w-5 h-5 text-fam-group shrink-0" />
+              <div className="rounded-xl bg-[#101c29] p-3 flex items-center gap-3" data-testid="share-suggest">
+            <MapPin className="w-5 h-5 text-[#52d9e6] shrink-0" />
             <p className="flex-1 text-[13.5px] text-slate-200 leading-snug">Ritrovo alle {seoulClock(m.nextMeetup.at)}: condividi la posizione solo fino alle {seoulClock(m.meetupUntil)}?</p>
-            <button type="button" onClick={() => m.choose(m.meetupUntil)} className="min-h-[44px] px-4 rounded-xl bg-app-accent text-app-on-accent text-[14px] font-bold" data-testid="share-for-meetup">Condividi</button>
+            <button type="button" onClick={() => m.choose(m.meetupUntil)} className="min-h-[44px] px-4 rounded-xl bg-[#52d9e6] text-[#04242a] text-[14px] font-bold active:scale-[0.97] transition-transform" data-testid="share-for-meetup">Condividi</button>
           </div>
         )}
 
         {m.chooser && allowed && !g.sharingUntil && (
-          <div className="rounded-2xl bg-app-surface border border-app-line p-4" data-testid="share-chooser">
+          <div className="rounded-xl bg-[#101c29] p-4" data-testid="share-chooser">
             <p className="text-[14px] font-semibold text-app-text">Per quanto tempo?</p>
             <p className="mt-1 text-[13px] text-app-muted leading-snug">La vede solo il gruppo e si cancella quando la fermi. Si aggiorna con l’app aperta; da fermo controllo ogni 3 minuti per non consumare batteria.</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -295,7 +346,7 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
           <p className="px-1 text-[13px] text-app-muted leading-snug" data-testid="share-mode" data-mode={g.paused ? 'paused' : g.batterySaver ? 'saver' : g.trackMode}>{shareModeText(g)}</p>
         )}
         {g.notice && (
-          <div className="rounded-2xl bg-fam-weather/10 border border-fam-weather/40 p-3 text-[13.5px] text-app-text flex items-start gap-2" role="status" data-testid="share-notice">
+          <div className="rounded-xl bg-[#2d2918] p-3 text-[13.5px] text-[#eaf0f6] flex items-start gap-2" role="status" data-testid="share-notice">
             <CircleAlert className="w-4 h-4 text-fam-weather shrink-0 mt-0.5" />
             <span className="flex-1">{g.notice}</span>
             <button type="button" onClick={dismissNotice} className="w-11 h-11 -m-2 flex items-center justify-center text-app-muted" aria-label="Chiudi l’avviso"><X className="w-4 h-4" /></button>
@@ -303,22 +354,6 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
         )}
         {g.gpsError && <p className="px-1 text-[13px] text-fam-weather" role="alert">{g.gpsError}</p>}
 
-        {/* Ho perso il gruppo: sempre a portata di pollice, ma separato dal resto */}
-        {!m.iAmLost && (m.lostConfirm ? (
-          <div className="rounded-2xl border border-fam-sos/50 bg-fam-sos/10 p-4 space-y-3" data-testid="lost-confirm">
-            <p className="text-[14px] text-app-text leading-snug">
-              {allowed ? 'Avviso il gruppo e condivido la tua posizione precisa per 2 ore.' : 'Avviso il gruppo che li hai persi. La posizione resta spenta: nessuno la vedrà.'}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => m.setLostConfirm(false)} className={`${btnRaised} min-h-[48px]`}>Annulla</button>
-              <button type="button" onClick={() => { m.setLostConfirm(false); reportLost(); }} className="min-h-[48px] rounded-2xl bg-app-danger text-white text-[14.5px] font-bold" data-testid="lost-send">Avvisa il gruppo</button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" onClick={() => m.setLostConfirm(true)} className="w-full min-h-[52px] rounded-2xl border border-fam-sos/60 bg-transparent text-fam-sos text-[14.5px] font-bold flex items-center justify-center gap-2" data-testid="lost-open">
-            <LifeBuoy className="w-[18px] h-[18px]" /> Ho perso il gruppo
-          </button>
-        ))}
       </section>
 
       {/* Ritrovo */}
@@ -329,7 +364,7 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
           <MeetupCard key={mt.id} m={mt} model={m} byName={nameOf} onRoute={onRoute} />
         ))}
         {!m.fixed && m.meetups.length === 0 && (
-          <p className="rounded-2xl bg-app-surface border border-dashed border-app-control p-4 text-[13.5px] text-app-muted leading-snug">Nessun ritrovo in programma. Fissa dove e quando vedervi: il gruppo viene avvisato subito.</p>
+          <p className="rounded-xl bg-[#101c29] p-4 text-[13.5px] text-[#97a5b9] leading-snug">Nessun ritrovo in programma. Fissa dove e quando vedervi: il gruppo viene avvisato subito.</p>
         )}
         <div className="grid grid-cols-2 gap-2.5">
           <button type="button" onClick={() => m.setSheet('meetup')} className={btnRaised} data-testid="meetup-new"><Plus className="w-[18px] h-[18px]" /> Fissa un ritrovo</button>
@@ -337,27 +372,6 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
         </div>
       </section>
 
-      {/* Privacy */}
-      <section className="rounded-2xl bg-app-surface border border-app-line p-4 flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[14.5px] font-semibold text-app-text">Posizione condivisibile</p>
-          <p className="mt-0.5 text-[13px] text-app-muted leading-snug" data-testid="share-allowed-hint">
-            {allowed ? 'Si attiva solo quando lo decidi tu.' : 'Spenta: nessuno vede dove sei, nemmeno se perdi il gruppo.'}
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={allowed}
-          aria-label="Posizione condivisibile"
-          onClick={() => setSharingAllowed(!allowed)}
-          className={`relative w-14 h-8 rounded-full shrink-0 transition-colors ${allowed ? 'bg-app-accent' : 'bg-app-raised border border-app-control'}`}
-          data-testid="share-allowed"
-          data-keep-color
-        >
-          <span className={`absolute top-1 left-1 w-6 h-6 rounded-full transition-transform ${allowed ? 'translate-x-6 bg-app-on-accent' : 'bg-slate-300'}`} />
-        </button>
-      </section>
       {m.sheet && <MeetupSheet fixed={m.sheet === 'fixed'} onClose={() => m.setSheet(null)} />}
     </div>
   );
@@ -367,17 +381,25 @@ const NowPanel: React.FC<{ model: Model; group: GroupMember[]; travelers: Travel
 
 const PeoplePanel: React.FC<Pick<Props, 'meId' | 'group' | 'travelers' | 'onOpenMember'>> = ({ meId, group, travelers, onOpenMember }) => (
   <div className="space-y-3">
-    <p className="px-1 text-[13px] text-app-muted leading-snug">{group.length} su {travelers.length} registrati con Google. Tocca un partecipante per vedere cosa ha scelto di condividere.</p>
-    <ul className="space-y-2.5">
+    <div className="flex items-end justify-between gap-4 px-1">
+      <div>
+        <h3 className="font-['Outfit'] text-[18px] font-medium tracking-[-0.02em] text-[#eaf0f6]">Partecipanti</h3>
+        <p className="mt-1 text-[13px] text-[#97a5b9]">Tocca un nome per i dettagli.</p>
+      </div>
+      <p className="shrink-0 text-[13px] font-semibold text-[#52d9e6] tabular-nums">{group.length}/{travelers.length}</p>
+    </div>
+    <ul className="overflow-hidden rounded-xl bg-[#101c29] divide-y divide-white/10">
       {travelers.map((slot) => {
         const member = group.find((x) => x.travelerId === slot.id);
         if (!member) {
           return (
-            <li key={slot.id} className="rounded-2xl border border-dashed border-app-control p-4 flex items-center gap-3 text-app-muted">
-              <UserPlus className="w-5 h-5 shrink-0" />
-              <div>
-                <p className="text-[14.5px] font-semibold">Posto {slot.id.slice(1)} libero</p>
-                <p className="text-[13px] leading-snug">In attesa che un amico acceda con Google e completi il profilo.</p>
+            <li key={slot.id} className="min-h-[76px] px-3.5 flex items-center gap-3 text-[#97a5b9]">
+              <span className="w-12 h-12 rounded-full bg-[#152231] flex items-center justify-center shrink-0" aria-hidden>
+                <UserPlus className="w-5 h-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold text-[#c3cfdd]">Posto {slot.id.slice(1)} libero</p>
+                <p className="mt-0.5 text-[13px] leading-snug">In attesa dell’accesso al viaggio.</p>
               </div>
             </li>
           );
@@ -386,23 +408,23 @@ const PeoplePanel: React.FC<Pick<Props, 'meId' | 'group' | 'travelers' | 'onOpen
         const vote = member.accommodationPreference ? ACCOMMODATIONS.find((a) => a.id === member.accommodationPreference) : null;
         const wa = member.phone.replace(/[^0-9]/g, '');
         return (
-          <li key={slot.id} className={`rounded-2xl bg-app-surface border flex items-center ${isMe ? 'border-app-accent/50' : 'border-app-line'}`}>
-            <button type="button" onClick={() => onOpenMember(member.id)} aria-label={`Dettagli di ${member.firstName} ${member.lastName}`} className="flex-1 min-w-0 flex items-center gap-3 p-3.5 text-left">
+          <li key={slot.id} className={`min-h-[76px] flex items-center ${isMe ? 'bg-[#122330]' : ''}`}>
+            <button type="button" onClick={() => onOpenMember(member.id)} aria-label={`Dettagli di ${member.firstName} ${member.lastName}`} className="min-h-[76px] flex-1 min-w-0 flex items-center gap-3 px-3.5 text-left transition-[background-color,transform] duration-150 active:scale-[0.985] active:bg-[#152231] focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#52d9e6]">
               <Person name={`${member.firstName.slice(0, 1)}${member.lastName.slice(0, 1)}`} url={member.avatarUrl} color={slot.color} size="w-12 h-12" />
               <span className="min-w-0 flex-1">
                 <span className="block text-[15.5px] font-bold text-app-text truncate">
                   {member.firstName} {member.lastName}
-                  {isMe && <span className="ml-1.5 text-[11px] font-bold uppercase tracking-wider text-app-accent">Tu</span>}
+                  {isMe && <span className="ml-1.5 text-[11px] font-semibold text-[#52d9e6]">Tu</span>}
                 </span>
-                <span className="block text-[13px] text-slate-300 truncate">{member.dietaryPreference}</span>
-                <span className="block text-[13px] text-app-muted truncate">{vote ? `Alloggio ${vote.code} · ${vote.district}` : 'Nessun voto sull’alloggio'}</span>
+                <span className="mt-0.5 block text-[13px] text-[#c3cfdd] truncate">{member.dietaryPreference}</span>
+                <span className="block text-[12.5px] text-[#97a5b9] truncate">{vote ? `Alloggio ${vote.code} · ${vote.district}` : 'Nessun voto sull’alloggio'}</span>
               </span>
-              {isMe && <ChevronRight className="w-5 h-5 text-app-muted shrink-0" aria-hidden />}
+              <ChevronRight className="w-[18px] h-[18px] text-[#97a5b9] shrink-0" aria-hidden />
             </button>
             {!isMe && (
-              <div className="flex items-center gap-1.5 pr-3 shrink-0">
-                <a href={`tel:${member.phone}`} aria-label={`Chiama ${member.firstName}`} className="w-11 h-11 rounded-xl bg-app-raised border border-app-control text-app-text flex items-center justify-center"><Phone className="w-[18px] h-[18px]" /></a>
-                {wa && <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`Scrivi a ${member.firstName} su WhatsApp`} className="w-11 h-11 rounded-xl bg-app-raised border border-app-control text-app-text flex items-center justify-center"><MessageCircle className="w-[18px] h-[18px]" /></a>}
+              <div className="flex items-center gap-0.5 pr-2 shrink-0">
+                <a href={`tel:${member.phone}`} aria-label={`Chiama ${member.firstName}`} className="w-11 h-11 rounded-xl text-[#c3cfdd] flex items-center justify-center transition-[background-color,transform] duration-150 active:scale-90 active:bg-[#152231] focus-visible:outline-2 focus-visible:outline-[#52d9e6]"><Phone className="w-[18px] h-[18px]" /></a>
+                {wa && <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`Scrivi a ${member.firstName} su WhatsApp`} className="w-11 h-11 rounded-xl text-[#52d9e6] flex items-center justify-center transition-[background-color,transform] duration-150 active:scale-90 active:bg-[#18343a] focus-visible:outline-2 focus-visible:outline-[#52d9e6]"><MessageCircle className="w-[18px] h-[18px]" /></a>}
               </div>
             )}
           </li>
@@ -418,10 +440,10 @@ const PrepPanel: React.FC<Pick<Props, 'meId' | 'group' | 'travelers' | 'checklis
   const total = CHECKLIST_ITEMS.length;
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl bg-app-surface border border-app-line p-4 space-y-3">
+      <section className="rounded-xl bg-[#101c29] p-4 space-y-3">
         <div>
-          <h3 className="text-[16px] font-bold text-app-text">A che punto siamo</h3>
-          <p className="mt-0.5 text-[13px] text-app-muted leading-snug">Spunta le tue caselle quando fai un passo: gli altri vedono subito chi è già a posto.</p>
+          <h3 className="font-['Outfit'] text-[18px] font-medium tracking-[-0.02em] text-[#eaf0f6]">A che punto siamo</h3>
+          <p className="mt-0.5 text-[13px] text-app-muted leading-snug">Il gruppo vede subito a che punto siete.</p>
         </div>
         <ul className="space-y-2.5">
           {travelers.map((slot) => {
@@ -431,17 +453,17 @@ const PrepPanel: React.FC<Pick<Props, 'meId' | 'group' | 'travelers' | 'checklis
               <li key={slot.id} className="flex items-center gap-3">
                 <Person name={member ? `${member.firstName.slice(0, 1)}${member.lastName.slice(0, 1)}` : '?'} url={member?.avatarUrl} color={member ? slot.color : '#334155'} size="w-8 h-8" />
                 <span className="w-16 text-[13.5px] text-app-text truncate">{member ? (member.id === meId ? 'Tu' : member.firstName) : 'Libero'}</span>
-                <div className="flex-1 h-2 rounded-full bg-app-raised overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label={`Preparativi di ${member ? member.firstName : `posto ${slot.id.slice(1)}`}`}>
-                  <div className="h-full rounded-full bg-fam-group transition-all" style={{ width: `${(done / total) * 100}%` }} />
+                <div className="flex-1 h-2 rounded-full bg-[#152231] overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label={`Preparativi di ${member ? member.firstName : `posto ${slot.id.slice(1)}`}`}>
+                  <div className="h-full rounded-full bg-[#52d9e6] transition-[width] duration-300 ease-out" style={{ width: `${(done / total) * 100}%` }} />
                 </div>
-                <span className={`w-10 text-right text-[13px] font-mono ${done === total && member ? 'text-fam-group font-bold' : 'text-app-muted'}`}>{done}/{total}</span>
+                <span className={`w-10 text-right text-[13px] tabular-nums ${done === total && member ? 'text-[#52d9e6] font-bold' : 'text-app-muted'}`}>{done}/{total}</span>
               </li>
             );
           })}
         </ul>
       </section>
 
-      <ul className="rounded-2xl bg-app-surface border border-app-line divide-y divide-app-line overflow-hidden">
+      <ul className="rounded-xl bg-[#101c29] divide-y divide-white/10 overflow-hidden">
         {CHECKLIST_ITEMS.map((item) => (
           <li key={item.key} className="p-4">
             <p className="text-[15px] font-semibold text-app-text leading-snug">{item.label}</p>
@@ -460,7 +482,7 @@ const PrepPanel: React.FC<Pick<Props, 'meId' | 'group' | 'travelers' | 'checklis
                       onClick={() => onToggleCheck(item.key)}
                       aria-pressed={done}
                       aria-label={`${item.label}: ${done ? 'fatto, tocca per togliere' : 'da fare, tocca per segnare come fatto'}`}
-                      className={`min-h-[48px] rounded-xl border-2 text-[13px] font-bold flex items-center justify-center gap-1 active:scale-95 ${done ? 'bg-fam-group border-fam-group text-app-on-accent' : 'border-app-accent text-app-accent'}`}
+                      className={`min-h-[48px] !rounded-xl text-[13px] font-bold flex items-center justify-center gap-1 active:scale-[0.97] transition-[background-color,transform] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6] ${done ? 'bg-[#52d9e6] text-[#04242a]' : 'bg-[#152231] text-[#52d9e6]'}`}
                       data-keep-color
                     >
                       {done && <Check className="w-4 h-4" strokeWidth={3} />} {who}
@@ -472,7 +494,7 @@ const PrepPanel: React.FC<Pick<Props, 'meId' | 'group' | 'travelers' | 'checklis
                     key={slot.id}
                     role="img"
                     aria-label={`${member ? member.firstName : `Posto ${slot.id.slice(1)}`}: ${item.label} ${done ? 'fatto' : member ? 'da fare' : 'non disponibile'}`}
-                    className={`min-h-[48px] rounded-xl border text-[12.5px] font-semibold flex items-center justify-center gap-1 truncate px-1 ${done ? 'bg-fam-group/15 border-fam-group/40 text-fam-group' : member ? 'border-app-line text-app-muted' : 'border-dashed border-app-line text-app-muted/70'}`}
+                    className={`min-h-[48px] !rounded-xl text-[12.5px] font-semibold flex items-center justify-center gap-1 truncate px-1 ${done ? 'bg-[#18343a] text-[#52d9e6]' : member ? 'bg-[#152231] text-[#9aa9b8]' : 'bg-transparent text-[#667789]'}`}
                   >
                     {done && <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={3} />}<span className="truncate">{who}</span>
                   </span>
@@ -498,12 +520,12 @@ export const PhoneGroupView: React.FC<Props> = (p) => {
   const total = CHECKLIST_ITEMS.length;
   const tabs: { id: PhoneTab; label: string; badge?: React.ReactNode }[] = [
     { id: 'now', label: 'Adesso', badge: anyLost ? <span className="w-2 h-2 rounded-full bg-fam-sos" aria-label="Qualcuno ha perso il gruppo" /> : undefined },
-    { id: 'people', label: 'Persone', badge: <span className="text-[11px] font-mono opacity-80">{p.group.length}</span> },
-    { id: 'prep', label: 'Preparativi', badge: p.meId && myDone < total ? <span className="text-[11px] font-mono opacity-80">{myDone}/{total}</span> : undefined }
+    { id: 'people', label: 'Persone', badge: <span className="text-[11px] tabular-nums opacity-80">{p.group.length}</span> },
+    { id: 'prep', label: 'Preparativi', badge: p.meId && myDone < total ? <span className="text-[11px] tabular-nums opacity-80">{myDone}/{total}</span> : undefined }
   ];
   return (
-    <div className="space-y-4 animate-in fade-in duration-200" data-testid="phone-group">
-      <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-app-surface border border-app-line" role="tablist" aria-label="Sezioni del gruppo">
+    <div className="space-y-5" data-testid="phone-group">
+      <div className="grid grid-cols-3 gap-5 border-b border-white/10" role="tablist" aria-label="Sezioni del gruppo">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -513,23 +535,18 @@ export const PhoneGroupView: React.FC<Props> = (p) => {
             aria-selected={tab === t.id}
             aria-controls={`pg-panel-${t.id}`}
             onClick={() => setTab(t.id)}
-            className={`min-h-[44px] rounded-xl text-[13.5px] font-bold flex items-center justify-center gap-1.5 ${tab === t.id ? 'bg-app-accent text-app-on-accent' : 'text-app-muted'}`}
+            className={`min-h-[46px] rounded-none border-b-2 -mb-px text-[14px] font-semibold flex items-center justify-center gap-1.5 transition-[color,transform,border-color] duration-200 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6] ${tab === t.id ? 'border-[#52d9e6] text-[#52d9e6]' : 'border-transparent text-[#9aa9b8]'}`}
             data-testid={`pg-tab-${t.id}`}
-            data-keep-color
           >
             {t.label}
             {t.badge}
           </button>
         ))}
       </div>
-      <div id="pg-panel-now" role="tabpanel" aria-labelledby="pg-tab-now" className={tab === 'now' ? '' : 'hidden'}>
-        <NowPanel model={model} group={p.group} travelers={p.travelers} onRoute={p.onRoute} onShowMap={p.onShowMap} />
-      </div>
-      <div id="pg-panel-people" role="tabpanel" aria-labelledby="pg-tab-people" className={tab === 'people' ? '' : 'hidden'}>
-        <PeoplePanel meId={p.meId} group={p.group} travelers={p.travelers} onOpenMember={p.onOpenMember} />
-      </div>
-      <div id="pg-panel-prep" role="tabpanel" aria-labelledby="pg-tab-prep" className={tab === 'prep' ? '' : 'hidden'}>
-        <PrepPanel meId={p.meId} group={p.group} travelers={p.travelers} checklists={p.checklists} checklistError={p.checklistError} onToggleCheck={p.onToggleCheck} />
+      <div key={tab} id={`pg-panel-${tab}`} role="tabpanel" aria-labelledby={`pg-tab-${tab}`} className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300">
+        {tab === 'now' && <NowPanel model={model} group={p.group} travelers={p.travelers} onRoute={p.onRoute} onShowMap={p.onShowMap} />}
+        {tab === 'people' && <PeoplePanel meId={p.meId} group={p.group} travelers={p.travelers} onOpenMember={p.onOpenMember} />}
+        {tab === 'prep' && <PrepPanel meId={p.meId} group={p.group} travelers={p.travelers} checklists={p.checklists} checklistError={p.checklistError} onToggleCheck={p.onToggleCheck} />}
       </div>
     </div>
   );
