@@ -74,7 +74,7 @@ export const TripCardView: React.FC = () => {
         </button>
       </header>
 
-      <div role="radiogroup" aria-label="Giorno" className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0">
+      <div role="radiogroup" aria-label="Giorno" className="flex min-w-0 gap-2 overflow-x-auto pb-1">
         {ITINERARY_DAYS.map((d) => {
           const selected = d.id === day.id;
           return (

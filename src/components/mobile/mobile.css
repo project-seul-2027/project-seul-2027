@@ -88,8 +88,8 @@
 .ms-day .now { color: var(--ms-accent); font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
 
 /* Barra in basso: piatta, filetto sopra */
-.ms-tabs { height: 68px; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; border-top: 1px solid var(--ms-line); background: var(--ms-bg); padding: 0 6px 4px; }
-.ms-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 4px; font-size: 11.5px; font-weight: 500; color: var(--ms-mute); min-height: 56px; justify-content: center; background: none; border: 0; }
+.ms-tabs { height: 68px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; border-top: 1px solid var(--ms-line); background: var(--ms-bg); padding: 0 6px 4px; }
+.ms-tab { min-width: 0; max-width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 4px; font-size: 11.5px; font-weight: 500; color: var(--ms-mute); min-height: 56px; justify-content: center; background: none; border: 0; }
 .ms-tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .ms-tab[aria-current] { color: var(--ms-accent); }
 .ms-fab { width: 48px; height: 48px; margin: 0 auto; border-radius: 16px; background: var(--ms-accent); color: var(--ms-ink); border: 0; display: grid; place-items: center; padding: 0; box-shadow: none; }
