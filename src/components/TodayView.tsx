@@ -17,6 +17,8 @@ import { WorldClockBar } from './WorldClockBar';
 import { DesktopOggiHero } from './desktop/DesktopOggiHero';
 import { PhoneCountdown } from './mobile/PhoneCountdown';
 import { MobileOggi } from './mobile/MobileOggi';
+import { DailyRecap } from './DailyRecap';
+import { CapsuleNudge } from './CapsuleNudge';
 import {
   TIMED_DAYS, locateNow, formatCountdown, formatInZone, msFromDayAndClock, zoneLabel, zoneOfDay
 } from '../utils/tripClock';
@@ -40,7 +42,7 @@ const timeLabel = (t: string): string => {
 };
 
 
-export type TodayTarget = 'wallet' | 'places' | 'sos' | 'map' | 'show' | 'weather' | 'expenses' | 'flights' | 'itinerary' | 'pdf';
+export type TodayTarget = 'wallet' | 'places' | 'sos' | 'map' | 'show' | 'weather' | 'expenses' | 'flights' | 'itinerary' | 'pdf' | 'gallery' | 'capsula';
 
 interface TodayViewProps {
   /** Apre la mappa già in modalità percorso: dalla posizione GPS verso la destinazione */
@@ -184,6 +186,23 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
   const [clocksOpen, setClocksOpen] = useState(false);
   const done = items.length > 0 && !current && !next;
   const free = items.length === 0;
+  const seoulDateIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));
+  const completedStops = useMemo(() => {
+    if (where.phase !== 'during') return [];
+    const completed = current ? items.slice(0, where.currentIndex) : next ? items.slice(0, where.nextIndex) : items;
+    return completed.map((entry) => briefOf(entry.item));
+  }, [where.phase, current, next, items, where.currentIndex, where.nextIndex]);
+  const recapCard = where.phase === 'during' && (
+    <DailyRecap
+      dayNumber={day.id}
+      dateIso={seoulDateIso}
+      dateLabel={seoulDate}
+      completedStops={completedStops}
+      onOpenExpenses={() => onGoTo('expenses')}
+      onOpenGallery={() => onGoTo('gallery')}
+      onOpenItinerary={() => onGoTo('itinerary')}
+    />
+  );
 
   // Telefono: la scheda principale cambia titolo, contenuto e azione in base allo stato della giornata
   const phoneState: { label: string; tone: string; title: string; hint?: string; time?: string } = before
@@ -615,9 +634,11 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
         <div className="ms-flat">
           <WalletShortcut onOpen={() => onGoTo('wallet')} nowMs={now} />
           <GroupLiveCard onRoute={onRoute} onShowMap={() => onGoTo('map')} />
+          <CapsuleNudge onOpen={() => onGoTo('capsula')} />
           {weatherCard}
           {timelineCard}
           {stopsCard}
+          {recapCard}
           {showKoreanCard}
           {remindersCard}
           <OfflineCard />
@@ -864,6 +885,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
             {dNow}
             <WalletShortcut onOpen={() => onGoTo('wallet')} nowMs={now} />
             <GroupLiveCard onRoute={onRoute} onShowMap={() => onGoTo('map')} />
+            <CapsuleNudge onOpen={() => onGoTo('capsula')} />
             {dTimeline}
             {dKorean}
           </div>

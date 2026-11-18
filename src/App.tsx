@@ -50,6 +50,8 @@ import { useSyncPushRegistration } from './notifications';
 import { PushToggle } from './components/PushToggle';
 import { MobileBottomNav, MoreSheet, QuickActionsSheet, useBackToClose, type QuickAction } from './components/mobile/MobileShell';
 import { SECTIONS, sectionById } from './components/mobile/sections';
+import { TripCardView } from './components/TripCardView';
+import { CapsuleView } from './components/CapsuleView';
 import { requestIntent } from './utils/quickIntent';
 import { 
   Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
@@ -82,7 +84,7 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'cover' | 'today' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
+type Tab = 'cover' | 'today' | 'scheda' | 'capsula' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
 
 /** Tipo di animazione d'ingresso della pagina (vedi index.css, classi page-anim-*). */
 type PageAnimKind = 'none' | 'rise' | 'slide-left' | 'slide-right' | 'fade';
@@ -110,19 +112,23 @@ function pageTransition(from: Tab, to: Tab, desktop: boolean): PageAnimKind {
   return 'fade';
 }
 
-const ALL_TABS: Tab[] = ['today', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
+const ALL_TABS: Tab[] = ['today', 'scheda', 'capsula', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
 
 /** Desktop may open a page from its URL. Mobile cold launches always start at Oggi. */
 function initialTab(): Tab {
   if (typeof window === 'undefined') return 'itinerary';
   const isPhone = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 1023.98px)').matches;
-  const fromUrl = isPhone ? null : pageFromUrl(window.location.search);
+  const urlPage = pageFromUrl(window.location.search);
+  // Sul telefono si parte da Oggi, tranne toccando la notifica della capsula del tempo: apre subito la capsula
+  const fromUrl = isPhone ? (urlPage === 'capsula' ? urlPage : null) : urlPage;
   if (fromUrl && (ALL_TABS as string[]).includes(fromUrl)) return fromUrl as Tab;
+  // La condivisione dal telefono deve aprire Luoghi anche se era stata ricordata un'altra pagina
+  const sp = new URLSearchParams(window.location.search);
+  if (isPhone && (sp.has('url') || sp.has('text') || sp.has('title'))) return 'places';
   // Ritorno dal login senza indirizzo: riapri la pagina richiesta prima dell'accesso
   const remembered = takeRememberedPage();
   if (!fromUrl && remembered && (ALL_TABS as string[]).includes(remembered)) return remembered as Tab;
   // Condivisione dal telefono (Android): un link o un testo diventa un nuovo luogo
-  const sp = new URLSearchParams(window.location.search);
   if (!fromUrl && (sp.has('url') || sp.has('text') || sp.has('title'))) return 'places';
   // Ritorno dall'app Fotocamera: riapri la galleria con la foto da confermare
   if (hasResumeFlag()) return 'gallery';
@@ -637,7 +643,7 @@ function TripPortal() {
       )}
 
       {/* Main Content Area */}
-      <main key={activeTab === 'pdf' ? 'pdf' : itineraryVersion} ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-5 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['today','itinerary','map'].includes(activeTab) ? '' : 'ms-skin'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing'].includes(activeTab) ? 'desk-flat' : ''}`}>
+      <main key={activeTab === 'pdf' ? 'pdf' : itineraryVersion} ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-5 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['today','itinerary','map'].includes(activeTab) ? '' : 'ms-skin'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing','scheda','capsula'].includes(activeTab) ? 'desk-flat' : ''}`}>
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
         {!isDesktop && !install.standalone && !installBannerHidden && !updateAvailable && !inTripWindow() && (install.canPrompt || install.needsIosInstructions) && (
           <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30 max-lg:fixed max-lg:inset-x-4 max-lg:bottom-[calc(96px+env(safe-area-inset-bottom))] max-lg:z-[60] max-lg:mb-0 max-lg:rounded-2xl max-lg:border-0 max-lg:bg-[#0f1c2b] max-lg:[background-image:none] max-lg:shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
@@ -683,6 +689,8 @@ function TripPortal() {
           />
         )}
 
+        {activeTab === 'scheda' && <TripCardView />}
+        {activeTab === 'capsula' && <CapsuleView />}
         {activeTab === 'wallet' && <WalletView />}
         {activeTab === 'show' && <ShowKoreanView />}
         {activeTab === 'places' && <PlacesView onShowMap={() => goToTab('map')} onRoute={handleRouteFromToday} />}

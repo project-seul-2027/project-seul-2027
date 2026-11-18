@@ -1,7 +1,7 @@
 import type React from 'react';
 import {
   Compass, CalendarDays, Map, Camera, WalletCards, Languages, Bookmark, ShieldAlert, Luggage, Wallet, Home, CloudSun,
-  Plane, Coins, BookOpen, FileText, Users, History
+  Plane, Coins, BookOpen, FileText, Users, History, IdCard, Hourglass
 } from 'lucide-react';
 
 /**
@@ -10,7 +10,7 @@ import {
  * Le classi sono scritte per intero perché Tailwind le trovi.
  */
 export type SectionId =
-  | 'today' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery'
+  | 'today' | 'scheda' | 'capsula' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery'
   | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
 
 export type SectionGroup = 'Viaggio' | 'Gruppo' | 'Strumenti' | 'Preparazione';
@@ -33,12 +33,14 @@ export interface SectionInfo {
 export const SECTIONS: SectionInfo[] = [
   { id: 'today', label: 'Oggi', title: 'Oggi', icon: Compass, group: null, fg: 'text-fam-today', tile: 'bg-fam-today/15', keywords: 'adesso ora programma oggi orologi fusi' },
   { id: 'itinerary', label: 'Itinerario', title: 'Itinerario', icon: CalendarDays, group: 'Viaggio', fg: 'text-fam-itinerary', tile: 'bg-fam-itinerary/15', keywords: 'programma calendario giorni tappe piano' },
+  { id: 'scheda', label: 'Scheda', title: 'Scheda viaggio', icon: IdCard, group: 'Viaggio', fg: 'text-fam-itinerary', tile: 'bg-fam-itinerary/15', keywords: 'scheda viaggio offline senza rete indirizzi voli alloggio contatti ritrovo appuntamento' },
   { id: 'accommodations', label: 'Alloggi', title: 'Alloggi', icon: Home, group: 'Viaggio', fg: 'text-fam-itinerary', tile: 'bg-fam-itinerary/15', keywords: 'hotel casa dormire alloggio airbnb indirizzo' },
   { id: 'flights', label: 'Voli e scalo', title: 'Voli e scalo', icon: Plane, group: 'Viaggio', fg: 'text-fam-flights', tile: 'bg-fam-flights/15', keywords: 'volo aereo aeroporto pechino scalo imbarco check-in malpensa incheon' },
   { id: 'map', label: 'Mappa', title: 'Mappa', icon: Map, group: 'Viaggio', fg: 'text-fam-tools', tile: 'bg-fam-tools/15', keywords: 'metro percorso strada navigazione portami gps linea' },
   { id: 'weather', label: 'Meteo', title: 'Meteo', icon: CloudSun, group: 'Viaggio', fg: 'text-fam-weather', tile: 'bg-fam-weather/15', keywords: 'tempo pioggia temperatura aria clima previsioni' },
   { id: 'expenses', label: 'Spese', title: 'Spese', icon: Wallet, group: 'Gruppo', fg: 'text-fam-money', tile: 'bg-fam-money/15', keywords: 'soldi budget saldo debiti conto pagare won euro cassa' },
   { id: 'gallery', label: 'Galleria', title: 'Galleria', icon: Camera, group: 'Gruppo', fg: 'text-fam-gallery', tile: 'bg-fam-gallery/15', keywords: 'foto video fotocamera immagini ricordi album' },
+  { id: 'capsula', label: 'Capsula', title: 'Capsula del tempo', icon: Hourglass, group: 'Gruppo', fg: 'text-fam-group', tile: 'bg-fam-group/15', keywords: 'capsula del tempo countdown giorni alla partenza foto risposte prima di partire' },
   { id: 'places', label: 'Luoghi', title: 'Luoghi', icon: Bookmark, group: 'Gruppo', fg: 'text-fam-places', tile: 'bg-fam-places/15', keywords: 'posti salvati wishlist ristoranti negozi da vedere' },
   { id: 'group', label: 'Gruppo adesso', title: 'Il gruppo', icon: Users, group: 'Gruppo', fg: 'text-fam-group', tile: 'bg-fam-group/15', keywords: 'partecipanti amici posizione ritrovo dove sono perso persone' },
   { id: 'show', label: 'In coreano', title: 'In coreano', icon: Languages, group: 'Strumenti', fg: 'text-fam-tools', tile: 'bg-fam-tools/15', keywords: 'traduci traduzione coreano frasi taxi allergie lingua hangul' },

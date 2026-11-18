@@ -13,7 +13,7 @@ export const ALERT_CATEGORIES: { id: AlertCategory; label: string; hint: string 
   { id: 'schedule', label: 'Programma', hint: '30 minuti prima dei momenti importanti della giornata' },
   { id: 'bookings', label: 'Prenotazioni e voli', hint: 'Check-in, voli, treni e scadenze' },
   { id: 'group', label: 'Gruppo', hint: 'Nuovi ritrovi, punto fisso e “ho perso il gruppo”' },
-  { id: 'activity', label: 'Novità del gruppo', hint: 'Nuove spese, foto e luoghi aggiunti dagli altri' },
+  { id: 'activity', label: 'Novità del gruppo', hint: 'Nuove spese, foto e luoghi aggiunti dagli altri, e la capsula del tempo prima della partenza' },
   { id: 'updates', label: 'Aggiornamenti', hint: 'Nuove versioni dell’app e avvisi mandati a mano' }
 ];
 

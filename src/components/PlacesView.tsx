@@ -157,22 +157,27 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
     }
   };
 
-  const input = 'w-full min-h-[46px] rounded-xl bg-slate-950 border border-slate-700 focus:border-violet-400 focus:outline-none px-3 text-sm text-white';
-  const label = 'block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5';
+  const input = 'w-full min-h-[48px] rounded-xl bg-[#152231] px-3 text-sm text-white placeholder:text-slate-400 outline-none transition-shadow focus-visible:shadow-[inset_0_0_0_1.5px_#52d9e6]';
+  const label = 'mb-2 block text-[13px] font-semibold text-slate-200';
   return createPortal(
-    <div className="fixed inset-0 z-[10000] bg-black/70 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={place ? 'Modifica il posto' : 'Nuovo posto'} data-testid="place-sheet">
-      <div className="w-full sm:max-w-md max-h-[94dvh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl">
-        <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-800">
-          <Bookmark className="w-5 h-5 text-violet-300" />
-          <p className="flex-1 text-sm font-bold text-white">{place ? 'Modifica il posto' : 'Salva un posto per il gruppo'}</p>
-          <button type="button" onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-xl text-slate-300 hover:bg-slate-800 flex items-center justify-center" aria-label="Chiudi"><X className="w-5 h-5" /></button>
+    <div className="place-sheet-overlay fixed inset-0 z-[10000] flex items-end justify-center bg-black/65 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={place ? 'Modifica il posto' : 'Nuovo posto'} data-testid="place-sheet">
+      <div className="place-sheet-panel flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-[#0a1119] shadow-[0_-12px_40px_rgba(0,0,0,0.38)] sm:max-w-lg sm:rounded-2xl">
+        <div className="shrink-0 border-b border-white/[0.08] px-5 pb-3 pt-3 sm:pt-5">
+          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-white/20 sm:hidden" aria-hidden="true" />
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[17px] font-bold tracking-[-0.02em] text-white">{place ? 'Modifica luogo' : 'Aggiungi un luogo'}</h2>
+              <p className="mt-0.5 text-xs text-slate-400">Condividilo con il gruppo.</p>
+            </div>
+            <button type="button" onClick={onClose} className="place-sheet-action flex min-h-11 min-w-11 items-center justify-center rounded-xl text-slate-300 transition-colors hover:bg-white/[0.07] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#52d9e6]" aria-label="Chiudi"><X className="h-5 w-5" /></button>
+          </div>
         </div>
-        <div className="overflow-y-auto px-4 py-4 space-y-3.5">
+        <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5 overscroll-contain">
           {!place && (
             <label className="block">
-              <span className={label}>Incolla un link o un testo (facoltativo)</span>
-              <textarea value={paste} onChange={(e) => onPaste(e.target.value)} rows={2} placeholder="Link di Naver, Google Maps, Instagram…" className={`${input} py-2.5 resize-none`} data-testid="place-paste" />
-              {link && isShortLink(link) && <span className="block mt-1 text-[11px] text-slate-500">I link brevi non contengono la posizione: scegli sotto come indicarla.</span>}
+              <span className={label}>Link o testo condiviso <span className="font-normal text-slate-400">· facoltativo</span></span>
+              <textarea value={paste} onChange={(e) => onPaste(e.target.value)} rows={2} placeholder="Incolla da Naver, Google Maps o Instagram" className={`${input} resize-none py-3`} data-testid="place-paste" />
+              {link && isShortLink(link) && <span className="mt-1.5 block text-xs leading-relaxed text-slate-400">Il link breve non include la posizione: puoi aggiungerla qui sotto.</span>}
             </label>
           )}
           <label className="block">
@@ -180,27 +185,27 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="es. Ramen di Mangwon" className={input} data-testid="place-name" />
           </label>
           <div>
-            <span className={label}>Che tipo di posto</span>
-            <div className="flex flex-wrap gap-1.5">
+            <span className={label}>Tipo di luogo</span>
+            <div className="places-category-strip -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
               {PLACE_CATEGORIES.map((c) => (
-                <button key={c.id} type="button" onClick={() => setCategory(c.id)} aria-pressed={category === c.id} className={`min-h-[40px] px-3 rounded-xl text-xs font-semibold ${category === c.id ? 'bg-violet-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`} data-testid={`place-cat-${c.id}`}>
-                  <span className="inline-flex align-middle mr-1" dangerouslySetInnerHTML={{ __html: categoryIconSvg(c.id, 14) }} />{c.label}
+                <button key={c.id} type="button" onClick={() => setCategory(c.id)} aria-pressed={category === c.id} className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#52d9e6] ${category === c.id ? 'bg-[#52d9e6] text-[#04242a]' : 'bg-[#152231] text-slate-300 hover:bg-[#1c2c3c]'}`} data-testid={`place-cat-${c.id}`}>
+                  <span className="inline-flex" dangerouslySetInnerHTML={{ __html: categoryIconSvg(c.id, 14) }} />{c.label}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <span className={label}>Quanto ci tenete</span>
-            <div className="grid grid-cols-3 gap-1.5">
+            <span className={label}>Priorità</span>
+            <div className="grid grid-cols-3 gap-1 rounded-xl bg-[#152231] p-1">
               {PLACE_PRIORITIES.map((p) => (
-                <button key={p.id} type="button" onClick={() => setPriority(p.id)} aria-pressed={priority === p.id} className={`min-h-[40px] rounded-xl text-[11.5px] font-semibold ${priority === p.id ? 'bg-violet-400 text-slate-950' : 'bg-slate-800 text-slate-200'}`} data-testid={`place-pri-${p.id}`}>
+                <button key={p.id} type="button" onClick={() => setPriority(p.id)} aria-pressed={priority === p.id} className={`min-h-10 rounded-lg px-1 text-[11.5px] font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#52d9e6] ${priority === p.id ? 'bg-[#223449] text-white' : 'text-slate-400 hover:text-white'}`} data-testid={`place-pri-${p.id}`}>
                   {p.label}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <span className={label}>Dov’è</span>
+            <span className={label}>Posizione</span>
             <div className="grid grid-cols-1 gap-2">
               <div className="flex gap-2">
                 <input
@@ -215,7 +220,7 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
                   className={`${input} flex-1 min-w-0`}
                   data-testid="place-address"
                 />
-                <button type="button" onClick={searchAddress} disabled={searching} className="min-h-[46px] px-4 rounded-xl bg-slate-800 text-cyan-100 text-sm font-semibold flex items-center gap-1.5 shrink-0 disabled:opacity-60" data-testid="place-address-search">
+                <button type="button" onClick={searchAddress} disabled={searching} className="flex min-h-12 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-[#52d9e6] transition-colors hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#52d9e6] disabled:opacity-60" data-testid="place-address-search">
                   {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Cerca
                 </button>
               </div>
@@ -231,38 +236,38 @@ const PlaceSheet: React.FC<{ onClose: () => void; shared?: Shared | null; place?
                   <li className="px-3 py-1.5 text-[10px] text-slate-500">Ricerca: © OpenStreetMap</li>
                 </ul>
               )}
-              <button type="button" onClick={useGps} disabled={gpsBusy} className="min-h-[44px] rounded-xl bg-slate-800 text-cyan-100 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60" data-testid="place-loc-gps">
+              <button type="button" onClick={useGps} disabled={gpsBusy} className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#52d9e6] transition-colors hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#52d9e6] disabled:opacity-60" data-testid="place-loc-gps">
                 {gpsBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />} Sono qui adesso
               </button>
-              <select value={nearId} onChange={(e) => pickNear(e.target.value)} className={input} aria-label="Scegli un luogo vicino" data-testid="place-loc-near">
+              <select value={nearId} onChange={(e) => pickNear(e.target.value)} className={`${input} appearance-auto`} aria-label="Scegli un luogo vicino" data-testid="place-loc-near">
                 <option value="">Oppure: è vicino a…</option>
                 {seoulPlaces.map((p) => <option key={p.id} value={p.id}>{p.italianName || p.name}</option>)}
               </select>
             </div>
-            <p className={`mt-1.5 text-[11px] flex items-center gap-1.5 ${coords ? 'text-emerald-300' : 'text-slate-500'}`} data-testid="place-coords">
+            <p className={`mt-2 flex items-center gap-1.5 text-xs leading-relaxed ${coords ? 'text-[#8fd9cc]' : 'text-slate-400'}`} data-testid="place-coords">
               {coords ? <><Check className="w-3.5 h-3.5" /> {coords.source}</> : 'Nessuna posizione scelta'}
             </p>
             {coords && (
               <div className="mt-2 space-y-1.5">
                 <LocationPicker lat={coords.lat} lng={coords.lng} onChange={(lat, lng) => setCoords({ lat, lng, source: 'Segnaposto spostato a mano' })} />
-                <p className="text-[11px] text-slate-400 leading-snug">Controlla che il segnaposto sia sul locale giusto: trascinalo o tocca il punto esatto. I numeri di lotto coreani (es. «160-1 Donggyo-dong») spesso vengono trovati solo in modo approssimato; il link di Google Maps ha sempre la posizione precisa.</p>
+                <p className="text-xs leading-relaxed text-slate-400">Controlla che il segnaposto sia sul posto giusto. Gli indirizzi coreani possono essere approssimati: trascina il segnaposto se serve.</p>
               </div>
             )}
           </div>
           <label className="block">
-            <span className={label}>Link (facoltativo)</span>
+            <span className={label}>Link <span className="font-normal text-slate-400">· facoltativo</span></span>
             <input value={link} onChange={(e) => setLink(e.target.value)} maxLength={500} inputMode="url" placeholder="https://…" className={input} data-testid="place-link" />
           </label>
           <label className="block">
-            <span className={label}>Nota (facoltativa)</span>
+            <span className={label}>Nota <span className="font-normal text-slate-400">· facoltativa</span></span>
             <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder="es. Chiude alle 21, si paga solo in contanti" className={input} data-testid="place-note" />
           </label>
-          {error && <p role="alert" className="text-xs text-amber-300 flex gap-1.5"><CircleAlert className="w-4 h-4 shrink-0" />{error}</p>}
+          {error && <p role="alert" className="flex gap-2 rounded-xl bg-amber-300/[0.08] px-3 py-2.5 text-xs leading-relaxed text-amber-100"><CircleAlert className="h-4 w-4 shrink-0 text-amber-300" />{error}</p>}
         </div>
-        <div className="px-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-          <button type="button" onClick={onClose} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 text-sm font-semibold">Annulla</button>
-          <button type="button" onClick={save} disabled={busy} className="min-h-[48px] rounded-2xl bg-violet-400 disabled:opacity-50 text-slate-950 text-sm font-bold flex items-center justify-center gap-2" data-testid="place-save">
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />} {place ? 'Salva' : 'Aggiungi'}
+        <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-white/[0.08] px-5 pt-3" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <button type="button" onClick={onClose} className="place-sheet-action min-h-12 rounded-xl bg-[#152231] text-sm font-semibold text-slate-200 transition-colors hover:bg-[#1c2c3c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#52d9e6]">Annulla</button>
+          <button type="button" onClick={save} disabled={busy} className="place-sheet-action flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#52d9e6] text-sm font-bold text-[#04242a] transition-colors hover:bg-[#73e2eb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6] disabled:cursor-not-allowed disabled:opacity-50" data-testid="place-save">
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {place ? 'Salva luogo' : 'Aggiungi luogo'}
           </button>
         </div>
       </div>

@@ -25,6 +25,7 @@ const GROUPS: { title: string | null; items: Item[] }[] = [
     title: 'Viaggio',
     items: [
       { id: 'itinerary', label: 'Itinerario', dot: '#60A5FA' },
+      { id: 'scheda', label: 'Scheda viaggio', dot: '#60A5FA' },
       { id: 'accommodations', label: 'Alloggi', dot: '#60A5FA' },
       { id: 'flights', label: 'Voli e scalo', dot: '#818CF8' },
       { id: 'map', label: 'Mappa', dot: '#FB923C' },
@@ -37,6 +38,7 @@ const GROUPS: { title: string | null; items: Item[] }[] = [
       { id: 'group', label: 'Gruppo adesso', dot: '#2DD4BF' },
       { id: 'expenses', label: 'Spese', dot: '#34D399' },
       { id: 'gallery', label: 'Galleria', dot: '#F472B6' },
+      { id: 'capsula', label: 'Capsula del tempo', dot: '#2DD4BF' },
       { id: 'places', label: 'Luoghi', dot: '#A78BFA' },
     ],
   },
