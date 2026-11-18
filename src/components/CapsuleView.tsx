@@ -58,7 +58,7 @@ export const CapsuleView: React.FC = () => {
         </p>
       </header>
 
-      <div role="radiogroup" aria-label="Traguardo" className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0">
+      <div role="radiogroup" aria-label="Traguardo" className="flex min-w-0 gap-2 overflow-x-auto pb-1">
         {MILESTONES.map((m) => {
           const s = stateOf(m, now);
           const picked = m === selected;
@@ -69,10 +69,10 @@ export const CapsuleView: React.FC = () => {
               role="radio"
               aria-checked={picked}
               onClick={() => setSelected(m)}
+              aria-label={`${label(m)} (${s === 'open' ? 'aperto' : s === 'closed' ? 'chiuso' : 'non ancora aperto'})`}
               className={`min-h-11 shrink-0 rounded-xl px-3.5 text-sm ${picked ? 'bg-[#52d9e6] font-semibold text-[#04242a]' : 'bg-[rgba(96,150,214,0.13)] text-slate-200'}`}
             >
               {label(m)}
-              <span className="sr-only"> ({s === 'open' ? 'aperto' : s === 'closed' ? 'chiuso' : 'non ancora aperto'})</span>
               {s === 'open' && !picked && <span aria-hidden="true" className="ml-1.5 inline-block h-2 w-2 rounded-full bg-[#52d9e6]" />}
             </button>
           );
