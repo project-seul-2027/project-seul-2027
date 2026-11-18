@@ -8,7 +8,7 @@
 export type AlertCategory = 'schedule' | 'bookings' | 'group' | 'activity' | 'updates';
 
 /** Pagina dell'app che si apre toccando la notifica (valori di ?p=) */
-export type PushRoute = 'group' | 'expenses' | 'gallery' | 'places' | 'pdf' | 'itinerary' | 'today' | 'flights';
+export type PushRoute = 'group' | 'expenses' | 'gallery' | 'places' | 'pdf' | 'itinerary' | 'today' | 'flights' | 'capsula';
 
 export interface PushMessage {
   /** Chiave per non rimandare due volte lo stesso avviso (documento pushLog) */

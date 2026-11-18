@@ -1,0 +1,61 @@
+# Capsula del tempo: avvisi a 100, 50, 30, 14, 7 e 1 giorno dalla partenza (1 marzo 2027).
+# Alle 18:00 italiane (17:00 UTC) si apre il traguardo; alle 16:00 italiane, due giorni dopo (46 ore), parte l'avviso
+# "sta per chiudere", solo per chi non ha ancora risposto né saltato.
+# GitHub può ritardare i controlli programmati anche di mezz'ora: per questo si controlla ogni 10 minuti per alcune ore
+# e lo script manda l'avviso se è scattato da meno di 3 ore (apertura) o 90 minuti (chiusura). Non lo manda due volte (pushLog).
+# Prova a mano: GitHub → Actions → "Capsula del tempo" → Run workflow (con "solo elenco" non manda nulla).
+name: Capsula del tempo
+
+on:
+  schedule:
+    # Aperture: dalle 17:00 alle 19:50 UTC (18:00-20:50 in Italia, ora solare)
+    - cron: '*/10 17-19 21 11 *'   # 100 giorni: 21 novembre 2026
+    - cron: '*/10 17-19 10 1 *'    # 50 giorni: 10 gennaio 2027
+    - cron: '*/10 17-19 30 1 *'    # 30 giorni: 30 gennaio
+    - cron: '*/10 17-19 15 2 *'    # 14 giorni: 15 febbraio
+    - cron: '*/10 17-19 22 2 *'    # 7 giorni: 22 febbraio
+    - cron: '*/10 17-19 28 2 *'    # 1 giorno: 28 febbraio
+    # Avvisi di chiusura: dalle 15:00 alle 16:50 UTC (16:00-17:50 in Italia), 46 ore dopo l'apertura
+    - cron: '*/10 15-16 23 11 *'
+    - cron: '*/10 15-16 12 1 *'
+    - cron: '*/10 15-16 1 2 *'
+    - cron: '*/10 15-16 17 2 *'
+    - cron: '*/10 15-16 24 2 *'
+    - cron: '*/10 15-16 2 3 *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Solo elenco, non manda niente
+        type: boolean
+        default: true
+      now_iso:
+        description: Data e ora da simulare (facoltativo, es. 2026-11-21T18:05:00+01:00)
+        required: false
+
+# Un invio alla volta: due controlli insieme potrebbero mandare lo stesso avviso due volte
+concurrency:
+  group: capsule-push
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepara
+        run: |
+          npm install --no-save --no-package-lock --legacy-peer-deps firebase-admin@13 esbuild@0.25
+          npx esbuild scripts/capsule-push.mts --bundle --platform=node --format=esm --target=node22 \
+            --external:firebase-admin --outfile=capsule-push.bundle.mjs
+      - name: Invia
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          export SITE_URL="https://${owner}.github.io/${GITHUB_REPOSITORY#*/}/"
+          node capsule-push.bundle.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
+          NOW_ISO: ${{ inputs.now_iso }}

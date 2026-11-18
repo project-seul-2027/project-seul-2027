@@ -11,6 +11,7 @@ import {
   isCompleted
 } from '../shared/travelerProfile';
 import { TRAVELERS_DEFAULT, type Traveler } from '../data/tripData';
+import { saveGroupContacts } from '../services/tripCardSnapshot';
 
 /**
  * loading       → controllo della sessione in corso
@@ -105,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return authApi.watchGroup(
       (members) => {
         setGroup(members);
+        saveGroupContacts(members);
         setGroupLoaded(true);
       },
       (err) => {

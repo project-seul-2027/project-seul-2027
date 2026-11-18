@@ -9,12 +9,14 @@ const DISP = { fontFamily: "'Outfit', sans-serif", fontWeight: 800, letterSpacin
 /** Etichetta mono, titolo e colore della famiglia di ogni pagina (dai mockup desktop). */
 export const PAGE_HERO: Record<string, { label: string; title: string; color: string }> = {
   itinerary: { label: 'Viaggio · programma giorno per giorno', title: 'Itinerario', color: ACCENT },
+  scheda: { label: 'Viaggio · tutto in un posto, anche offline', title: 'Scheda viaggio', color: ACCENT },
   accommodations: { label: 'Viaggio · dove dormiamo', title: 'Alloggi', color: ACCENT },
   flights: { label: 'Viaggio · voli e scalo', title: 'Voli e scalo', color: ACCENT },
   map: { label: 'Viaggio · punti sulla mappa', title: 'Mappa', color: ACCENT },
   weather: { label: 'Viaggio · previsioni', title: 'Meteo', color: ACCENT },
   group: { label: 'Gruppo adesso · in condivisione', title: 'Dove siamo', color: ACCENT },
   expenses: { label: 'Gruppo · conti', title: 'Spese', color: ACCENT },
+  capsula: { label: 'Gruppo · verso la partenza', title: 'Capsula del tempo', color: ACCENT },
   gallery: { label: 'Gruppo · foto e video', title: 'Galleria', color: ACCENT },
   places: { label: 'Gruppo · posti preferiti', title: 'Luoghi', color: ACCENT },
   wallet: { label: 'Wallet · sempre pronti, anche offline', title: 'Biglietti', color: ACCENT },

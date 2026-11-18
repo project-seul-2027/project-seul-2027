@@ -286,6 +286,31 @@ service cloud.firestore {
       allow delete: if isParticipant() && resource.data.uploaderId == request.auth.uid;
     }
 
+    // Capsula del tempo: una risposta per persona e per traguardo (100, 50, 30, 14, 7, 1 giorni alla partenza).
+    // Il documento si chiama "<traguardo>-<uid>". Non si modifica: per cambiare si cancella e si riscrive.
+    // Che gli altri si vedano solo dopo aver risposto è una scelta dell'app, non una regola di sicurezza.
+    match /capsule/{capsuleId} {
+      allow read: if isParticipant();
+
+      allow create: if isParticipant()
+        && request.resource.data.keys().hasOnly(['milestone', 'uid', 'slot', 'text', 'thumb', 'skipped', 'createdAt'])
+        && request.resource.data.keys().hasAll(['milestone', 'uid', 'slot', 'text', 'skipped', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && capsuleId.matches('^(100|50|30|14|7|1)-' + request.auth.uid + '$')
+        && request.resource.data.milestone in [100, 50, 30, 14, 7, 1]
+        && request.resource.data.slot in slots()
+        && request.resource.data.createdAt == request.time
+        && shortString(request.resource.data.text, 280)
+        && request.resource.data.skipped is bool
+        && (!('thumb' in request.resource.data) || shortString(request.resource.data.thumb, 150000))
+        // "salta" è vuoto; una risposta vera ha una riga o una foto
+        && (request.resource.data.skipped
+            ? (request.resource.data.text.size() == 0 && !('thumb' in request.resource.data))
+            : (request.resource.data.text.size() > 0 || 'thumb' in request.resource.data));
+
+      allow delete: if isParticipant() && resource.data.uid == request.auth.uid;
+    }
+
     // Foto a piena qualità (letta solo quando si apre la foto)
     match /galleryImages/{photoId} {
       allow read: if isParticipant();
