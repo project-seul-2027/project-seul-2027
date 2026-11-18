@@ -1,33 +1,157 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Hourglass, ImagePlus, Loader2, X } from 'lucide-react';
+import { Camera, Check, Clock, Loader2, Lock, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { isSlot } from '../types/expenses';
 import { compressImage } from '../services/galleryService';
 import { CAPSULE_TEXT_MAX, friendlyCapsuleError, removeCapsule, saveCapsule, watchCapsule, type CapsuleEntry } from '../services/capsuleService';
-import { MILESTONES, closesAt, defaultMilestone, fireAt, stateOf, type Milestone } from '../utils/capsule';
+import { MILESTONES, WINDOW_MS, closesAt, defaultMilestone, fireAt, stateOf, type CapsuleState, type Milestone } from '../utils/capsule';
 
 const HEADING: React.CSSProperties = { fontFamily: 'Outfit, system-ui, sans-serif' };
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+
 const romeDay = (ms: number) =>
   new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(ms));
 const romeClock = (ms: number) =>
   new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
 
-/** "tra 5 ore", "tra 2 giorni": per dire quanto manca all'apertura o alla chiusura */
-function relative(ms: number): string {
-  const h = Math.max(1, Math.round(ms / 3_600_000));
-  return h < 36 ? `tra ${h} ${h === 1 ? 'ora' : 'ore'}` : `tra ${Math.round(h / 24)} giorni`;
+const pad = (n: number) => String(n).padStart(2, '0');
+/** "3 g 04 h", "5 h 12 min", "42 min" */
+function countdown(ms: number): { big: string; unit: string; sub: string } {
+  const total = Math.max(0, Math.floor(ms / MIN));
+  const d = Math.floor(total / (24 * 60));
+  const h = Math.floor((total % (24 * 60)) / 60);
+  const m = total % 60;
+  // Sotto i due giorni si contano le ore intere: "47 ore" è più chiaro di "1 giorno"
+  if (d >= 2) return { big: `${d}`, unit: 'giorni', sub: `${pad(h)} h ${pad(m)} min` };
+  if (total >= 60) return { big: `${Math.floor(total / 60)}`, unit: 'ore', sub: `${pad(m)} min` };
+  return { big: `${m}`, unit: 'minuti', sub: '' };
+}
+
+/** Quanto è passato da un'apertura, in italiano: "7 min dopo", "3 h dopo" */
+function afterOpen(ms: number): string {
+  const min = Math.round(ms / MIN);
+  if (min < 1) return 'appena aperta';
+  if (min < 60) return `${min} min dopo`;
+  return `${Math.round(min / 60)} h dopo`;
 }
 
 const label = (m: Milestone) => (m === 1 ? 'Ultimo giorno' : `${m} giorni`);
+const stateWord: Record<CapsuleState, string> = { upcoming: 'non ancora aperto', open: 'aperto', closed: 'chiuso' };
 
-const inputClass =
-  'w-full rounded-xl bg-[#0a1119] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 border border-white/10 focus:outline focus:outline-2 focus:outline-[#52d9e6]';
+const initials = (name: string) => name.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase() || '?';
 
-/**
- * Capsula del tempo: a 100, 50, 30, 14, 7 e 1 giorno dalla partenza tutti raccontano cosa stanno facendo (una foto o una riga).
- * Le risposte degli altri si vedono dopo aver risposto, o quando il traguardo si chiude.
- * È una scelta di gioco, non di sicurezza: le regole del database lasciano leggere a tutto il gruppo.
- */
+const Avatar: React.FC<{ src?: string; name: string; size?: number; state?: 'done' | 'pending' | 'skipped' | 'plain' }> = ({ src, name, size = 36, state = 'plain' }) => {
+  const ring = state === 'done' ? 'ring-2 ring-[#52d9e6]' : state === 'skipped' ? 'ring-1 ring-slate-500' : 'ring-1 ring-white/10';
+  const dim = state === 'pending' ? 'opacity-40 grayscale' : '';
+  return src ? (
+    <img src={src} alt="" referrerPolicy="no-referrer" width={size} height={size} className={`shrink-0 rounded-full object-cover ${ring} ${dim}`} style={{ width: size, height: size }} />
+  ) : (
+    <span
+      aria-hidden="true"
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-[#152231] text-[11px] font-semibold text-slate-200 ${ring} ${dim}`}
+      style={{ width: size, height: size }}
+    >
+      {initials(name)}
+    </span>
+  );
+};
+
+/** Il gruppo, in fila: chi ha risposto è acceso, chi manca è spento. Nessun nome, solo facce. */
+const GroupStrip: React.FC<{ members: { id: string; name: string; avatar?: string }[]; answered: Map<string, 'done' | 'skipped'> }> = ({ members, answered }) => (
+  <ul className="flex items-center" aria-label="Chi ha risposto">
+    {members.map((m, i) => {
+      const st = answered.get(m.id);
+      return (
+        <li key={m.id} className={i === 0 ? '' : '-ml-2'} title={st === 'done' ? `${m.name} ha risposto` : st === 'skipped' ? `${m.name} ha saltato` : `${m.name} non ha ancora risposto`}>
+          <Avatar src={m.avatar} name={m.name} size={34} state={st ?? 'pending'} />
+        </li>
+      );
+    })}
+  </ul>
+);
+
+/** La linea dei traguardi: sei punti, quello aperto pulsa, quello con la tua risposta ha un segno. */
+const Timeline: React.FC<{ now: number; selected: Milestone; answeredByMe: Set<number>; onPick: (m: Milestone) => void }> = ({ now, selected, answeredByMe, onPick }) => (
+  <nav aria-label="Traguardi" className="px-1">
+    <ol className="relative flex items-start justify-between">
+      <span aria-hidden="true" className="absolute left-3 right-3 top-[15px] h-px bg-white/10" />
+      {MILESTONES.map((m) => {
+        const s = stateOf(m, now);
+        const picked = m === selected;
+        const mine = answeredByMe.has(m);
+        return (
+          <li key={m} className="relative z-10 flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onPick(m)}
+              aria-current={picked ? 'step' : undefined}
+              aria-label={`${label(m)}, ${stateWord[s]}${mine ? ', hai risposto' : ''}`}
+              className="flex min-h-11 min-w-11 items-center justify-center"
+            >
+              <span
+                className={`relative flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 transition-colors ${
+                  picked ? 'border-[#52d9e6] bg-[#52d9e6]' : s === 'closed' ? 'border-slate-500 bg-slate-500' : s === 'open' ? 'border-[#52d9e6] bg-[#0a1119]' : 'border-white/25 bg-[#0a1119]'
+                }`}
+              >
+                {s === 'open' && <span aria-hidden="true" className="absolute inset-[-6px] animate-ping rounded-full border border-[#52d9e6]/60 motion-reduce:hidden" />}
+                {mine && <Check className={`h-3 w-3 ${picked ? 'text-[#04242a]' : 'text-[#52d9e6]'}`} aria-hidden="true" strokeWidth={3} />}
+              </span>
+            </button>
+            <span className={`text-[11px] font-semibold tabular-nums ${picked ? 'text-[#52d9e6]' : 'text-slate-400'}`}>{m === 1 ? '1 g' : `${m} g`}</span>
+          </li>
+        );
+      })}
+    </ol>
+  </nav>
+);
+
+/** Anello che si svuota mentre la finestra di 48 ore si chiude */
+const Ring: React.FC<{ fraction: number; children: React.ReactNode }> = ({ fraction, children }) => {
+  const r = 52;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative flex h-[136px] w-[136px] shrink-0 items-center justify-center">
+      <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden="true">
+        <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="#52d9e6" strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0, Math.min(1, fraction)))} />
+      </svg>
+      <div className="relative text-center">{children}</div>
+    </div>
+  );
+};
+
+/** Cancella la propria risposta a un traguardo, dopo una conferma: si può riscrivere finché il traguardo è aperto */
+const MyAnswer: React.FC<{ milestone: Milestone; uid: string; hint: string; onError: (m: string | null) => void }> = ({ milestone, uid, hint, onError }) => {
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const cancel = async () => {
+    setBusy(true);
+    onError(null);
+    try {
+      await removeCapsule(milestone, uid);
+    } catch (e) {
+      onError(friendlyCapsuleError(e));
+    } finally {
+      setBusy(false);
+      setConfirm(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-[#0a1119] px-4 py-3 text-sm text-slate-200 sm:flex-row sm:items-center sm:justify-between" data-testid="capsule-mine">
+      <span>{hint}</span>
+      {confirm ? (
+        <span className="flex gap-2">
+          <button type="button" onClick={cancel} disabled={busy} className="min-h-11 rounded-xl bg-rose-200 px-4 text-sm font-semibold text-[#2a0a0a] disabled:opacity-50">Sì, cancella</button>
+          <button type="button" onClick={() => setConfirm(false)} className="min-h-11 rounded-xl px-4 text-sm text-slate-300">No</button>
+        </span>
+      ) : (
+        <button type="button" onClick={() => setConfirm(true)} className="min-h-11 shrink-0 rounded-xl px-4 text-sm font-semibold text-rose-200">Cancella la mia risposta</button>
+      )}
+    </div>
+  );
+};
+
 export const CapsuleView: React.FC = () => {
   const { user, group } = useAuth();
   const [now, setNow] = useState(() => Date.now());
@@ -37,118 +161,107 @@ export const CapsuleView: React.FC = () => {
 
   useEffect(() => watchCapsule(setEntries, setError), []);
   useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 60_000);
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(t);
   }, []);
 
-  const total = group.length || 4;
+  const members = useMemo(() => {
+    const list = group.map((g) => ({ id: g.id, name: g.displayName || g.firstName || 'Partecipante', avatar: g.avatarUrl || undefined }));
+    return list.length ? list : [{ id: 'me', name: user?.displayName || 'Tu', avatar: user?.avatarUrl || undefined }];
+  }, [group, user]);
+
   const state = stateOf(selected, now);
-  const mine = entries.find((e) => e.milestone === selected && e.uid === user?.id) ?? null;
-  const ofMilestone = useMemo(() => entries.filter((e) => e.milestone === selected && !e.skipped), [entries, selected]);
-  const answeredCount = ofMilestone.length;
-  // Si vedono le risposte degli altri dopo aver risposto, oppure a traguardo chiuso
+  const ofSelected = entries.filter((e) => e.milestone === selected);
+  const mine = ofSelected.find((e) => e.uid === user?.id) ?? null;
+  const answers = ofSelected.filter((e) => !e.skipped);
+  const answeredByMe = new Set(MILESTONES.filter((m) => entries.some((e) => e.milestone === m && e.uid === user?.id && !e.skipped)));
+  const answerState = new Map<string, 'done' | 'skipped'>(ofSelected.map((e) => [e.uid, e.skipped ? 'skipped' : 'done']));
   const revealed = state === 'closed' || (!!mine && !mine.skipped);
+  const who = (uid: string) => members.find((m) => m.id === uid);
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 pb-10 lg:max-w-none" data-testid="capsule">
-      <header className="min-w-0">
-        <h1 className="sr-only" style={HEADING}>Capsula del tempo</h1>
-        <p className="text-sm text-slate-400">
-          Prima della partenza vi chiedo sei volte cosa state facendo: una foto o una riga. Le risposte degli altri si vedono appena rispondi.
-        </p>
-      </header>
+      <h1 className="sr-only" style={HEADING}>Capsula del tempo</h1>
 
-      <div role="radiogroup" aria-label="Traguardo" className="flex min-w-0 gap-2 overflow-x-auto pb-1">
-        {MILESTONES.map((m) => {
-          const s = stateOf(m, now);
-          const picked = m === selected;
-          return (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={picked}
-              onClick={() => setSelected(m)}
-              aria-label={`${label(m)} (${s === 'open' ? 'aperto' : s === 'closed' ? 'chiuso' : 'non ancora aperto'})`}
-              className={`min-h-11 shrink-0 rounded-xl px-3.5 text-sm ${picked ? 'bg-[#52d9e6] font-semibold text-[#04242a]' : 'bg-[rgba(96,150,214,0.13)] text-slate-200'}`}
-            >
-              {label(m)}
-              {s === 'open' && !picked && <span aria-hidden="true" className="ml-1.5 inline-block h-2 w-2 rounded-full bg-[#52d9e6]" />}
-            </button>
-          );
-        })}
-      </div>
+      <Timeline now={now} selected={selected} answeredByMe={answeredByMe} onPick={setSelected} />
 
       {error && <p role="alert" className="text-sm text-rose-200">{error}</p>}
 
-      <section className="rounded-xl bg-[rgba(96,150,214,0.13)] px-4 py-4" data-testid={`capsule-${selected}`}>
-        <h2 className="flex items-center gap-2 text-base font-semibold text-white" style={HEADING}>
-          <Hourglass className="h-4 w-4 text-[#52d9e6]" aria-hidden="true" />
-          {selected === 1 ? 'Domani si parte' : `${selected} giorni a Seul`}
-        </h2>
-
-        {state === 'upcoming' && (
-          <p className="mt-3 text-sm text-slate-200">
-            Si apre {romeDay(fireAt(selected))} alle {romeClock(fireAt(selected))} ({relative(fireAt(selected) - now)}). Ti arriva una notifica.
-          </p>
-        )}
-
-        {state === 'open' && !mine && (
-          <Composer key={selected} milestone={selected} closesIn={relative(closesAt(selected) - now)} uid={user?.id ?? ''} travelerId={user?.travelerId} onError={setError} />
-        )}
-
-        {state === 'open' && mine?.skipped && (
-          <div className="mt-3 space-y-3 text-sm text-slate-200">
-            <p>Hai saltato questa volta. Puoi ancora rispondere fino a {romeDay(closesAt(selected))} alle {romeClock(closesAt(selected))}.</p>
-            <button
-              type="button"
-              onClick={() => user && removeCapsule(selected, user.id).catch((e) => setError(friendlyCapsuleError(e)))}
-              className="inline-flex min-h-11 items-center rounded-xl bg-[#52d9e6] px-4 text-sm font-semibold text-[#04242a]"
-            >
-              Rispondi adesso
-            </button>
-          </div>
-        )}
-
-        {state === 'closed' && ofMilestone.length === 0 && <p className="mt-3 text-sm text-slate-400">Nessuno ha risposto a questo traguardo.</p>}
-        {state === 'closed' && ofMilestone.length > 0 && <p className="mt-3 text-sm text-slate-400">Traguardo chiuso: ora si vedono tutte le risposte.</p>}
-
-        {state !== 'upcoming' && (
-          <p className="mt-3 text-xs text-slate-400" data-testid="capsule-progress">
-            {answeredCount} su {total} {answeredCount === 1 ? 'ha risposto' : 'hanno risposto'}
-            {state === 'open' && ` · chiude ${romeDay(closesAt(selected))} alle ${romeClock(closesAt(selected))}`}
-          </p>
-        )}
-      </section>
-
-      {state !== 'upcoming' && !revealed && (
-        <p className="rounded-xl bg-[rgba(96,150,214,0.13)] px-4 py-4 text-sm text-slate-300" data-testid="capsule-locked">
-          Le risposte degli altri compaiono qui appena rispondi, o quando il traguardo si chiude.
-        </p>
+      {mine && !mine.skipped && (state === 'upcoming' || state === 'open') && user && (
+        <MyAnswer
+          milestone={selected}
+          uid={user.id}
+          onError={setError}
+          hint={state === 'upcoming' ? 'Hai una risposta salvata prima dell’apertura: non doveva essere possibile. Cancellala e riscrivila quando si apre.' : 'È la tua risposta: puoi cancellarla finché il traguardo è aperto.'}
+        />
       )}
 
-      {revealed && ofMilestone.length > 0 && (
-        <ul className="grid gap-3 sm:grid-cols-2" data-testid="capsule-entries">
-          {ofMilestone.map((e) => {
-            const who = group.find((g) => g.id === e.uid);
-            return (
-              <li key={e.id} className="overflow-hidden rounded-xl bg-[rgba(96,150,214,0.13)]">
-                {e.thumb && <img src={e.thumb} alt={`Foto di ${who?.displayName ?? 'un partecipante'}`} className="aspect-[4/3] w-full object-cover" loading="lazy" />}
-                <div className="space-y-1 px-4 py-3">
-                  <p className="text-xs font-semibold text-[#52d9e6]">{who?.displayName ?? 'Qualcuno'}</p>
-                  {e.text && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-100">{e.text}</p>}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+      {state === 'upcoming' && <UpcomingStage milestone={selected} now={now} members={members} answerState={answerState} />}
+
+      {state === 'open' && !mine && (
+        <Composer key={selected} milestone={selected} now={now} uid={user?.id ?? ''} travelerId={user?.travelerId} onError={setError} />
+      )}
+
+      {state === 'open' && mine?.skipped && (
+        <section className="space-y-4 rounded-xl bg-[rgba(96,150,214,0.13)] px-5 py-6 text-center" data-testid="capsule-skipped">
+          <p className="text-base font-semibold text-white" style={HEADING}>Oggi passi.</p>
+          <p className="text-sm text-slate-300">Puoi ancora rispondere fino a {romeDay(closesAt(selected))} alle {romeClock(closesAt(selected))}.</p>
+          <button
+            type="button"
+            onClick={() => user && removeCapsule(selected, user.id).catch((e) => setError(friendlyCapsuleError(e)))}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#52d9e6] px-5 text-sm font-semibold text-[#04242a]"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" /> Rispondi adesso
+          </button>
+        </section>
+      )}
+
+      {revealed && (
+        <Feed milestone={selected} now={now} state={state} answers={answers} who={who} members={members} answerState={answerState} mine={mine} />
+      )}
+
+      {state !== 'upcoming' && !revealed && (
+        <section className="space-y-3 rounded-xl bg-[rgba(96,150,214,0.13)] px-4 py-5" data-testid="capsule-locked">
+          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <Lock className="h-4 w-4 text-[#52d9e6]" aria-hidden="true" /> Le risposte sono chiuse per ora
+          </div>
+          <p className="text-sm text-slate-300">
+            {answers.length === 0 ? 'Nessuno ha ancora risposto.' : `${answers.length} ${answers.length === 1 ? 'risposta è' : 'risposte sono'} già arrivate.`} Rispondi tu e le vedi subito.
+          </p>
+          <GroupStrip members={members} answered={answerState} />
+        </section>
       )}
     </div>
   );
 };
 
-/** Foto e/o riga, "Pubblica" o "Salta questa volta" */
-const Composer: React.FC<{ milestone: Milestone; closesIn: string; uid: string; travelerId: unknown; onError: (m: string | null) => void }> = ({ milestone, closesIn, uid, travelerId, onError }) => {
+/** Prima del traguardo: il conto alla rovescia è il protagonista, poi il gruppo in fila */
+const UpcomingStage: React.FC<{ milestone: Milestone; now: number; members: { id: string; name: string; avatar?: string }[]; answerState: Map<string, 'done' | 'skipped'> }> = ({ milestone, now, members, answerState }) => {
+  const left = countdown(fireAt(milestone) - now);
+  return (
+    <section className="overflow-hidden rounded-xl bg-[rgba(96,150,214,0.13)] px-5 py-6" data-testid={`capsule-${milestone}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#52d9e6]">{label(milestone)} alla partenza</p>
+      <div className="mt-4 flex items-center gap-5">
+        <Ring fraction={1 - (fireAt(milestone) - now) / (30 * 24 * HOUR)}>
+          <p className="text-[44px] font-semibold leading-none tabular-nums text-white" style={HEADING}>{left.big}</p>
+          <p className="text-[12px] font-medium text-slate-200">{left.unit}</p>
+          {left.sub && <p className="mt-0.5 text-[11px] tabular-nums text-slate-400">{left.sub}</p>}
+        </Ring>
+        <div className="min-w-0 space-y-2">
+          <p className="text-base font-semibold text-white" style={HEADING}>Si apre {romeDay(fireAt(milestone))}</p>
+          <p className="text-sm text-slate-300">Alle {romeClock(fireAt(milestone))} ti arriva una notifica: cosa stai facendo adesso?</p>
+        </div>
+      </div>
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/[0.08] pt-4">
+        <GroupStrip members={members} answered={answerState} />
+        <p className="text-right text-xs text-slate-400">Apertura, poi 48 ore per rispondere</p>
+      </div>
+    </section>
+  );
+};
+
+/** Risposta: come uno scatto di BeReal, con il tempo che resta in cima */
+const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; travelerId: unknown; onError: (m: string | null) => void }> = ({ milestone, now, uid, travelerId, onError }) => {
   const [text, setText] = useState('');
   const [thumb, setThumb] = useState('');
   const [busy, setBusy] = useState(false);
@@ -156,6 +269,9 @@ const Composer: React.FC<{ milestone: Milestone; closesIn: string; uid: string; 
   const fileRef = useRef<HTMLInputElement>(null);
   const slot = isSlot(travelerId) ? travelerId : null;
   const ready = !!uid && !!slot && !busy && !preparing && (text.trim().length > 0 || thumb !== '');
+  const left = closesAt(milestone) - now;
+  const fraction = left / WINDOW_MS;
+  const cd = countdown(left);
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
@@ -187,42 +303,64 @@ const Composer: React.FC<{ milestone: Milestone; closesIn: string; uid: string; 
   };
 
   return (
-    <div className="mt-3 space-y-3" data-testid="capsule-composer">
-      <p className="text-sm text-slate-200">Cosa stai facendo adesso? Puoi rispondere {closesIn.replace('tra', 'entro')}.</p>
+    <section className="space-y-4 rounded-xl bg-[rgba(96,150,214,0.13)] p-4" data-testid="capsule-composer">
+      <div className="flex items-center justify-between gap-3">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold text-[#52d9e6]">
+          <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#52d9e6]" /> Aperta adesso
+        </p>
+        <p className="inline-flex items-center gap-1.5 text-xs text-slate-300">
+          <Clock className="h-3.5 w-3.5" aria-hidden="true" /> chiude tra {cd.big} {cd.unit}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <Ring fraction={fraction}>
+          <Camera className="mx-auto h-7 w-7 text-[#52d9e6]" aria-hidden="true" />
+        </Ring>
+        <div className="min-w-0">
+          <p className="text-lg font-semibold leading-snug text-white" style={HEADING}>Cosa stai facendo adesso?</p>
+          <p className="mt-1 text-xs text-slate-400">Una foto al volo, una riga, o tutte e due.</p>
+        </div>
+      </div>
 
       {thumb ? (
-        <div className="relative">
-          <img src={thumb} alt="Anteprima della tua foto" className="aspect-[4/3] w-full rounded-xl object-cover" />
-          <button type="button" onClick={() => setThumb('')} aria-label="Togli la foto" className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-black/60 text-white">
-            <X className="h-5 w-5" />
+        <div className="relative overflow-hidden rounded-xl">
+          <img src={thumb} alt="Anteprima della tua foto" className="aspect-[4/5] w-full object-cover sm:aspect-[4/3]" />
+          <button type="button" onClick={() => setThumb('')} aria-label="Togli la foto" className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#04242a]/80 text-white">
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       ) : (
-        <button type="button" onClick={() => fileRef.current?.click()} disabled={preparing} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0a1119] px-4 text-sm font-semibold text-slate-100 disabled:opacity-50">
-          {preparing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ImagePlus className="h-4 w-4 text-[#52d9e6]" aria-hidden="true" />}
-          {preparing ? 'Preparo la foto…' : 'Aggiungi una foto'}
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={preparing}
+          className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-3 rounded-xl bg-[#0a1119] text-slate-300 disabled:opacity-60 sm:aspect-[4/3]"
+        >
+          {preparing ? <Loader2 className="h-8 w-8 animate-spin text-[#52d9e6]" aria-hidden="true" /> : <Camera className="h-8 w-8 text-[#52d9e6]" aria-hidden="true" />}
+          <span className="text-sm font-semibold text-white">{preparing ? 'Preparo la foto…' : 'Scatta o scegli una foto'}</span>
         </button>
       )}
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ''; }} />
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ''; }} />
 
       <label className="block">
         <span className="sr-only">Una riga su cosa stai facendo</span>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, CAPSULE_TEXT_MAX))}
-          rows={3}
-          placeholder="Oppure scrivi una riga"
-          className={inputClass}
+          rows={2}
+          placeholder="Scrivi una riga…"
+          className="w-full resize-none rounded-xl bg-[#0a1119] px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none focus-visible:shadow-[inset_0_0_0_1.5px_#52d9e6]"
         />
-        <span className="mt-1 block text-right text-xs tabular-nums text-slate-500">{text.length}/{CAPSULE_TEXT_MAX}</span>
+        <span className="mt-1 block text-right text-[11px] tabular-nums text-slate-500">{text.length}/{CAPSULE_TEXT_MAX}</span>
       </label>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => publish({ text, thumb: thumb || undefined })}
           disabled={!ready}
-          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#52d9e6] px-4 text-sm font-semibold text-[#04242a] disabled:opacity-40"
+          className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#52d9e6] px-4 text-sm font-semibold text-[#04242a] disabled:opacity-40"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
           {busy ? 'Pubblico…' : 'Pubblica'}
@@ -231,8 +369,96 @@ const Composer: React.FC<{ milestone: Milestone; closesIn: string; uid: string; 
           Salta questa volta
         </button>
       </div>
-    </div>
+    </section>
   );
 };
+
+/** Dopo la risposta (o a traguardo chiuso): le risposte in un feed, dalla più veloce */
+const Feed: React.FC<{
+  milestone: Milestone;
+  now: number;
+  state: CapsuleState;
+  answers: CapsuleEntry[];
+  who: (uid: string) => { id: string; name: string; avatar?: string } | undefined;
+  members: { id: string; name: string; avatar?: string }[];
+  answerState: Map<string, 'done' | 'skipped'>;
+  mine: CapsuleEntry | null;
+}> = ({ milestone, now, state, answers, who, members, answerState, mine }) => {
+  const sorted = [...answers].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+  const waiting = members.filter((m) => !answerState.has(m.id));
+  const open = state === 'open';
+  return (
+    <section className="space-y-4" data-testid="capsule-entries">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#52d9e6]">{open ? 'Stanno rispondendo' : 'Traguardo chiuso'}</p>
+          <p className="mt-1 text-lg font-semibold text-white" style={HEADING}>
+            {answers.length} {answers.length === 1 ? 'risposta' : 'risposte'} {open && mine ? '· la tua è già qui' : ''}
+          </p>
+        </div>
+        {open && (
+          <p className="shrink-0 text-right text-xs text-slate-400">
+            {closesIn(milestone, now)}
+          </p>
+        )}
+      </div>
+
+      {mine && !mine.skipped && open && (
+        <p className="flex items-center gap-2 rounded-xl bg-[rgba(82,217,230,0.12)] px-4 py-3 text-sm text-[#b8f4fa]">
+          <Check className="h-4 w-4 shrink-0" aria-hidden="true" /> Hai risposto alle {romeClock(mine.createdAt ?? now)}: {afterOpen((mine.createdAt ?? now) - fireAt(milestone))}.
+        </p>
+      )}
+
+      {sorted.length === 0 && <p className="text-sm text-slate-400">Nessuna risposta per questo traguardo.</p>}
+
+      <ul className="space-y-4">
+        {sorted.map((e, i) => {
+          const person = who(e.uid);
+          const delta = (e.createdAt ?? fireAt(milestone)) - fireAt(milestone);
+          const fast = delta >= 0 && delta < 10 * MIN;
+          return (
+            <li key={e.id} className="overflow-hidden rounded-xl bg-[rgba(96,150,214,0.13)]" data-rank={i + 1}>
+              <div className="flex items-center gap-3 px-4 pb-2 pt-3">
+                <Avatar src={person?.avatar} name={person?.name ?? 'Qualcuno'} size={36} state="done" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-white">{person?.name ?? 'Qualcuno'}</p>
+                  <p className="text-[11px] text-slate-400">
+                    {e.createdAt ? romeClock(e.createdAt) : '--:--'} · {afterOpen(delta)}
+                  </p>
+                </div>
+                {fast && <span className="shrink-0 rounded-md bg-[#52d9e6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#04242a]">Lampo</span>}
+              </div>
+              {e.thumb && <img src={e.thumb} alt={`Foto di ${person?.name ?? 'un partecipante'}`} className="aspect-[4/5] w-full object-cover sm:aspect-[4/3]" loading="lazy" />}
+              {e.text && (
+                <p className={`px-4 pb-4 pt-3 leading-relaxed text-slate-100 ${e.thumb ? 'text-sm' : 'text-xl font-medium text-white'}`} style={e.thumb ? undefined : HEADING}>
+                  {e.text}
+                </p>
+              )}
+              {!e.text && <div className="h-3" aria-hidden="true" />}
+            </li>
+          );
+        })}
+      </ul>
+
+      {open && waiting.length > 0 && (
+        <section className="space-y-3 rounded-xl bg-[rgba(96,150,214,0.13)] px-4 py-4">
+          <p className="text-sm font-semibold text-white">Ancora in attesa</p>
+          <ul className="flex flex-wrap gap-3">
+            {waiting.map((m) => (
+              <li key={m.id} className="flex items-center gap-2 text-xs text-slate-300">
+                <Avatar src={m.avatar} name={m.name} size={28} state="pending" /> {m.name.split(' ')[0]}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </section>
+  );
+};
+
+function closesIn(milestone: Milestone, now: number): string {
+  const left = countdown(closesAt(milestone) - now);
+  return `chiude tra ${left.big} ${left.unit}`;
+}
 
 export default CapsuleView;
