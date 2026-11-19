@@ -1,10 +1,12 @@
 /**
  * Legge il PDF dell'itinerario e ne ricava i giorni del programma (ItineraryDay).
  *
- * Il PDF ha una struttura fissa che si riconosce dalle posizioni del testo:
- *  - le "schede" dei giorni (numero grande, titolo in grassetto, elenco puntato);
+ * Nel PDF si riconoscono:
+ *  - le "schede" dei giorni (numero grande a sinistra, titolo accanto, elenco puntato);
  *  - le sezioni "N marzo: titolo" con un testo introduttivo, una tabella a due colonne (ora / cosa fare),
  *    riquadri con elenchi e paragrafi finali.
+ * Titoli e colonne si riconoscono dalle proporzioni del testo (pdfLayout.ts), non da coordinate fisse
+ * né dal grassetto, così il parser regge anche se il PDF viene reimpaginato.
  * Il testo, con le posizioni, arriva da pdfTextExtract.ts. Qui non c'è nulla di legato al browser, così
  * lo stesso codice gira anche nel server (GitHub Actions) e nei test.
  *
@@ -12,6 +14,7 @@
  * resta com'è (testi, riassunti, luoghi sulla mappa), quello che è cambiato viene riscritto dal PDF e riassunto.
  */
 import type { ItineraryDay, MapLocation, ScheduleItem } from '../data/tripData';
+import { isContent, isHeading, measureLayout, type PdfLayout } from './pdfLayout';
 
 export interface PdfItem {
   x: number;
@@ -64,7 +67,8 @@ export interface BuildResult {
 const PHASES: Record<string, ItineraryDay['phase']> = {
   'prima settimana': 'Prima settimana',
   'seconda settimana': 'Seconda settimana',
-  'ultima parte': 'Ultima parte'
+  'ultima parte': 'Ultima parte',
+  'ultimi giorni': 'Ultima parte'
 };
 
 export function joinItems(items: PdfItem[]): string {
@@ -79,237 +83,246 @@ export function joinItems(items: PdfItem[]): string {
   return out.replace(/\s+/g, ' ').trim();
 }
 
+interface Placed {
+  it: PdfItem;
+  page: number;
+}
+
 interface Line {
   page: number;
   y: number;
+  /** Frammenti da sinistra a destra */
   items: PdfItem[];
 }
 
-function toLines(items: { it: PdfItem; page: number }[], tol = 2.5): Line[] {
-  const sorted = [...items].sort((a, b) => a.page - b.page || b.it.y - a.it.y || a.it.x - b.it.x);
+function toLines(placed: Placed[], tolerance = 2.5): Line[] {
+  const sorted = [...placed].sort((a, b) => a.page - b.page || b.it.y - a.it.y || a.it.x - b.it.x);
   const lines: Line[] = [];
   for (const { it, page } of sorted) {
     const last = lines[lines.length - 1];
-    if (last && last.page === page && Math.abs(last.y - it.y) <= tol) last.items.push(it);
+    if (last && last.page === page && Math.abs(last.y - it.y) <= tolerance) last.items.push(it);
     else lines.push({ page, y: it.y, items: [it] });
   }
+  for (const line of lines) line.items.sort((a, b) => a.x - b.x);
   return lines;
 }
 
+const isBullet = (it: PdfItem) => it.str.trim().startsWith('•');
+const withoutBullet = (it: PdfItem): PdfItem => ({ ...it, str: it.str.trim().replace(/^•\s*/, '') });
+
+// ───────────────────────── Àncore e regioni ─────────────────────────
+//
+// Il PDF si divide in regioni: ognuna parte da un'àncora (titolo di settimana, scheda di un giorno,
+// sezione "N marzo: ...", altro titolo) e contiene il testo fino all'àncora successiva.
+
+type AnchorKind = 'week' | 'card' | 'date' | 'other';
+
 interface Anchor {
-  kind: 'week' | 'card' | 'date' | 'other';
+  kind: AnchorKind;
   page: number;
+  /** Tutto quello che sta sotto questa quota (fino all'àncora successiva) appartiene alla regione */
   top: number;
   item: PdfItem;
 }
+
 interface Region {
   anchor: Anchor;
-  items: { it: PdfItem; page: number }[];
+  items: Placed[];
 }
 
-const DATE_HEADING = /^(\d{1,2})\s+marzo\s*:\s*(.*)$/i;
+/** "1 marzo: ritrovo a Malpensa", "19 marzo a Pechino: orari" */
+const DATE_HEADING = /^(\d{1,2})\s+marzo\b\s*([^:]{0,40}?)\s*:\s*(.*)$/i;
 
-function findAnchor(it: PdfItem, page: number): Anchor | null {
-  if (!it.bold) return null;
-  if (it.x < 60 && DATE_HEADING.test(it.str.trim())) return { kind: 'date', page, top: it.y + 12, item: it };
-  // Il titolo della scheda è accanto al numero e può stare più in alto della sua base: la soglia segue l'altezza del numero
-  if (it.x >= 55 && it.x <= 95 && it.h >= 15 && /^\d{1,2}$/.test(it.str.trim())) return { kind: 'card', page, top: it.y + Math.max(9, it.h + 2), item: it };
-  if (it.x < 60 && it.h >= 13) {
-    const t = it.str.trim().toLowerCase();
-    return { kind: PHASES[t] ? 'week' : 'other', page, top: it.y + 12, item: it };
+function findAnchor(it: PdfItem, page: number, layout: PdfLayout): Anchor | null {
+  const text = it.str.trim();
+  // Scheda di un giorno: un numero grande ("2" o "02") nella colonna di sinistra, con il titolo accanto e un po' più in alto
+  if (/^\d{1,2}$/.test(text) && it.h >= layout.body * 1.5 && it.x < layout.left + 45) {
+    return { kind: 'card', page, top: it.y + it.h + 2, item: it };
   }
+  if (it.x > layout.left + 12 || !isHeading(it, layout)) return null;
+  const top = it.y + Math.max(it.h, 12);
+  if (DATE_HEADING.test(text)) return { kind: 'date', page, top, item: it };
+  if (PHASES[text.toLowerCase()]) return { kind: 'week', page, top, item: it };
+  if (it.h >= layout.body * 1.4) return { kind: 'other', page, top, item: it };
   return null;
 }
 
-function splitRegions(pages: PdfPage[]): Region[] {
+function splitRegions(pages: PdfPage[], layout: PdfLayout): Region[] {
   const regions: Region[] = [];
-  pages.forEach((raw, p) => {
-    // Intestazione e piè di pagina non servono
-    const items = raw.filter((i) => i.str.trim() !== '' && i.y > 45 && i.y < 805);
-    const anchors = items.map((i) => findAnchor(i, p)).filter((a): a is Anchor => a !== null).sort((a, b) => b.top - a.top);
+  pages.forEach((raw, page) => {
+    const items = raw.filter(isContent);
+    // Dalla più alta alla più bassa: ogni elemento va all'ultima àncora che sta sopra di lui
+    const anchors = items
+      .map((it) => findAnchor(it, page, layout))
+      .filter((a): a is Anchor => a !== null)
+      .sort((a, b) => b.top - a.top);
     for (const it of items) {
-      // Regione = l'ultima àncora con top >= y dell'elemento
-      let owner = -1;
-      anchors.forEach((a, idx) => {
-        if (a.top >= it.y) owner = idx;
-      });
-      if (owner === -1) {
-        // Prima della prima àncora della pagina: continua la regione della pagina precedente
-        if (regions.length) regions[regions.length - 1].items.push({ it, page: p });
+      const owner = anchors.filter((a) => a.top >= it.y).pop();
+      if (!owner) {
+        // Testo in cima alla pagina, prima di ogni àncora: continua la regione della pagina precedente
+        regions[regions.length - 1]?.items.push({ it, page });
         continue;
       }
-      let region = regions.find((r) => r.anchor === anchors[owner]);
+      let region = regions.find((r) => r.anchor === owner);
       if (!region) {
-        region = { anchor: anchors[owner], items: [] };
+        region = { anchor: owner, items: [] };
         regions.push(region);
       }
-      region.items.push({ it, page: p });
+      region.items.push({ it, page });
     }
-    // Àncore senza elementi (non dovrebbe succedere) non creano regioni
   });
   return regions;
 }
 
 // ───────────────────────── Schede dei giorni ─────────────────────────
 
+/** Scheda: numero del giorno, titolo (le righe prima del primo punto) ed elenco puntato. */
 function parseCard(region: Region): { n: number; title: string; bullets: string[] } {
-  const n = Number(region.anchor.item.str.trim());
-  const content = region.items.filter(({ it }) => it.x >= 110);
-  const lines = toLines(content);
-  const titleParts: string[] = [];
+  const number = region.anchor.item;
+  const contentX = number.x + 40;
+  const lines = toLines(region.items.filter(({ it }) => it.x >= contentX));
+  const title: string[] = [];
   const bullets: string[] = [];
   for (const line of lines) {
-    const first = [...line.items].sort((a, b) => a.x - b.x)[0];
-    // Il punto può essere un frammento a sé ("•") oppure stare nello stesso frammento della parola ("• Mattina:")
-    if (/^•/.test(first.str.trim())) {
-      const head = { ...first, str: first.str.trim().replace(/^•\s*/, '') };
-      bullets.push(joinItems([head, ...line.items.filter((i) => i !== first)]));
-    } else if (bullets.length > 0) {
-      bullets[bullets.length - 1] += ' ' + joinItems(line.items);
-    } else if (first.bold) {
-      titleParts.push(joinItems(line.items));
-    }
+    const [first, ...rest] = line.items;
+    if (isBullet(first)) bullets.push(joinItems([withoutBullet(first), ...rest]));
+    else if (bullets.length) bullets[bullets.length - 1] += ' ' + joinItems(line.items);
+    else title.push(joinItems(line.items));
   }
-  return { n, title: titleParts.join(' ').trim(), bullets: bullets.map((b) => b.replace(/\s+/g, ' ').trim()) };
+  return {
+    n: Number(number.str.trim()),
+    title: title.join(' ').trim(),
+    bullets: bullets.map((b) => b.replace(/\s+/g, ' ').trim()).filter(Boolean)
+  };
 }
 
 // ───────────────────────── Sezioni "N marzo: ..." ─────────────────────────
+//
+// Una sezione ha, in quest'ordine variabile: paragrafi introduttivi, una tabella oraria a due colonne
+// ("Ora" / "Cosa fare"), riquadri rientrati con titolo ed elenco, paragrafi finali.
+// Dopo un paragrafo che segue la tabella, eventuali altre tabelle (es. costi) non fanno parte del programma.
 
-const HEADER_FIRST = /^(ora|quando)\b/i;
-const HEADER_SECOND = /^(cosa fare|linee guida)$/i;
+const TIME_HEADER = /^(ora|quando)\b/i;
+const TEXT_HEADER = /^(cosa fare|linee guida)$/i;
 
-function parseSection(region: Region): { n: number; section: ParsedSection } {
-  const m = DATE_HEADING.exec(region.anchor.item.str.trim())!;
-  const n = Number(m[1]);
-  const headingText = m[2].trim();
-  const section: ParsedSection = { title: headingText, zone: null, intro: [], rows: [], tail: [], callouts: [] };
+const zoneOf = (t: string): ParsedSection['zone'] => (/coreana|\bseul\b/i.test(t) ? 'KR' : /pechino|cines/i.test(t) ? 'CN' : null);
 
-  // Fuso: dal titolo ("(ora coreana)"), dall'etichetta a destra o dall'intestazione della tabella
-  const zoneOf = (t: string): ParsedSection['zone'] => (/coreana|\(seul\)/i.test(t) ? 'KR' : /pechino|cines/i.test(t) ? 'CN' : null);
-  section.zone = zoneOf(headingText);
+function parseSection(region: Region, layout: PdfLayout): { n: number; section: ParsedSection } {
+  const heading = region.anchor.item;
+  const [, day, extra, rest] = DATE_HEADING.exec(heading.str.trim())!;
+  const title = (extra ? `${extra}: ${rest}` : rest).trim();
+  const section: ParsedSection = { title, zone: zoneOf(heading.str), intro: [], rows: [], tail: [], callouts: [] };
 
-  const lines = toLines(region.items.filter(({ it }) => it !== region.anchor.item));
-  let x0 = 57;
-  let x1 = 136;
-  let state: 'intro' | 'table' | 'ignored' = 'intro';
+  // Colonne della tabella: valori tipici finché non si legge l'intestazione vera
+  let timeX = layout.left + 6;
+  let textX = layout.left + 85;
+  let state: 'intro' | 'table' | 'after' = 'intro';
   const tableLines: Line[] = [];
-  let lastPara: { page: number; y: number } | null = null;
-  let calloutOpen: { title: string; bullets: string[] } | null = null;
+  let callout: ParsedSection['callouts'][number] | null = null;
+  let lastParagraph: Line | null = null;
 
-  const pushPara = (line: Line, target: string[]) => {
+  const addParagraph = (line: Line, target: string[]) => {
     const text = joinItems(line.items);
-    if (lastPara && lastPara.page === line.page && lastPara.y - line.y <= 16 && target.length) target[target.length - 1] += ' ' + text;
+    const continues = lastParagraph && lastParagraph.page === line.page && lastParagraph.y - line.y <= 16 && target.length > 0;
+    if (continues) target[target.length - 1] += ' ' + text;
     else target.push(text);
-    lastPara = { page: line.page, y: line.y };
+    lastParagraph = line;
   };
 
-  for (const line of lines) {
-    const items = [...line.items].sort((a, b) => a.x - b.x);
-    const text = joinItems(items);
+  for (const line of toLines(region.items.filter(({ it }) => it !== heading))) {
+    const [first] = line.items;
+    const text = joinItems(line.items);
 
-    // Etichetta a destra del titolo ("martedì, ora locale", "ora coreana")
-    if (items.every((i) => i.x > 380) && line.y > region.anchor.top - 14 && section.rows.length === 0 && tableLines.length === 0) {
-      section.zone = section.zone ?? zoneOf(text);
+    // Etichetta a destra del titolo ("martedì, ora locale")
+    if (line.items.every((i) => i.x > 350) && line.y >= heading.y - 6) {
+      section.zone ??= zoneOf(text);
       continue;
     }
 
-    // Intestazione della tabella oraria
-    const bolds = items.filter((i) => i.bold);
-    if (bolds.length >= 2 && HEADER_FIRST.test(bolds[0].str.trim()) && HEADER_SECOND.test(bolds[1].str.trim())) {
-      x0 = bolds[0].x;
-      x1 = bolds[1].x;
+    const textHeader = line.items.find((i, idx) => idx > 0 && TEXT_HEADER.test(i.str.trim()));
+    if (TIME_HEADER.test(first.str.trim()) && textHeader) {
+      timeX = first.x;
+      textX = textHeader.x;
       state = 'table';
-      calloutOpen = null;
-      lastPara = null;
-      section.zone = section.zone ?? zoneOf(bolds[0].str);
-      continue;
-    }
-    // Altre tabelle (es. costi): non fanno parte del programma
-    if (bolds.length >= 2 && bolds[0].x < 70 && !HEADER_FIRST.test(bolds[0].str.trim()) && items.length === bolds.length && bolds[bolds.length - 1].x > 300) {
-      state = 'ignored';
+      callout = null;
+      lastParagraph = null;
+      section.zone ??= zoneOf(first.str);
       continue;
     }
 
-    const minX = items[0].x;
-    const mid = items[0].x > x0 + 3 && items[0].x < x1 - 5;
-    if (mid) {
-      // Riquadro con titolo ed elenco
-      state = state === 'ignored' ? 'ignored' : state;
-      const bullet = items.find((i) => i.str.trim() === '•');
-      if (bullet) {
-        if (!calloutOpen) {
-          calloutOpen = { title: '', bullets: [] };
-          section.callouts.push(calloutOpen);
-        }
-        calloutOpen.bullets.push(joinItems(items.filter((i) => i !== bullet)));
-      } else if (items[0].bold && items[0].x < x0 + 45) {
-        calloutOpen = { title: text, bullets: [] };
-        section.callouts.push(calloutOpen);
-      } else if (calloutOpen && calloutOpen.bullets.length) {
-        calloutOpen.bullets[calloutOpen.bullets.length - 1] += ' ' + text;
+    // Riquadro rientrato: titolo, punti elenco e righe che li continuano
+    if (first.x > timeX + 3 && first.x < textX - 5) {
+      if (isBullet(first)) {
+        if (!callout) section.callouts.push((callout = { title: '', bullets: [] }));
+        callout.bullets.push(joinItems([withoutBullet(first), ...line.items.slice(1)]).trim());
+      } else if (isHeading(first, layout, 1.05)) {
+        section.callouts.push((callout = { title: text, bullets: [] }));
+      } else if (callout?.bullets.length) {
+        callout.bullets[callout.bullets.length - 1] += ' ' + text;
       }
-      if (state === 'ignored') state = 'ignored';
-      lastPara = null;
+      lastParagraph = null;
       continue;
     }
-    calloutOpen = null;
+    callout = null;
 
-    if (minX < x0 - 3) {
-      // Paragrafo fuori dalla tabella
-      if (state === 'ignored') state = 'table';
-      pushPara(line, state === 'intro' ? section.intro : section.tail);
-      if (state === 'table') state = 'intro' === (state as string) ? 'intro' : 'table';
-      // Dopo un paragrafo la tabella è finita
-      if (state === 'table') state = 'ignored';
+    if (first.x < timeX - 3) {
+      addParagraph(line, state === 'intro' ? section.intro : section.tail);
+      if (state === 'table') state = 'after';
       continue;
     }
     if (state === 'table') tableLines.push(line);
   }
 
-  section.rows = buildRows(tableLines, x1);
-  return { n, section };
+  section.rows = buildRows(tableLines, textX);
+  return { n: Number(day), section };
 }
 
-function cluster(lines: { page: number; y: number; text: string; bold: boolean }[], gap = 16) {
+interface Cell {
+  page: number;
+  y: number;
+  text: string;
+  bold: boolean;
+}
+
+/** Unisce le righe vicine di una colonna in un'unica cella */
+function mergeCells(cells: Cell[], gap = 16): Cell[] {
   const groups: { page: number; ys: number[]; texts: string[]; bold: boolean }[] = [];
-  for (const l of lines) {
+  for (const c of cells) {
     const g = groups[groups.length - 1];
-    if (g && g.page === l.page && g.ys[g.ys.length - 1] - l.y <= gap) {
-      g.ys.push(l.y);
-      g.texts.push(l.text);
-      g.bold = g.bold || l.bold;
-    } else groups.push({ page: l.page, ys: [l.y], texts: [l.text], bold: l.bold });
+    if (g && g.page === c.page && g.ys[g.ys.length - 1] - c.y <= gap) {
+      g.ys.push(c.y);
+      g.texts.push(c.text);
+      g.bold ||= c.bold;
+    } else groups.push({ page: c.page, ys: [c.y], texts: [c.text], bold: c.bold });
   }
-  return groups.map((g) => ({ page: g.page, y: g.ys.reduce((a, b) => a + b, 0) / g.ys.length, text: g.texts.join(' ').replace(/\s+/g, ' ').trim(), bold: g.bold }));
+  return groups.map((g) => ({
+    page: g.page,
+    y: g.ys.reduce((a, b) => a + b, 0) / g.ys.length,
+    text: g.texts.join(' ').replace(/\s+/g, ' ').trim(),
+    bold: g.bold
+  }));
 }
 
-function buildRows(lines: Line[], x1: number): ParsedRow[] {
-  const c1: { page: number; y: number; text: string; bold: boolean }[] = [];
-  const c2: { page: number; y: number; text: string; bold: boolean }[] = [];
+/** Righe della tabella: ogni orario si accoppia alla cella di testo più vicina in altezza */
+function buildRows(lines: Line[], textX: number): ParsedRow[] {
+  const times: Cell[] = [];
+  const texts: Cell[] = [];
   for (const line of lines) {
-    const left = line.items.filter((i) => i.x < x1 - 3);
-    const right = line.items.filter((i) => i.x >= x1 - 3);
-    if (left.length) c1.push({ page: line.page, y: line.y, text: joinItems(left), bold: left.some((i) => i.bold) });
-    if (right.length) c2.push({ page: line.page, y: line.y, text: joinItems(right), bold: right.some((i) => i.bold) });
+    const left = line.items.filter((i) => i.x < textX - 3);
+    const right = line.items.filter((i) => i.x >= textX - 3);
+    if (left.length) times.push({ page: line.page, y: line.y, text: joinItems(left), bold: left.some((i) => i.bold) });
+    if (right.length) texts.push({ page: line.page, y: line.y, text: joinItems(right), bold: right.some((i) => i.bold) });
   }
-  const times = cluster(c1);
-  const texts = cluster(c2);
+  const cells = mergeCells(texts);
+  const used = new Set<Cell>();
   const rows: ParsedRow[] = [];
-  const used = new Set<number>();
-  for (const t of times) {
-    let best = -1;
-    let bestDist = Infinity;
-    texts.forEach((x, idx) => {
-      if (used.has(idx) || x.page !== t.page) return;
-      const d = Math.abs(x.y - t.y);
-      if (d < bestDist) {
-        bestDist = d;
-        best = idx;
-      }
-    });
-    if (best === -1) continue;
-    used.add(best);
-    rows.push({ time: normTime(t.text), text: texts[best].text, bold: texts[best].bold });
+  for (const time of mergeCells(times)) {
+    const match = cells
+      .filter((c) => !used.has(c) && c.page === time.page)
+      .sort((a, b) => Math.abs(a.y - time.y) - Math.abs(b.y - time.y))[0];
+    if (!match) continue;
+    used.add(match);
+    rows.push({ time: normTime(time.text), text: match.text, bold: match.bold });
   }
   return rows;
 }
@@ -321,43 +334,29 @@ function normTime(t: string): string {
 // ───────────────────────── Dal PDF ai giorni ─────────────────────────
 
 export function parseItineraryPages(pages: PdfPage[]): { days: ParsedDay[]; warnings: string[] } {
-  const regions = splitRegions(pages);
+  const layout = measureLayout(pages);
   const byDay = new Map<number, ParsedDay>();
   const day = (n: number) => {
-    let d = byDay.get(n);
-    if (!d) {
-      d = { n, cardBullets: [], sections: [] };
-      byDay.set(n, d);
-    }
-    return d;
+    if (!byDay.has(n)) byDay.set(n, { n, cardBullets: [], sections: [] });
+    return byDay.get(n)!;
   };
   let phase: ItineraryDay['phase'] | undefined;
   const warnings: string[] = [];
 
-  for (const region of regions) {
-    switch (region.anchor.kind) {
-      case 'week':
-        phase = PHASES[region.anchor.item.str.trim().toLowerCase()];
-        break;
-      case 'card': {
-        const c = parseCard(region);
-        if (c.n < 1 || c.n > 31 || !c.title) {
-          warnings.push(`Scheda del ${c.n} senza titolo: ignorata.`);
-          break;
-        }
-        const d = day(c.n);
-        d.cardTitle = c.title;
-        d.cardBullets = c.bullets;
-        d.phase = phase;
-        break;
+  for (const region of splitRegions(pages, layout)) {
+    const { kind, item } = region.anchor;
+    if (kind === 'week') phase = PHASES[item.str.trim().toLowerCase()];
+    else if (kind === 'other') phase = undefined;
+    else if (kind === 'card') {
+      const card = parseCard(region);
+      if (card.n < 1 || card.n > 31 || !card.title) {
+        warnings.push(`Scheda del ${card.n} senza titolo: ignorata.`);
+        continue;
       }
-      case 'date': {
-        const { n, section } = parseSection(region);
-        day(n).sections.push(section);
-        break;
-      }
-      default:
-        break;
+      Object.assign(day(card.n), { cardTitle: card.title, cardBullets: card.bullets, phase });
+    } else if (kind === 'date') {
+      const { n, section } = parseSection(region, layout);
+      day(n).sections.push(section);
     }
   }
   return { days: [...byDay.values()].sort((a, b) => a.n - b.n), warnings };
@@ -424,6 +423,10 @@ function labelOf(bullet: string): { label: string; text: string } {
   if (withColon) return { label: cap(withColon[1].toLowerCase()), text: cap(withColon[2]) };
   const bare = /^(Mattina|Pomeriggio|Sera|Notte)\b/i.exec(bullet);
   if (bare) return { label: cap(bare[1].toLowerCase()), text: cap(bullet) };
+  // Senza etichetta si guarda come comincia la frase: "Nel pomeriggio...", "Cena a...", "Poi..."
+  if (/^nel pomeriggio\b/i.test(bullet)) return { label: 'Pomeriggio', text: bullet };
+  if (/^(cena|serata|ultima sera|ultima uscita)\b/i.test(bullet)) return { label: 'Sera', text: bullet };
+  if (/^(poi|dopo)\b/i.test(bullet)) return { label: 'Poi', text: bullet };
   return { label: 'Giorno', text: bullet };
 }
 
