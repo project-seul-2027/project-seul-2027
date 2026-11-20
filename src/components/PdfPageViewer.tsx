@@ -15,11 +15,13 @@ interface PdfPageProps {
   pdf: pdfjsLib.PDFDocumentProxy;
   pageNumber: number;
   cssWidth: number;
+  /** Altezza prevista della pagina, riservata subito: il layout non si sposta mentre le pagine si disegnano */
+  minHeight?: number;
   registerRef: (index: number, el: HTMLDivElement | null) => void;
   index: number;
 }
 
-const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, cssWidth, registerRef, index }) => {
+const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, cssWidth, minHeight, registerRef, index }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -64,9 +66,9 @@ const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, cssWidth, registerRe
     <div
       ref={(el) => registerRef(index, el)}
       className="bg-white rounded-md shadow-lg shadow-black/40 overflow-hidden"
-      style={{ width: cssWidth }}
+      style={{ width: cssWidth, minHeight }}
     >
-      <canvas ref={canvasRef} className="block" aria-label={`Pagina ${pageNumber}`} />
+      <canvas ref={canvasRef} role="img" className="block" aria-label={`Pagina ${pageNumber}`} />
     </div>
   );
 };
@@ -83,21 +85,28 @@ interface PdfPageViewerProps {
   onDocument?: (doc: pdfjsLib.PDFDocumentProxy) => void;
   /** Pulsanti extra a destra della barra (solo variante desktop). */
   actions?: React.ReactNode;
-  /** 'desk': barra e sfondo nello stile delle pagine desktop. */
-  variant?: 'default' | 'desk';
+  /** 'desk': barra e sfondo nello stile delle pagine desktop. 'phone': nessuna barra, lo zoom è un controllo sopra le pagine. */
+  variant?: 'default' | 'desk' | 'phone';
+  /** Solo 'phone': l'altezza del lettore è quella di una pagina intera adattata alla larghezza. */
+  fitPage?: boolean;
   className?: string;
 }
 
-export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, targetKey, onPageChange, onDocument, actions, variant = 'default', className = '' }) => {
+export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, targetKey, onPageChange, onDocument, actions, variant = 'default', fitPage = false, className = '' }) => {
   const desk = variant === 'desk';
+  const phone = variant === 'phone';
   const btn = desk ? 'pdfv-btn' : 'w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-800 disabled:opacity-30 transition-colors';
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  /** Larghezza della colonna in cui sta il lettore, calcolata dalla finestra e non dal contenuto: non cambia se compare una barra di scorrimento */
+  const [columnWidth, setColumnWidth] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [current, setCurrent] = useState(1);
+  /** Altezza diviso larghezza della prima pagina */
+  const [aspect, setAspect] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   // Caricamento del documento
@@ -107,8 +116,11 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
     const task = pdfjsLib.getDocument({ url });
     let cancelled = false;
     task.promise
-      .then((doc) => {
+      .then(async (doc) => {
         if (cancelled) return;
+        const first = (await doc.getPage(1)).getViewport({ scale: 1 });
+        if (cancelled) return;
+        setAspect(first.height / first.width);
         setNumPages(doc.numPages);
         setPdf(doc);
       })
@@ -125,7 +137,10 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const update = () => setContainerWidth(el.clientWidth);
+    const update = () => {
+      setContainerWidth(el.clientWidth);
+      setColumnWidth(Math.round(window.innerWidth - 2 * el.getBoundingClientRect().left));
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -133,6 +148,11 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
   }, []);
 
   const pageWidth = Math.max(0, containerWidth - 16) * zoom;
+  // Con "fitPage" il lettore è alto quanto una pagina adattata alla larghezza (più 8 px sopra e sotto), qualunque sia lo zoom
+  // L'altezza usa la larghezza della colonna, non quella misurata dentro il lettore: altrimenti, quando la barra di scorrimento
+  // della pagina compare o sparisce, cambia la larghezza, quindi l'altezza, quindi di nuovo la barra, all'infinito.
+  const fit = phone && fitPage && aspect > 0 && columnWidth > 0;
+  const fitHeight = Math.round(Math.max(0, columnWidth - 16) * aspect) + 16;
 
   const registerRef = useCallback((index: number, el: HTMLDivElement | null) => {
     pageRefs.current[index] = el;
@@ -177,8 +197,8 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
   const pages = Array.from({ length: numPages }, (_, i) => i + 1);
 
   return (
-    <div className={`flex flex-col h-full min-h-0 ${className}`}>
-      <div className={desk ? 'pdfv-bar' : 'flex items-center justify-between gap-2 px-3 py-2 bg-slate-950 border-b border-slate-800 text-slate-300 shrink-0'}>
+    <div className={`relative flex flex-col h-full min-h-0 ${className}`}>
+      {!phone && <div className={desk ? 'pdfv-bar' : 'flex items-center justify-between gap-2 px-3 py-2 bg-slate-950 border-b border-slate-800 text-slate-300 shrink-0'}>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => goToPage(Math.max(1, current - 1))} disabled={current <= 1} aria-label="Pagina precedente" className={btn}>
             <ChevronLeft className="w-5 h-5" />
@@ -207,12 +227,13 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
           </button>
           {desk && actions}
         </div>
-      </div>
+      </div>}
 
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className={`relative flex-1 min-h-0 overflow-auto overscroll-contain ${desk ? 'pdfv-well' : 'bg-slate-800/60'}`}
+        style={fit ? { height: fitHeight, minHeight: 320, maxHeight: 'calc(100svh - 300px - env(safe-area-inset-bottom))' } : undefined}
+        className={`relative overflow-auto overscroll-contain [scrollbar-gutter:stable] ${fit ? 'flex-none [overflow-anchor:none]' : 'flex-1 min-h-0'} ${desk ? 'pdfv-well' : phone ? 'bg-transparent' : 'bg-slate-800/60'}`}
       >
         {!pdf && !error && (
           <div className="absolute inset-0 flex items-center justify-center text-slate-400 gap-2 text-sm">
@@ -223,7 +244,7 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
           <div className="p-6 text-center text-sm text-slate-300">{error}</div>
         )}
         {pdf && (
-          <div className="py-3" style={{ width: Math.max(containerWidth, pageWidth + 16) }}>
+          <div className={fit ? 'py-2' : 'py-3'} style={{ width: Math.max(containerWidth, pageWidth + 16) }}>
             <div className="flex flex-col items-center gap-3 px-2" style={{ width: pageWidth + 16, margin: '0 auto' }}>
               {pages.map((n, i) => (
                 <PdfPage
@@ -232,6 +253,7 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
                   pdf={pdf}
                   pageNumber={n}
                   cssWidth={pageWidth}
+                  minHeight={aspect > 0 ? Math.round(pageWidth * aspect) : undefined}
                   registerRef={registerRef}
                 />
               ))}
@@ -239,6 +261,20 @@ export const PdfPageViewer: React.FC<PdfPageViewerProps> = ({ url, targetPage, t
           </div>
         )}
       </div>
+
+      {phone && pdf && (
+        <div role="group" aria-label="Zoom" className="absolute bottom-3 right-3 flex items-center rounded-xl bg-[#0a1119] shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
+          <button type="button" onClick={() => setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)))} disabled={zoom <= MIN_ZOOM} aria-label="Riduci zoom" className="flex h-11 w-11 items-center justify-center rounded-xl text-[#eaf0f6] disabled:opacity-30">
+            <ZoomOut className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => setZoom(1)} aria-label="Adatta alla larghezza" className="h-11 min-w-12 rounded-xl px-1 text-[13px] font-medium tabular-nums text-[#97a5b9]">
+            {Math.round(zoom * 100)}%
+          </button>
+          <button type="button" onClick={() => setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)))} disabled={zoom >= MAX_ZOOM} aria-label="Aumenta zoom" className="flex h-11 w-11 items-center justify-center rounded-xl text-[#eaf0f6] disabled:opacity-30">
+            <ZoomIn className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Plus, X, LayoutGrid, Search, Wallet, Camera, Bookmark, MapPin, Languages, WalletCards, ShieldAlert, LifeBuoy,
   SlidersHorizontal, UserCog, Smartphone, LogOut, ChevronRight
@@ -88,13 +88,36 @@ export const MobileBottomNav: React.FC<BottomNavProps> = ({ activeTab, primary, 
     );
   };
   const moreActive = sheet === 'more' || (sheet === 'none' && inMore);
+
+  // L'indicatore in cima alla barra scivola sotto la voce attiva: dopo la prima misura, ogni cambio di pagina lo sposta con una transizione
+  const navRef = useRef<HTMLElement>(null);
+  const [ind, setInd] = useState<{ x: number; ready: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const place = () => {
+      const current = nav.querySelector<HTMLElement>('.ms-tab[aria-current]');
+      setInd((prev) => (current ? { x: current.offsetLeft + current.offsetWidth / 2 - 12, ready: prev?.ready ?? false } : null));
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(nav);
+    const frame = requestAnimationFrame(() => setInd((prev) => (prev ? { ...prev, ready: true } : prev)));
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [activeTab, sheet, primary]);
+
   return (
     <nav
+      ref={navRef}
       aria-label="Navigazione principale"
       data-app-bottomnav
       className="ms-tabs lg:hidden fixed bottom-0 inset-x-0 z-[60]"
       style={{ height: 'calc(68px + env(safe-area-inset-bottom))', paddingBottom: 'calc(4px + env(safe-area-inset-bottom))' }}
     >
+      <span aria-hidden="true" className="ms-ind" data-ready={ind?.ready ? '1' : undefined} style={{ transform: `translateX(${ind?.x ?? 0}px)`, opacity: ind ? 1 : 0 }} />
       {slots.slice(0, 2).map(item)}
       <button
         type="button"
@@ -314,7 +337,7 @@ export const MoreSheet: React.FC<MoreSheetProps> = ({ open, activeTab, onClose, 
                 </section>
               )}
               {SECTION_GROUPS.map((g) => (
-                <section key={g} className="ms-grp" aria-labelledby={`grp-${g}`}>
+                <section key={g} className="ms-grp" data-motion="list" aria-labelledby={`grp-${g}`}>
                   <p id={`grp-${g}`} className={GROUP_TONE[g] ?? 'ms-cy'}>{g}</p>
                   {SECTIONS.filter((s) => s.group === g).map(row)}
                 </section>

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Download, Maximize2, X, BookOpen, Upload, ChevronDown } from 'lucide-react';
+import { Download, Maximize2, X, Upload, ChevronDown } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { itineraryPdfService, type OverrideReport } from '../services/itineraryPdfService';
 import { useItineraryPdf } from './useItineraryPdf';
 import { PdfPageViewer } from './PdfPageViewer';
+import { PdfPhoneReader, type ReaderTopic } from './PdfPhoneReader';
 import { PdfPushSetup } from './PdfPushSetup';
 import { pdfPushTrigger } from '../services/pdfPushTrigger';
 import { derivePageTopics, type PageTopic } from '../utils/pdfPageTopics';
@@ -132,29 +133,6 @@ export const PdfViewerModal: React.FC = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [fullscreen]);
-
-  // Indice delle pagine su telefono: lista compatta sotto il visualizzatore
-  const topicsBlock = topics.length > 0 ? (
-      <ul className="rounded-2xl bg-[#0a1119] border-t border-[rgba(234,240,246,.11)] divide-y divide-[rgba(234,240,246,.11)]" data-testid="pdf-topics">
-        {topics.map((pt) => {
-          const open = selectedPageTopic === pt.page;
-          return (
-            <li key={pt.page} className="py-1">
-              <button
-                type="button"
-                onClick={() => setSelectedPageTopic(pt.page)}
-                aria-expanded={open}
-                className={`w-full min-h-[48px] flex items-center justify-between gap-3 text-left text-[15px] font-medium ${open ? 'text-[#52d9e6]' : 'text-[#eaf0f6]'}`}
-              >
-                <span>{pt.title}</span>
-                <ChevronDown className={`w-4 h-4 shrink-0 text-[#97a5b9] transition-transform ${open ? 'rotate-180' : ''}`} />
-              </button>
-              {open && pt.summary && <p className="pb-3 text-[14px] leading-relaxed text-[#97a5b9]">{pt.summary}</p>}
-            </li>
-          );
-        })}
-      </ul>
-  ) : null;
 
   // Riepilogo per il telefono: le cose che servono subito, senza scorrere
   const quickFacts = !custom ? (
@@ -319,96 +297,69 @@ export const PdfViewerModal: React.FC = () => {
     );
   }
 
+  const uploadedAt = meta ? new Date(meta.updatedAt).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+  const phoneTopics: ReaderTopic[] = topics.map((t) => ({ page: t.page, title: topicTitle(t.title), summary: t.summary }));
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Top Banner */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-red-500/10 text-red-400 shrink-0">
-            <FileText className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white font-display">
-              Documento Ufficiale Aggiornato: Itinerario Seul 2027
-            </h3>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          {canUpload && (
-            <>
-              <input ref={fileInput} type="file" accept="application/pdf,.pdf" className="hidden" onChange={onPickFile} />
-              <button
-                type="button"
-                disabled={uploading}
-                onClick={() => fileInput.current?.click()}
-                className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[var(--ms-fill)] hover:bg-[var(--ms-fill)] border-0 text-[#52d9e6] text-[14px] font-semibold flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span>{uploading ? 'Caricamento…' : 'Aggiorna PDF'}</span>
-              </button>
-            </>
-          )}
-          <a
-            href={pdfUrl}
-            download="Itinerario_Seul_2027_Aggiornato.pdf"
-            className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[var(--ms-fill)] hover:bg-[var(--ms-fill)] text-[#eaf0f6] text-[14px] font-semibold flex items-center gap-2 transition-colors border-0"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Scarica PDF</span>
-          </a>
-          <button
-            type="button"
-            onClick={() => setFullscreen(true)}
-            className="px-3.5 py-2 min-h-[44px] rounded-xl bg-[#52d9e6] hover:bg-[#7fe4ee] text-[#04242a] text-[14px] font-semibold flex items-center gap-2 transition-all"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-            <span>Schermo intero</span>
-          </button>
-        </div>
-      </div>
-
-      {canUpload && <PdfPushSetup />}
-
-      {uploadMsg && (
-        <p role="status" className={`text-xs ${uploadMsg.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
-          {uploadMsg.text}
-        </p>
-      )}
-
+    <PdfPhoneReader
+      url={pdfUrl}
+      title="Itinerario Seul 2027"
+      subtitle={custom ? `Caricato il ${uploadedAt} · ${meta!.name}` : '13 pagine: voli, alloggi, serate e programma'}
+      downloadName="Itinerario_Seul_2027_Aggiornato.pdf"
+      topics={phoneTopics}
+      onDocument={onDocument}
+      onFullscreen={() => setFullscreen(true)}
+      notice={
+        uploadMsg && (
+          <p role="status" className={`text-[13px] leading-snug ${uploadMsg.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
+            {uploadMsg.text}
+          </p>
+        )
+      }
+    >
       {lastRead && (changedDays.length > 0 || lastRead.warnings.length > 0) && (
-        <div className="text-xs text-slate-400 space-y-1 border-l border-white/10 pl-3">
+        <div className="space-y-1 text-[13px] leading-snug text-[var(--ms-mute)]">
           {changedDays.length > 0 && (
             <p>
-              <span className="text-slate-200">Programma letto dal PDF.</span> Giorni cambiati:{' '}
-              {changedDays.map((r) => `${r.n} marzo`).join(', ')}.
+              <span className="text-[var(--ms-text)]">Programma letto dal PDF.</span> Giorni cambiati: {changedDays.map((r) => `${r.n} marzo`).join(', ')}.
             </p>
           )}
           {lastRead.warnings.map((w, i) => (
             <p key={`${i}-${w}`}>{w}</p>
           ))}
-          {canUpload && changedDays.length > 0 && (
-            <button type="button" disabled={uploading} onClick={onReset} className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2 disabled:opacity-50">
-              Ripristina il programma originale
-            </button>
-          )}
         </div>
       )}
 
       {quickFacts}
 
-      {/* Visualizzatore incorporato: le pagine sono disegnate nel sito, senza download */}
-      <div className="overflow-hidden h-[70svh] md:h-[780px] flex flex-col bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl">
-        <div className="px-4 py-2.5 flex items-center justify-between text-xs text-slate-400 font-mono gap-2 bg-slate-950 border-b border-slate-800">
-          <span>Visualizzatore PDF Ufficiale Aggiornato</span>
-          <span className="truncate">{custom ? meta!.name : 'Itinerario_Seul_2027_aggiornato.pdf'}</span>
-        </div>
-        <PdfPageViewer url={pdfUrl} targetPage={selectedPageTopic} onDocument={onDocument} className="flex-1 min-h-0" />
-      </div>
-
-      {topicsBlock}
+      {canUpload && (
+        <details className="rounded-2xl bg-[var(--ms-fill)] px-4 open:pb-4">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-[15px] font-medium text-[var(--ms-text)]">
+            Gestisci il PDF
+            <ChevronDown className="h-4 w-4 text-[var(--ms-mute)]" aria-hidden="true" />
+          </summary>
+          <div className="space-y-4 pt-1">
+            <input ref={fileInput} type="file" accept="application/pdf,.pdf" className="hidden" onChange={onPickFile} />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileInput.current?.click()}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--ms-accent)] text-[15px] font-semibold text-[#04242a] disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              {uploading ? 'Caricamento…' : 'Aggiorna PDF'}
+            </button>
+            {changedDays.length > 0 && (
+              <button type="button" disabled={uploading} onClick={onReset} className="min-h-11 text-[14px] font-semibold text-[var(--ms-accent)] disabled:opacity-50">
+                Ripristina il programma originale
+              </button>
+            )}
+            <PdfPushSetup />
+          </div>
+        </details>
+      )}
 
       {fullscreenLayer}
-    </div>
+    </PdfPhoneReader>
   );
 };

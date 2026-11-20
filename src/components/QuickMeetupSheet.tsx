@@ -117,8 +117,8 @@ export const QuickMeetupSheet: React.FC<{ stops: MapLocation[]; onClose: () => v
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="quick-meetup-title" data-testid="quick-meetup">
-      <button type="button" aria-label="Chiudi" onClick={onClose} className="absolute inset-0 bg-black/60" />
-      <div className="relative w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-xl bg-[#0a1119] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] space-y-5">
+      <button type="button" aria-label="Chiudi" onClick={onClose} className="motion-fade absolute inset-0 bg-black/60" />
+      <div className="animate-sheet-up sm:animate-none relative w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-xl bg-[#0a1119] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] space-y-5">
         <div className="flex items-start justify-between gap-3">
           <h2 id="quick-meetup-title" className="text-xl font-semibold text-white" style={{ fontFamily: 'Outfit, system-ui, sans-serif' }}>Ritrovo al volo</h2>
           <button type="button" onClick={onClose} aria-label="Chiudi" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-300 hover:text-white">
@@ -150,7 +150,7 @@ export const QuickMeetupSheet: React.FC<{ stops: MapLocation[]; onClose: () => v
               )}
               <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cerca un altro luogo" className={inputClass} aria-label="Cerca un altro luogo" />
               {results.length > 0 && (
-                <ul className="divide-y divide-white/[0.08] rounded-xl bg-[rgba(96,150,214,0.13)]">
+                <ul data-motion="list" className="divide-y divide-white/[0.08] rounded-xl bg-[rgba(96,150,214,0.13)]">
                   {results.map((l) => (
                     <li key={l.id}>
                       <button type="button" onClick={() => { setPlaceId(l.id); setQuery(''); }} className="flex min-h-11 w-full items-center px-3 text-left text-sm text-slate-100">

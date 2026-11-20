@@ -7,11 +7,16 @@
 import { useSyncExternalStore } from 'react';
 import { ITINERARY_DAYS, recomputeLocationDays, type ItineraryDay } from '../data/tripData';
 import { rebuildTimedDays } from './tripClock';
+import { markEventDay } from './eventDay';
 
 const CACHE_KEY = 'seul-itinerary-override-v1';
 
 /** Programma incluso nel sito, com'era prima di qualunque PDF: serve per confrontare e per ripristinare. */
 const PRISTINE: ItineraryDay[] = JSON.parse(JSON.stringify(ITINERARY_DAYS));
+markEventDay(PRISTINE);
+markEventDay(ITINERARY_DAYS);
+recomputeLocationDays();
+
 export const builtInItinerary = (): ItineraryDay[] => JSON.parse(JSON.stringify(PRISTINE));
 
 export interface ItineraryOverrideDoc {
@@ -44,7 +49,8 @@ export function isValidItinerary(v: unknown): v is ItineraryDay[] {
 }
 
 function replaceDays(days: ItineraryDay[]): void {
-  ITINERARY_DAYS.splice(0, ITINERARY_DAYS.length, ...days);
+  // Anche i programmi già salvati: il giorno della finale si ricava dal contenuto, non da quello che era segnato prima
+  ITINERARY_DAYS.splice(0, ITINERARY_DAYS.length, ...markEventDay(days));
   recomputeLocationDays();
   rebuildTimedDays();
   version += 1;

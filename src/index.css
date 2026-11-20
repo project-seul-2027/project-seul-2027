@@ -606,6 +606,38 @@ body {
   }
 }
 
+/* ── Sistema di movimento ─────────────────────────────────────────────────
+   Una sola curva di arrivo (ease-out esponenziale) e tre durate: 140 ms per il feedback, 240 ms per i cambi di stato,
+   380-650 ms per un ingresso. Con "riduci movimento" restano solo dissolvenze brevi: niente spostamenti, zoom o sfocature. */
+:root { --ease-out: cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes motion-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* Una foto che si mette a fuoco mentre arriva: dalla sfocatura, con un piccolo scatto verso l'alto */
+@keyframes motion-reveal {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(10px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes motion-draw { from { stroke-dashoffset: var(--len, 24); } to { stroke-dashoffset: 0; } }
+@keyframes motion-ring { from { stroke-dashoffset: var(--ring, 327); } }
+
+/* Elementi di una lista che compare tutta insieme: ognuno entra 40 ms dopo il precedente (si ferma all'ottavo) */
+[data-motion="list"] > *, [data-motion="reveal"] > * { animation: motion-rise 380ms var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 40ms); }
+[data-motion="reveal"] > * { animation-name: motion-reveal; animation-duration: 650ms; animation-delay: calc(var(--i, 0) * 90ms); }
+[data-motion] > :nth-child(1) { --i: 0; } [data-motion] > :nth-child(2) { --i: 1; } [data-motion] > :nth-child(3) { --i: 2; }
+[data-motion] > :nth-child(4) { --i: 3; } [data-motion] > :nth-child(5) { --i: 4; } [data-motion] > :nth-child(6) { --i: 5; }
+[data-motion] > :nth-child(7) { --i: 6; } [data-motion] > :nth-child(n+8) { --i: 7; }
+
+.motion-fade { animation: motion-fade 180ms ease-out backwards; }
+/* Spunta che si disegna e anello che si riempie */
+.motion-draw { stroke-dasharray: var(--len, 24); animation: motion-draw 380ms var(--ease-out) 120ms both; }
+.motion-ring { animation: motion-ring 900ms var(--ease-out) backwards; transition: stroke-dashoffset 600ms var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-motion="list"] > *, [data-motion="reveal"] > * { animation: motion-fade 160ms ease-out backwards; animation-delay: 0ms; }
+  .motion-draw, .motion-ring { animation: none; transition: none; stroke-dasharray: none; }
+}
+
 /* Meteo/Clima desktop (>=1024px): stile piatto, senza cornici né stondature. Il telefono non è toccato. */
 @media (min-width: 1024px) {
   .desk-clean-clima :is(.rounded-3xl, .rounded-2xl, .rounded-xl, .rounded-lg, .rounded-full) {
