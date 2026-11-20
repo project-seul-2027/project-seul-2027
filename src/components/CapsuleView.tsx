@@ -114,7 +114,7 @@ const Ring: React.FC<{ fraction: number; children: React.ReactNode }> = ({ fract
     <div className="relative flex h-[136px] w-[136px] shrink-0 items-center justify-center">
       <svg viewBox="0 0 120 120" className="absolute inset-0 -rotate-90" aria-hidden="true">
         <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
-        <circle cx="60" cy="60" r={r} fill="none" stroke="#52d9e6" strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0, Math.min(1, fraction)))} />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="#52d9e6" strokeWidth="8" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0, Math.min(1, fraction)))} className="motion-ring" style={{ ['--ring' as string]: c }} />
       </svg>
       <div className="relative text-center">{children}</div>
     </div>
@@ -405,13 +405,13 @@ const Feed: React.FC<{
 
       {mine && !mine.skipped && open && (
         <p className="flex items-center gap-2 rounded-xl bg-[rgba(82,217,230,0.12)] px-4 py-3 text-sm text-[#b8f4fa]">
-          <Check className="h-4 w-4 shrink-0" aria-hidden="true" /> Hai risposto alle {romeClock(mine.createdAt ?? now)}: {afterOpen((mine.createdAt ?? now) - fireAt(milestone))}.
+          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path className="motion-draw" style={{ ['--len' as string]: 22 }} d="M5 12.5l4.5 4.5L19 7.5" /></svg> Hai risposto alle {romeClock(mine.createdAt ?? now)}: {afterOpen((mine.createdAt ?? now) - fireAt(milestone))}.
         </p>
       )}
 
       {sorted.length === 0 && <p className="text-sm text-slate-400">Nessuna risposta per questo traguardo.</p>}
 
-      <ul className="space-y-4">
+      <ul className="space-y-4" data-motion="reveal">
         {sorted.map((e, i) => {
           const person = who(e.uid);
           const delta = (e.createdAt ?? fireAt(milestone)) - fireAt(milestone);

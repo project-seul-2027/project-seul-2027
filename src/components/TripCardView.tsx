@@ -92,7 +92,7 @@ export const TripCardView: React.FC = () => {
         })}
       </div>
 
-      <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
+      <div data-motion="list" className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
       <Card title={day.title} icon={<CalendarDays className="h-4 w-4" />} testId="trip-card-program">
         {day.schedule && day.schedule.length > 0 ? (
           <ol className="space-y-2.5">

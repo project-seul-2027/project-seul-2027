@@ -26,7 +26,7 @@ const dayNumber = (d: ItineraryDay) => d.dateStr.split(' ')[0].padStart(2, '0');
 /** Etichette speciali di alcuni giorni (stesse dell'elenco per telefono). */
 function badgesOf(d: ItineraryDay): { text: string; color: string }[] {
   const out: { text: string; color: string }[] = [];
-  if (d.isSpecialEvent) out.push({ text: 'VALORANT MASTERS (3 MAR) · ARENA TBD', color: '#F87171' });
+  if (d.isSpecialEvent) out.push({ text: `VALORANT MASTERS (${Number(d.dateStr.split(' ')[0])} MAR) · ARENA TBD`, color: '#F87171' });
   if (d.id === 8) out.push({ text: 'Serata di saluti (Pietro riparte il 10)', color: '#A78BFA' });
   if (d.id === 9) out.push({ text: 'Rientro di Pietro a Milano (volo 11:10)', color: '#FBBF24' });
   if (d.id === 13) out.push({ text: 'White Day coreano', color: '#F472B6' });

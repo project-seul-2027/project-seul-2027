@@ -15,6 +15,7 @@
  */
 import type { ItineraryDay, MapLocation, ScheduleItem } from '../data/tripData';
 import { isContent, isHeading, measureLayout, type PdfLayout } from './pdfLayout';
+import { markEventDay } from './eventDay';
 
 export interface PdfItem {
   x: number;
@@ -572,7 +573,6 @@ export function buildItineraryFromPdf(pages: PdfPage[], base: ItineraryDay[], lo
         locationIds,
         tags: similar ? b.tags : [title],
         tips: tips.length ? tips : similar ? b.tips : undefined,
-        isSpecialEvent: b.isSpecialEvent || /^[A-ZÀ-Ú0-9 !]{8,}/.test(title)
       };
       report.push({ n, status: 'modificato', detail: `${schedule.length - merged.reused} voci nuove o cambiate su ${schedule.length}` });
     }
@@ -581,5 +581,5 @@ export function buildItineraryFromPdf(pages: PdfPage[], base: ItineraryDay[], lo
 
   for (const d of parsed) if (!base.some((b) => b.id + 1 === d.n) && (d.cardTitle || d.sections.length)) warnings.push(`Il PDF contiene il giorno ${d.n} che il sito non ha: ignorato.`);
   void found;
-  return { days: result, report, warnings, ok: true };
+  return { days: markEventDay(result), report, warnings, ok: true };
 }

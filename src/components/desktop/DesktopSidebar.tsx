@@ -124,10 +124,10 @@ export function DesktopSidebar({
                   onClick={() => onGo(it.id)}
                   aria-current={on ? 'page' : undefined}
                   data-testid={`side-${it.id}`}
-                  className="flex h-8 shrink-0 items-center gap-2.5 rounded-[9px] px-2.5 text-left text-[13px] font-medium transition-colors hover:bg-[#101A2D]"
+                  className="flex h-8 shrink-0 items-center gap-2.5 rounded-[9px] px-2.5 text-left text-[13px] font-medium transition-[background-color,color,box-shadow] duration-200 hover:bg-[#101A2D]"
                   style={on ? { background: '#16233A', color: '#F7F9FC', boxShadow: 'inset 2px 0 0 #00C5E8' } : { color: '#CBD5E1' }}
                 >
-                  <i className="block h-2 w-2 flex-none rounded-full" style={{ background: it.dot }} />
+                  <i className="block h-2 w-2 flex-none rounded-full transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none" style={{ background: it.dot, transform: on ? 'scale(1.45)' : undefined }} />
                   {it.label}
                 </button>
               );

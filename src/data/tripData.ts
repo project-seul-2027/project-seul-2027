@@ -1119,7 +1119,6 @@ export const ITINERARY_DAYS: ItineraryDay[] = [
     costsEstimate: "Circa 15 € (cena e pocha), biglietti da verificare",
     locationIds: ["valorant_masters_arena", "hongdae_district"],
     tags: ["Valorant", "Esports", "Hongdae"],
-    isSpecialEvent: true,
     tips: [
       "Il torneo è riservato nel calendario: non prenotare altri impegni per quel giorno."
     ]
