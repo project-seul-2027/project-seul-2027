@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Check, Clock, Loader2, Lock, RotateCcw, X } from 'lucide-react';
+import { Camera, Check, Clock, Image as ImageIcon, Loader2, Lock, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { isSlot } from '../types/expenses';
 import { compressImage } from '../services/galleryService';
+import { CameraCaptureModal } from './CameraCaptureModal';
 import { CAPSULE_TEXT_MAX, friendlyCapsuleError, removeCapsule, saveCapsule, watchCapsule, type CapsuleEntry } from '../services/capsuleService';
 import { MILESTONES, WINDOW_MS, closesAt, defaultMilestone, fireAt, stateOf, type CapsuleState, type Milestone } from '../utils/capsule';
 
@@ -260,13 +261,33 @@ const UpcomingStage: React.FC<{ milestone: Milestone; now: number; members: { id
   );
 };
 
+/** La riga scritta si conserva sul telefono: se Android chiude l'app mentre si usa la fotocamera di sistema, non si perde */
+const draftKey = (m: Milestone) => `seul2027:capsule:draft:${m}`;
+const readDraft = (m: Milestone): string => {
+  try {
+    return localStorage.getItem(draftKey(m)) ?? '';
+  } catch {
+    return '';
+  }
+};
+const writeDraft = (m: Milestone, text: string): void => {
+  try {
+    if (text) localStorage.setItem(draftKey(m), text);
+    else localStorage.removeItem(draftKey(m));
+  } catch {
+    /* archiviazione bloccata: nessuna bozza */
+  }
+};
+
 /** Risposta: come uno scatto di BeReal, con il tempo che resta in cima */
 const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; travelerId: unknown; onError: (m: string | null) => void }> = ({ milestone, now, uid, travelerId, onError }) => {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => readDraft(milestone));
   const [thumb, setThumb] = useState('');
   const [busy, setBusy] = useState(false);
   const [preparing, setPreparing] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
+  const systemCameraRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const slot = isSlot(travelerId) ? travelerId : null;
   const ready = !!uid && !!slot && !busy && !preparing && (text.trim().length > 0 || thumb !== '');
   const left = closesAt(milestone) - now;
@@ -295,6 +316,7 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
     onError(null);
     try {
       await saveCapsule(uid, slot, milestone, input);
+      writeDraft(milestone, '');
     } catch (e) {
       onError(friendlyCapsuleError(e));
     } finally {
@@ -331,23 +353,50 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={preparing}
-          className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-3 rounded-xl bg-[#0a1119] text-slate-300 disabled:opacity-60 sm:aspect-[4/3]"
-        >
+        <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-4 rounded-xl bg-[#0a1119] px-6 sm:aspect-[4/3]">
           {preparing ? <Loader2 className="h-8 w-8 animate-spin text-[#52d9e6]" aria-hidden="true" /> : <Camera className="h-8 w-8 text-[#52d9e6]" aria-hidden="true" />}
-          <span className="text-sm font-semibold text-white">{preparing ? 'Preparo la foto…' : 'Scatta o scegli una foto'}</span>
-        </button>
+          <p className="text-sm font-semibold text-white">{preparing ? 'Preparo la foto…' : 'Aggiungi una foto'}</p>
+          <div className="flex w-full max-w-xs flex-col gap-2">
+            <button type="button" onClick={() => setCameraOpen(true)} disabled={preparing} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#52d9e6] px-4 text-sm font-semibold text-[#04242a] disabled:opacity-50">
+              <Camera className="h-4 w-4" aria-hidden="true" /> Scatta
+            </button>
+            <button type="button" onClick={() => libraryRef.current?.click()} disabled={preparing} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[rgba(96,150,214,0.13)] px-4 text-sm font-semibold text-[#eaf0f6] disabled:opacity-50">
+              <ImageIcon className="h-4 w-4" aria-hidden="true" /> Dalla galleria
+            </button>
+          </div>
+        </div>
       )}
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ''; }} />
+      {/* Dalla galleria: nessun "capture", così si apre la scelta delle foto già salvate */}
+      <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ''; }} />
+      {/* Fotocamera di sistema: solo se quella dell'app non parte */}
+      <input ref={systemCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ''; }} />
+      {cameraOpen && (
+        <CameraCaptureModal
+          onCapture={(file) => {
+            setCameraOpen(false);
+            void pick(file);
+          }}
+          onClose={() => setCameraOpen(false)}
+          onPickLibrary={() => {
+            setCameraOpen(false);
+            libraryRef.current?.click();
+          }}
+          onUseSystemCamera={() => {
+            setCameraOpen(false);
+            systemCameraRef.current?.click();
+          }}
+        />
+      )}
 
       <label className="block">
         <span className="sr-only">Una riga su cosa stai facendo</span>
         <textarea
           value={text}
-          onChange={(e) => setText(e.target.value.slice(0, CAPSULE_TEXT_MAX))}
+          onChange={(e) => {
+            const next = e.target.value.slice(0, CAPSULE_TEXT_MAX);
+            setText(next);
+            writeDraft(milestone, next);
+          }}
           rows={2}
           placeholder="Scrivi una riga…"
           className="w-full resize-none rounded-xl bg-[#0a1119] px-4 py-3 text-sm text-white placeholder:text-slate-500 outline-none focus-visible:shadow-[inset_0_0_0_1.5px_#52d9e6]"
