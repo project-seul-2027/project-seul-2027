@@ -1,27 +1,23 @@
 # Capsula del tempo: avvisi a 100, 50, 30, 14, 7 e 1 giorno dalla partenza (1 marzo 2027).
-# Alle 18:00 italiane (17:00 UTC) si apre il traguardo; alle 16:00 italiane, due giorni dopo (46 ore), parte l'avviso
+# Alle 18:00 italiane si apre il traguardo; alle 16:00 italiane, due giorni dopo (46 ore), parte l'avviso
 # "sta per chiudere", solo per chi non ha ancora risposto né saltato.
-# GitHub può ritardare i controlli programmati anche di mezz'ora: per questo si controlla ogni 10 minuti per alcune ore
-# e lo script manda l'avviso se è scattato da meno di 3 ore (apertura) o 90 minuti (chiusura). Non lo manda due volte (pushLog).
+# GitHub esegue i controlli programmati "quando può": il 21 novembre l'unico è partito oltre quattro ore tardi.
+# Per questo si controlla ogni mezz'ora durante tutto il giorno (7:00-23:59 UTC) dall'apertura alla chiusura;
+# lo script manda l'avviso se è scattato da meno di 24 ore (apertura) o 110 minuti (chiusura), non di notte in Italia,
+# e mai due volte (pushLog).
 # Prova a mano: GitHub → Actions → "Capsula del tempo" → Run workflow (con "solo elenco" non manda nulla).
 name: Capsula del tempo
 
 on:
   schedule:
-    # Aperture: dalle 17:00 alle 19:50 UTC (18:00-20:50 in Italia, ora solare)
-    - cron: '*/10 17-19 21 11 *'   # 100 giorni: 21 novembre 2026
-    - cron: '*/10 17-19 10 1 *'    # 50 giorni: 10 gennaio 2027
-    - cron: '*/10 17-19 30 1 *'    # 30 giorni: 30 gennaio
-    - cron: '*/10 17-19 15 2 *'    # 14 giorni: 15 febbraio
-    - cron: '*/10 17-19 22 2 *'    # 7 giorni: 22 febbraio
-    - cron: '*/10 17-19 28 2 *'    # 1 giorno: 28 febbraio
-    # Avvisi di chiusura: dalle 15:00 alle 16:50 UTC (16:00-17:50 in Italia), 46 ore dopo l'apertura
-    - cron: '*/10 15-16 23 11 *'
-    - cron: '*/10 15-16 12 1 *'
-    - cron: '*/10 15-16 1 2 *'
-    - cron: '*/10 15-16 17 2 *'
-    - cron: '*/10 15-16 24 2 *'
-    - cron: '*/10 15-16 2 3 *'
+    - cron: '*/30 7-23 21-23 11 *'   # 100 giorni: dal 21 al 23 novembre 2026
+    - cron: '*/30 7-23 10-12 1 *'    # 50 giorni: dal 10 al 12 gennaio 2027
+    - cron: '*/30 7-23 30,31 1 *'    # 30 giorni: 30 gennaio...
+    - cron: '*/30 7-23 1 2 *'        # ...fino all'1 febbraio
+    - cron: '*/30 7-23 15-17 2 *'    # 14 giorni: dal 15 al 17 febbraio
+    - cron: '*/30 7-23 22-24 2 *'    # 7 giorni: dal 22 al 24 febbraio
+    - cron: '*/30 7-23 28 2 *'       # 1 giorno: 28 febbraio...
+    - cron: '*/30 7-23 1,2 3 *'      # ...fino al 2 marzo
   workflow_dispatch:
     inputs:
       dry_run:

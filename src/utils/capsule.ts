@@ -17,8 +17,16 @@ export const REMINDER_AFTER_MS = 46 * HOUR;
  * Quello di apertura può arrivare anche tre ore dopo ("cosa stai facendo adesso?" resta vero); quello di chiusura al massimo
  * un'ora e mezza dopo, così manca ancora mezz'ora alla fine.
  */
-export const OPEN_LOOKBACK_MS = 3 * HOUR;
-export const CLOSING_LOOKBACK_MS = 90 * 60_000;
+export const OPEN_LOOKBACK_MS = 24 * HOUR;
+export const CLOSING_LOOKBACK_MS = 110 * 60_000;
+
+/** Orario in Italia in cui si possono mandare avvisi: di notte si aspetta la mattina (l'avviso di apertura resta valido 24 ore) */
+export const QUIET_FROM_HOUR = 22;
+export const QUIET_UNTIL_HOUR = 8;
+export function isQuietRome(ms: number): boolean {
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', hourCycle: 'h23' }).format(new Date(ms)));
+  return hour >= QUIET_FROM_HOUR || hour < QUIET_UNTIL_HOUR;
+}
 
 /** Le 18:00 in Italia sono le 17:00 UTC finché c'è l'ora solare (fino al 28 marzo 2027: tutti i traguardi ci rientrano) */
 export const fireAt = (m: Milestone): number => Date.UTC(2027, 2, 1 - m, 17, 0, 0);

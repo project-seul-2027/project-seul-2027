@@ -2,7 +2,7 @@
  * Chi deve ricevere un avviso della capsula del tempo in questo momento. Puro calcolo, senza Firebase:
  * lo usa scripts/capsule-push.mts.
  */
-import { CLOSING_LOOKBACK_MS, MILESTONES, OPEN_LOOKBACK_MS, capsuleMessage, fireAt, reminderAt, type Milestone } from './capsule';
+import { CLOSING_LOOKBACK_MS, MILESTONES, OPEN_LOOKBACK_MS, capsuleMessage, fireAt, isQuietRome, reminderAt, type Milestone } from './capsule';
 import type { PlannedPush, PushTokenDoc } from './tripPushPlan';
 
 export function planCapsulePushes(input: {
@@ -16,6 +16,8 @@ export function planCapsulePushes(input: {
   const wants = (t: PushTokenDoc) => t.prefs.activity === true;
   const due = (at: number, lookback: number) => at <= now && at > now - lookback;
   const out: PlannedPush[] = [];
+  // Di notte non si manda nulla: il controllo del mattino recupera gli avvisi ancora validi
+  if (isQuietRome(now)) return out;
 
   for (const m of MILESTONES as readonly Milestone[]) {
     for (const [kind, at, lookback] of [['open', fireAt(m), OPEN_LOOKBACK_MS], ['closing', reminderAt(m), CLOSING_LOOKBACK_MS]] as const) {
