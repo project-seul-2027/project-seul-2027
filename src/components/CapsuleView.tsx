@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Check, Clock, Image as ImageIcon, Loader2, Lock, RotateCcw, X } from 'lucide-react';
+import { Camera, Check, Clock, Image as ImageIcon, Loader2, Lock, MessageCircle, RotateCcw, Send, Trash2, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { isSlot } from '../types/expenses';
 import { compressImage } from '../services/galleryService';
 import { CameraCaptureModal } from './CameraCaptureModal';
-import { CAPSULE_TEXT_MAX, friendlyCapsuleError, loadCapsuleImage, removeCapsule, saveCapsule, watchCapsule, type CapsuleEntry } from '../services/capsuleService';
+import { addCapsuleComment, CAPSULE_COMMENT_MAX, CAPSULE_TEXT_MAX, friendlyCapsuleError, loadCapsuleImage, removeCapsule, removeCapsuleComment, saveCapsule, watchCapsule, watchCapsuleComments, type CapsuleComment, type CapsuleEntry } from '../services/capsuleService';
 import { CapsulePhotoViewer } from './CapsulePhotoViewer';
 import { MILESTONES, WINDOW_MS, activeClosesAt, defaultMilestone, fireAt, stateOf, type CapsuleState, type Milestone } from '../utils/capsule';
 
@@ -158,10 +158,12 @@ export const CapsuleView: React.FC = () => {
   const { user, group } = useAuth();
   const [now, setNow] = useState(() => Date.now());
   const [entries, setEntries] = useState<CapsuleEntry[]>([]);
+  const [comments, setComments] = useState<CapsuleComment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Milestone>(() => defaultMilestone(Date.now()));
 
   useEffect(() => watchCapsule(setEntries, setError), []);
+  useEffect(() => watchCapsuleComments(setComments, setError), []);
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(t);
@@ -219,7 +221,7 @@ export const CapsuleView: React.FC = () => {
       )}
 
       {revealed && (
-        <Feed milestone={selected} now={now} state={state} answers={answers} who={who} members={members} answerState={answerState} mine={mine} />
+        <Feed milestone={selected} now={now} state={state} answers={answers} comments={comments} currentUserId={user?.id ?? ''} who={who} members={members} answerState={answerState} mine={mine} />
       )}
 
       {state !== 'upcoming' && !revealed && (
@@ -470,11 +472,13 @@ const Feed: React.FC<{
   now: number;
   state: CapsuleState;
   answers: CapsuleEntry[];
+  comments: CapsuleComment[];
+  currentUserId: string;
   who: (uid: string) => { id: string; name: string; avatar?: string } | undefined;
   members: { id: string; name: string; avatar?: string }[];
   answerState: Map<string, 'done' | 'skipped'>;
   mine: CapsuleEntry | null;
-}> = ({ milestone, now, state, answers, who, members, answerState, mine }) => {
+}> = ({ milestone, now, state, answers, comments, currentUserId, who, members, answerState, mine }) => {
   const [viewing, setViewing] = useState<CapsuleEntry | null>(null);
   const sorted = [...answers].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
   const waiting = members.filter((m) => !answerState.has(m.id));
@@ -528,6 +532,12 @@ const Feed: React.FC<{
                 </p>
               )}
               {!e.text && <div className="h-3" aria-hidden="true" />}
+              <CapsuleComments
+                entry={e}
+                comments={comments.filter((comment) => comment.capsuleId === e.id)}
+                currentUserId={currentUserId}
+                who={who}
+              />
             </li>
           );
         })}
@@ -544,6 +554,106 @@ const Feed: React.FC<{
             ))}
           </ul>
         </section>
+      )}
+    </section>
+  );
+};
+
+const CapsuleComments: React.FC<{
+  entry: CapsuleEntry;
+  comments: CapsuleComment[];
+  currentUserId: string;
+  who: (uid: string) => { id: string; name: string; avatar?: string } | undefined;
+}> = ({ entry, comments, currentUserId, who }) => {
+  const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const canComment = !!currentUserId && currentUserId !== entry.uid;
+
+  const submit = async () => {
+    if (!canComment || !text.trim()) return;
+    setSubmitting(true);
+    setCommentError(null);
+    try {
+      await addCapsuleComment(entry.id, currentUserId, text);
+      setText('');
+    } catch (error) {
+      setCommentError(friendlyCapsuleError(error));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const remove = async (commentId: string) => {
+    setDeletingId(commentId);
+    setCommentError(null);
+    try {
+      await removeCapsuleComment(commentId);
+    } catch (error) {
+      setCommentError(friendlyCapsuleError(error));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (
+    <section className="border-t border-white/[0.08] px-4 py-3" aria-label="Commenti">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+        <MessageCircle className="h-3.5 w-3.5 text-[#52d9e6]" aria-hidden="true" />
+        {comments.length} {comments.length === 1 ? 'commento' : 'commenti'}
+      </p>
+
+      {comments.length > 0 && (
+        <ul className="mt-3 space-y-2.5">
+          {comments.map((comment) => {
+            const person = who(comment.authorId);
+            return (
+              <li key={comment.id} className="flex gap-2 text-sm">
+                <Avatar src={person?.avatar} name={person?.name ?? 'Qualcuno'} size={25} />
+                <div className="min-w-0 flex-1 rounded-lg bg-[#0a1119] px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 truncate text-xs font-semibold text-white">
+                      {person?.name ?? 'Qualcuno'}
+                      {comment.createdAt && <span className="ml-1.5 font-normal text-slate-500">{romeClock(comment.createdAt)}</span>}
+                    </p>
+                    {comment.authorId === currentUserId && (
+                      <button type="button" onClick={() => void remove(comment.id)} disabled={deletingId !== null} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:text-rose-200 disabled:opacity-50" aria-label="Elimina il tuo commento">
+                        {deletingId === comment.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-0.5 break-words text-sm text-slate-200">{comment.text}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {commentError && <p role="alert" className="mt-2 text-xs text-rose-200">{commentError}</p>}
+
+      {canComment && (
+        <form
+          className="mt-3 flex items-end gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <label className="sr-only" htmlFor={`capsule-comment-${entry.id}`}>Commenta il contenuto di {who(entry.uid)?.name ?? 'un partecipante'}</label>
+          <textarea
+            id={`capsule-comment-${entry.id}`}
+            value={text}
+            onChange={(event) => setText(event.target.value.slice(0, CAPSULE_COMMENT_MAX))}
+            rows={1}
+            placeholder="Scrivi un commento…"
+            className="min-h-11 flex-1 resize-none rounded-xl bg-[#0a1119] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus-visible:shadow-[inset_0_0_0_1.5px_#52d9e6]"
+          />
+          <button type="submit" disabled={submitting || !text.trim()} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#52d9e6] text-[#04242a] transition-transform active:scale-95 disabled:opacity-40" aria-label="Invia commento">
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
+          </button>
+        </form>
       )}
     </section>
   );

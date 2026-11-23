@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, setDoc, writeBatch, type DocumentData, type Timestamp } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, writeBatch, type DocumentData, type Timestamp } from 'firebase/firestore';
 import { firebase } from '../firebase/client';
 import { MILESTONES, type Milestone } from '../utils/capsule';
 import { TRAVELER_SLOT_IDS, type TravelerSlotId } from '../shared/travelerProfile';
@@ -9,10 +9,12 @@ import { TRAVELER_SLOT_IDS, type TravelerSlotId } from '../shared/travelerProfil
  * Non si modifica: per cambiare risposta si cancella e si riscrive.
  */
 const CAPSULE = 'capsule';
+const COMMENTS = 'capsuleComments';
 /** capsuleImages/{stesso id}: la foto a qualità piena. Si legge solo quando serve (nel feed la miniatura, poi questa). */
 const IMAGES = 'capsuleImages';
 
 export const CAPSULE_TEXT_MAX = 280;
+export const CAPSULE_COMMENT_MAX = 400;
 
 export interface CapsuleEntry {
   id: string;
@@ -23,6 +25,14 @@ export interface CapsuleEntry {
   /** Miniatura JPEG come data URL, vuota se solo testo */
   thumb: string;
   skipped: boolean;
+  createdAt: number | null;
+}
+
+export interface CapsuleComment {
+  id: string;
+  capsuleId: string;
+  authorId: string;
+  text: string;
   createdAt: number | null;
 }
 
@@ -59,6 +69,44 @@ export function watchCapsule(onData: (list: CapsuleEntry[]) => void, onError: (m
     (snap) => onData(snap.docs.map((d) => parseEntry(d.id, d.data())).filter((x): x is CapsuleEntry => !!x)),
     (err) => onError(friendlyCapsuleError(err))
   );
+}
+
+export function watchCapsuleComments(onData: (list: CapsuleComment[]) => void, onError: (msg: string) => void): () => void {
+  const { db } = firebase();
+  return onSnapshot(
+    query(collection(db, COMMENTS), orderBy('createdAt', 'desc'), limit(500)),
+    (snap) =>
+      onData(
+        snap.docs.flatMap((d) => {
+          const data = d.data({ serverTimestamps: 'estimate' });
+          if (typeof data.capsuleId !== 'string' || typeof data.authorId !== 'string' || typeof data.text !== 'string') return [];
+          return [{
+            id: d.id,
+            capsuleId: data.capsuleId,
+            authorId: data.authorId,
+            text: data.text.slice(0, CAPSULE_COMMENT_MAX),
+            createdAt: millis(data.createdAt)
+          }];
+        }).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
+      ),
+    (err) => onError(friendlyCapsuleError(err))
+  );
+}
+
+export async function addCapsuleComment(capsuleId: string, authorId: string, text: string): Promise<void> {
+  const clean = text.trim().slice(0, CAPSULE_COMMENT_MAX);
+  if (!clean) throw new Error('Scrivi un commento prima di inviarlo.');
+  const { db } = firebase();
+  await setDoc(doc(collection(db, COMMENTS)), {
+    capsuleId,
+    authorId,
+    text: clean,
+    createdAt: serverTimestamp()
+  });
+}
+
+export async function removeCapsuleComment(commentId: string): Promise<void> {
+  await deleteDoc(doc(firebase().db, COMMENTS, commentId));
 }
 
 export type CapsuleInput = { text: string; thumb?: string; full?: string } | { skipped: true };
@@ -99,8 +147,18 @@ export function loadCapsuleImage(id: string): Promise<string> {
 export async function removeCapsule(milestone: Milestone, uid: string): Promise<void> {
   const { db } = firebase();
   const id = `${milestone}-${uid}`;
-  await deleteDoc(doc(db, CAPSULE, id));
+  // I commenti appartengono alla risposta: eliminarli prima evita che ricompaiano se la persona ripubblica nello stesso traguardo.
+  const commentSnap = await getDocs(query(collection(db, COMMENTS), where('capsuleId', '==', id)));
+  for (let offset = 0; offset < commentSnap.docs.length; offset += 450) {
+    const batch = writeBatch(db);
+    for (const comment of commentSnap.docs.slice(offset, offset + 450)) batch.delete(comment.ref);
+    await batch.commit();
+  }
+  const imageRef = doc(db, IMAGES, id);
+  const imageSnap = await getDoc(imageRef);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, CAPSULE, id));
+  if (imageSnap.exists()) batch.delete(imageRef);
+  await batch.commit();
   fullCache.delete(id);
-  // Le risposte solo testo non hanno la foto piena: l'errore di cancellazione si ignora
-  await deleteDoc(doc(db, IMAGES, id)).catch(() => undefined);
 }

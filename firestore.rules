@@ -341,6 +341,37 @@ service cloud.firestore {
       allow delete: if isParticipant() && resource.data.uid == request.auth.uid;
     }
 
+    // Commenti alle risposte della capsula: si commentano solo contenuti di un altro partecipante.
+    // Non si modifica: può eliminarlo chi lo ha scritto oppure l'autore della risposta insieme alla risposta stessa.
+    match /capsuleComments/{commentId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && request.resource.data.keys().hasOnly(['capsuleId', 'authorId', 'text', 'createdAt'])
+        && request.resource.data.keys().hasAll(['capsuleId', 'authorId', 'text', 'createdAt'])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.capsuleId is string
+        && request.resource.data.capsuleId.matches('^(100|50|30|14|7|1)-.+$')
+        && shortString(request.resource.data.text, 400)
+        && request.resource.data.text.size() > 0
+        && exists(/databases/$(database)/documents/capsule/$(request.resource.data.capsuleId))
+        && get(/databases/$(database)/documents/capsule/$(request.resource.data.capsuleId)).data.uid != request.auth.uid
+        && get(/databases/$(database)/documents/capsule/$(request.resource.data.capsuleId)).data.skipped == false
+        && (
+          get(/databases/$(database)/documents/capsule/$(request.resource.data.capsuleId)).data.text.size() > 0
+          || 'thumb' in get(/databases/$(database)/documents/capsule/$(request.resource.data.capsuleId)).data
+        );
+      allow delete: if isParticipant()
+        && (
+          resource.data.authorId == request.auth.uid
+          || (
+            exists(/databases/$(database)/documents/capsule/$(resource.data.capsuleId))
+            && get(/databases/$(database)/documents/capsule/$(resource.data.capsuleId)).data.uid == request.auth.uid
+          )
+        );
+      // nessun update
+    }
+
     // Foto a piena qualità (letta solo quando si apre la foto)
     match /galleryImages/{photoId} {
       allow read: if isParticipant();
