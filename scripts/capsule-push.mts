@@ -17,7 +17,7 @@ import { pushUrl } from '../src/shared/pushEvents';
 const env = process.env;
 if (!env.FIREBASE_SERVICE_ACCOUNT) {
   console.log('FIREBASE_SERVICE_ACCOUNT non impostato: nessun avviso inviato.');
-  process.exit(0);
+  process.exit(1);
 }
 let serviceAccount: Record<string, unknown>;
 try {
@@ -57,20 +57,26 @@ const names = new Map<string, string>();
 for (const d of (await db.collection('members').get()).docs) names.set(d.id, String(d.get('firstName') || d.get('displayName') || 'Qualcuno'));
 
 const logged = new Set<string>();
-for (const d of (await db.collection('pushLog').where('at', '>', now - 3 * 86_400_000).get()).docs) logged.add(d.id);
+const accepted = new Map<string, Set<string>>();
+for (const d of (await db.collection('pushLog').where('at', '>', now - 3 * 86_400_000).get()).docs) {
+  const ids = d.get('acceptedIds');
+  if (Array.isArray(ids)) accepted.set(d.id, new Set(ids));
+  else if (d.get('sent') !== 0) logged.add(d.id); // Older records have no device-level receipts.
+}
 
 const plan = planCapsulePushes({ now, tokens, answered, logged, posts, names });
 console.log(`Telefoni: ${tokens.length} · avvisi da mandare: ${plan.length}`);
 if (plan.length === 0) process.exit(0);
 
-const DEAD = new Set(['messaging/registration-token-not-registered', 'messaging/invalid-registration-token', 'messaging/invalid-argument']);
+const DEAD = new Set(['messaging/registration-token-not-registered', 'messaging/invalid-registration-token']);
 const messaging = getMessaging();
+let failures = 0;
 for (const p of plan) {
-  const byToken = new Map(p.tokens.map((t) => [t.token, t]));
+  const byToken = new Map(p.tokens.filter((t) => !accepted.get(p.key)?.has(t.id)).map((t) => [t.token, t]));
   console.log(`- ${p.key}: "${p.title}" — ${p.body} → ${byToken.size} telefoni`);
-  if (dry) continue;
+  if (dry || !byToken.size) continue;
   const list = [...byToken.keys()];
-  let sent = 0;
+  const delivered = accepted.get(p.key) ?? new Set<string>();
   for (let i = 0; i < list.length; i += 500) {
     const chunk = list.slice(i, i + 500);
     const res = await messaging.sendEachForMulticast({
@@ -79,13 +85,19 @@ for (const p of plan) {
       android: { priority: 'normal' },
       webpush: { headers: { TTL: '7200', Urgency: 'normal' } }
     });
-    sent += res.successCount;
+    failures += res.failureCount;
     for (const [idx, r] of res.responses.entries()) {
-      if (r.success) continue;
+      if (r.success) {
+        delivered.add(byToken.get(chunk[idx])!.id);
+        continue;
+      }
       const code = r.error?.code ?? 'unknown';
       console.warn(`  invio fallito (${code})`);
       if (DEAD.has(code)) await db.collection('pushTokens').doc(byToken.get(chunk[idx])!.id).delete().catch(() => undefined);
     }
+    await db.collection('pushLog').doc(p.key).set({ at: now, acceptedIds: [...delivered], sent: delivered.size, total: p.tokens.length });
+    console.log('Firebase: %d accettati, %d falliti', res.successCount, res.failureCount);
   }
-  await db.collection('pushLog').doc(p.key).set({ at: now, sent, total: list.length });
 }
+
+if (failures) process.exitCode = 1;

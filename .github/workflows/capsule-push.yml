@@ -4,7 +4,7 @@
 # GitHub esegue i controlli programmati "quando può": il 21 novembre l'unico è partito oltre quattro ore tardi.
 # Per questo si controlla ogni 10 minuti durante tutto il giorno (7:00-23:59 UTC) dall'apertura alla chiusura;
 # e manda "Nome ha risposto" a chi non ha ancora risposto (in ritardo di qualche minuto: senza il piano Blaze non ci sono funzioni in tempo reale);
-# lo script manda l'avviso se è scattato da meno di 24 ore (apertura) o 110 minuti (chiusura), non di notte in Italia,
+# lo script manda l'avviso se è scattato da meno di 24 ore (apertura) o due ore (chiusura), non di notte in Italia,
 # e mai due volte (pushLog).
 # Prova a mano: GitHub → Actions → "Capsula del tempo" → Run workflow (con "solo elenco" non manda nulla).
 name: Capsula del tempo

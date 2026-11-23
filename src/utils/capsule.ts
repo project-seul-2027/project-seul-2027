@@ -12,13 +12,9 @@ const HOUR = 3_600_000;
 export const WINDOW_MS = 48 * HOUR;
 /** Quando parte l'avviso di chiusura (a 46 ore dall'apertura = 2 ore alla fine) */
 export const REMINDER_AFTER_MS = 46 * HOUR;
-/**
- * Un avviso resta valido così a lungo dopo l'orario previsto: i controlli programmati di GitHub possono ritardare di molti minuti.
- * Quello di apertura può arrivare anche tre ore dopo ("cosa stai facendo adesso?" resta vero); quello di chiusura al massimo
- * un'ora e mezza dopo, così manca ancora mezz'ora alla fine.
- */
+/** Recupera i controlli in ritardo, senza inviare promemoria dopo la chiusura. */
 export const OPEN_LOOKBACK_MS = 24 * HOUR;
-export const CLOSING_LOOKBACK_MS = 110 * 60_000;
+export const CLOSING_LOOKBACK_MS = WINDOW_MS - REMINDER_AFTER_MS;
 
 /** Orario in Italia in cui si possono mandare avvisi: di notte si aspetta la mattina (l'avviso di apertura resta valido 24 ore) */
 export const QUIET_FROM_HOUR = 22;
