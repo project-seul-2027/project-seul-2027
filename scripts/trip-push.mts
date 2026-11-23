@@ -87,7 +87,12 @@ for (const d of (await db.collection('places').where('createdAt', '>', sinceTs).
 
 // Avvisi già mandati negli ultimi giorni
 const logged = new Set<string>();
-for (const d of (await db.collection('pushLog').where('at', '>', now - 3 * 86_400_000).get()).docs) logged.add(d.id);
+const accepted = new Map<string, Set<string>>();
+for (const d of (await db.collection('pushLog').where('at', '>', now - 3 * 86_400_000).get()).docs) {
+  const ids = d.get('acceptedIds');
+  if (Array.isArray(ids)) accepted.set(d.id, new Set(ids));
+  else if (d.get('sent') !== 0) logged.add(d.id);
+}
 
 // Il programma letto dall'ultimo PDF (se c'è) prende il posto di quello incluso nel sito, come nell'app
 try {
@@ -111,11 +116,11 @@ if (plan.length === 0) process.exit(0);
 const DEAD = new Set(['messaging/registration-token-not-registered', 'messaging/invalid-registration-token', 'messaging/invalid-argument']);
 const messaging = getMessaging();
 for (const p of plan) {
-  const byToken = new Map(p.tokens.map((t) => [t.token, t]));
+  const byToken = new Map(p.tokens.filter((t) => !accepted.get(p.key)?.has(t.id)).map((t) => [t.token, t]));
   console.log(`- ${p.key}: "${p.title}" — ${p.body} → ${byToken.size} telefoni`);
-  if (dry) continue;
+  if (dry || !byToken.size) continue;
   const list = [...byToken.keys()];
-  let sent = 0;
+  const delivered = accepted.get(p.key) ?? new Set<string>();
   for (let i = 0; i < list.length; i += 500) {
     const chunk = list.slice(i, i + 500);
     const res = await messaging.sendEachForMulticast({
@@ -124,13 +129,15 @@ for (const p of plan) {
       android: { priority: p.critical ? 'high' : 'normal' },
       webpush: { headers: { TTL: p.critical ? '1800' : '3600', Urgency: p.critical ? 'high' : 'normal' } }
     });
-    sent += res.successCount;
     for (const [idx, r] of res.responses.entries()) {
-      if (r.success) continue;
+      if (r.success) {
+        delivered.add(byToken.get(chunk[idx])!.id);
+        continue;
+      }
       const code = r.error?.code ?? 'unknown';
       console.warn(`  invio fallito (${code})`);
       if (DEAD.has(code)) await db.collection('pushTokens').doc(byToken.get(chunk[idx])!.id).delete().catch(() => undefined);
     }
   }
-  await db.collection('pushLog').doc(p.key).set({ at: now, sent, total: list.length });
+  await db.collection('pushLog').doc(p.key).set({ at: now, acceptedIds: [...delivered], sent: delivered.size, total: p.tokens.length });
 }

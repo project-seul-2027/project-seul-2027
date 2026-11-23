@@ -1,8 +1,10 @@
 interface Env {
   FIREBASE_PROJECT_ID: string;
   APP_ORIGINS: string;
+  SITE_URL: string;
   ALLOWED_EMAILS: string;
   KAKAO_REST_API_KEY?: string;
+  FIREBASE_SERVICE_ACCOUNT?: string;
 }
 
 type Precision = 'place' | 'address' | 'street' | 'area' | 'unknown';
@@ -43,6 +45,7 @@ type Claims = { aud: string; iss: string; sub: string; exp: number; iat: number;
 type FirebaseJwk = JsonWebKey & { kid?: string };
 let cachedKeys: { expiresAt: number; keys: FirebaseJwk[] } | null = null;
 const windows = new Map<string, { start: number; count: number }>();
+let cachedGoogleToken: { value: string; expiresAt: number } | null = null;
 const corsHeaders = (origin: string) => ({
   'Access-Control-Allow-Origin': origin,
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -51,6 +54,149 @@ const corsHeaders = (origin: string) => ({
   Vary: 'Origin'
 });
 const json = (body: unknown, status: number, origin: string) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(origin), 'Content-Type': 'application/json; charset=utf-8' } });
+
+type ServiceAccount = { client_email: string; private_key: string; project_id?: string };
+type FirestoreValue = {
+  stringValue?: string;
+  integerValue?: string;
+  doubleValue?: number;
+  booleanValue?: boolean;
+  timestampValue?: string;
+  arrayValue?: { values?: FirestoreValue[] };
+};
+type FirestoreDocument = { name: string; fields?: Record<string, FirestoreValue> };
+
+function base64Url(value: string | ArrayBuffer): string {
+  const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : new Uint8Array(value);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function googleAccessToken(raw: string): Promise<string> {
+  if (cachedGoogleToken && cachedGoogleToken.expiresAt > Date.now() + 60_000) return cachedGoogleToken.value;
+  const account = JSON.parse(raw) as ServiceAccount;
+  if (!account.client_email || !account.private_key) throw new Error('service-account');
+  const now = Math.floor(Date.now() / 1000);
+  const encodedHeader = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const encodedClaims = base64Url(JSON.stringify({
+    iss: account.client_email,
+    scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600
+  }));
+  const pem = account.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, '');
+  const keyBytes = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('pkcs8', keyBytes, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const unsigned = `${encodedHeader}.${encodedClaims}`;
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${unsigned}.${base64Url(signature)}` })
+  });
+  if (!response.ok) throw new Error(`oauth:${response.status}`);
+  const result = await response.json() as { access_token?: string; expires_in?: number };
+  if (!result.access_token) throw new Error('oauth-token');
+  cachedGoogleToken = { value: result.access_token, expiresAt: Date.now() + (result.expires_in ?? 3600) * 1000 };
+  return result.access_token;
+}
+
+const firestoreBase = (projectId: string) => `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+const fieldString = (doc: FirestoreDocument, name: string) => doc.fields?.[name]?.stringValue ?? '';
+const fieldNumber = (doc: FirestoreDocument, name: string) => Number(doc.fields?.[name]?.integerValue ?? doc.fields?.[name]?.doubleValue ?? 0);
+const fieldBoolean = (doc: FirestoreDocument, name: string) => doc.fields?.[name]?.booleanValue === true;
+const documentId = (doc: FirestoreDocument) => doc.name.split('/').pop() ?? '';
+
+async function authorizedJson(url: string, accessToken: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(url, { ...init, headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } });
+}
+
+async function sendMeetupPush(env: Env, claims: Claims, meetupId: string): Promise<{ sent: number; accepted: number; total: number }> {
+  if (!/^[A-Za-z0-9_-]{10,80}$/.test(meetupId)) throw new Error('meetup-id');
+  if (!env.FIREBASE_SERVICE_ACCOUNT) throw new Error('push-not-configured');
+  const accessToken = await googleAccessToken(env.FIREBASE_SERVICE_ACCOUNT);
+  const meetupResponse = await authorizedJson(`${firestoreBase(env.FIREBASE_PROJECT_ID)}/meetups/${encodeURIComponent(meetupId)}`, accessToken);
+  if (!meetupResponse.ok) throw new Error(`meetup:${meetupResponse.status}`);
+  const meetup = await meetupResponse.json() as FirestoreDocument;
+  const authorUid = fieldString(meetup, 'createdBy');
+  const createdAt = Date.parse(meetup.fields?.createdAt?.timestampValue ?? '');
+  if (authorUid !== claims.sub || !Number.isFinite(createdAt) || createdAt < Date.now() - 10 * 60_000) throw new Error('meetup-owner');
+
+  const logKey = `m-${meetupId}`;
+  const logUrl = `${firestoreBase(env.FIREBASE_PROJECT_ID)}/pushLog/${encodeURIComponent(logKey)}`;
+  const oldLogResponse = await authorizedJson(logUrl, accessToken);
+  const oldLog = oldLogResponse.ok ? await oldLogResponse.json() as FirestoreDocument : null;
+  const accepted = new Set((oldLog?.fields?.acceptedIds?.arrayValue?.values ?? []).map((value) => value.stringValue ?? '').filter(Boolean));
+
+  const tokenResponse = await authorizedJson(`${firestoreBase(env.FIREBASE_PROJECT_ID)}:runQuery`, accessToken, {
+    method: 'POST',
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'pushTokens' }], select: { fields: [{ fieldPath: 'uid' }, { fieldPath: 'token' }] } } })
+  });
+  if (!tokenResponse.ok) throw new Error(`tokens:${tokenResponse.status}`);
+  const tokenRows = await tokenResponse.json() as Array<{ document?: FirestoreDocument }>;
+  const unique = new Map<string, { id: string; uid: string; token: string }>();
+  for (const row of tokenRows) {
+    if (!row.document) continue;
+    const token = fieldString(row.document, 'token');
+    if (token && !unique.has(token)) unique.set(token, { id: documentId(row.document), uid: fieldString(row.document, 'uid'), token });
+  }
+  const activeIds = new Set([...unique.values()].map((entry) => entry.id));
+  for (const id of accepted) if (!activeIds.has(id)) accepted.delete(id);
+
+  const label = fieldString(meetup, 'label') || 'Punto indicato nell’app';
+  const at = fieldNumber(meetup, 'at');
+  const fixed = fieldBoolean(meetup, 'fixed');
+  const time = new Intl.DateTimeFormat('it-IT', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' }).format(new Date(at));
+  const appUrl = `${env.SITE_URL.replace(/\/?$/, '/')}?p=group`;
+  const ttl = fixed ? 86_400 : Math.min(86_400, Math.max(3_600, Math.floor((at - Date.now()) / 1000) + 7_200));
+  let sentNow = 0;
+  const removed = new Set<string>();
+  for (const entry of unique.values()) {
+    if (accepted.has(entry.id)) continue;
+    const author = entry.uid === authorUid;
+    const title = author ? 'Ritrovo inviato al gruppo' : fixed ? 'Nuovo punto fisso urgente' : 'Nuovo ritrovo urgente';
+    const body = author
+      ? `${label}${fixed ? '' : ` alle ${time}`}: gli altri partecipanti sono stati avvisati.`
+      : fixed ? label : `${label} alle ${time}`;
+    const response = await authorizedJson(`https://fcm.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/messages:send`, accessToken, {
+      method: 'POST',
+      body: JSON.stringify({ message: {
+        token: entry.token,
+        data: { title, body, url: appUrl, tag: author ? `${logKey}-confirm` : logKey, critical: author ? '0' : '1' },
+        android: { priority: 'HIGH' },
+        webpush: { headers: { TTL: String(ttl), Urgency: 'high' } }
+      } })
+    });
+    if (response.ok) {
+      accepted.add(entry.id);
+      sentNow += 1;
+    } else {
+      const detail = await response.text();
+      const dead = response.status === 404 || detail.includes('UNREGISTERED') || detail.includes('INVALID_ARGUMENT');
+      if (dead) {
+        removed.add(entry.id);
+        await authorizedJson(`${firestoreBase(env.FIREBASE_PROJECT_ID)}/pushTokens/${encodeURIComponent(entry.id)}`, accessToken, { method: 'DELETE' }).catch(() => undefined);
+      }
+      console.warn('Meetup push rejected by FCM', { status: response.status, author, deadToken: dead });
+    }
+  }
+
+  const values = [...accepted].map((id) => ({ stringValue: id }));
+  const logResponse = await authorizedJson(logUrl, accessToken, {
+    method: 'PATCH',
+    body: JSON.stringify({ fields: {
+      at: { integerValue: String(Date.now()) },
+      via: { stringValue: 'cloudflare-worker' },
+      acceptedIds: { arrayValue: { values } },
+      sent: { integerValue: String(accepted.size) },
+      total: { integerValue: String(unique.size - removed.size) }
+    } })
+  });
+  if (!logResponse.ok) throw new Error(`push-log:${logResponse.status}`);
+  return { sent: sentNow, accepted: accepted.size, total: unique.size - removed.size };
+}
 
 function decodePart(part: string): Record<string, unknown> {
   return JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown>;
@@ -158,7 +304,13 @@ export default {
       const now = Date.now(), window = windows.get(claims.sub);
       if (window && now - window.start < 60_000 && window.count >= 12) return json({ error: 'Rate limit' }, 429, origin);
       windows.set(claims.sub, !window || now - window.start >= 60_000 ? { start: now, count: 1 } : { ...window, count: window.count + 1 });
-      const body = await request.json() as { query?: unknown; need?: unknown; lat?: unknown; lng?: unknown };
+      const body = await request.json() as { query?: unknown; need?: unknown; lat?: unknown; lng?: unknown; meetupId?: unknown };
+      if (new URL(request.url).pathname.endsWith('/meetup-push')) {
+        if (typeof body.meetupId !== 'string') return json({ error: 'Bad request' }, 400, origin);
+        const result = await sendMeetupPush(env, claims, body.meetupId);
+        console.info('Meetup push completed', { sentNow: result.sent, acceptedDevices: result.accepted, registeredDevices: result.total });
+        return json(result, result.accepted === result.total ? 200 : 503, origin);
+      }
       if (typeof body.need === 'string') {
         // Ricerca per bisogno: solo punti in Corea, solo bisogni dell'elenco
         const need = NEEDS[body.need];
@@ -209,6 +361,8 @@ export default {
       const reason = error instanceof Error ? error.message : 'unknown';
       console.warn('Map search request rejected or failed', { reason });
       if (AUTH_ERRORS.has(reason)) return json({ error: 'Not signed in' }, 401, origin);
+      if (reason === 'meetup-id' || reason === 'meetup-owner') return json({ error: 'Meetup not available' }, 403, origin);
+      if (reason === 'push-not-configured' || reason === 'service-account') return json({ error: 'Push service not configured' }, 503, origin);
       if (error instanceof SyntaxError) return json({ error: 'Bad request' }, 400, origin);
       return json({ error: 'Search failed' }, 500, origin);
     }

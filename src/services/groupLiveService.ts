@@ -130,7 +130,20 @@ export async function writeMyLive(uid: string, slot: TravelerSlotId, state: MyLi
   });
 }
 
-export async function createMeetup(uid: string, mySlot: TravelerSlotId, input: MeetupInput): Promise<void> {
+export async function notifyMeetupCreated(meetupId: string): Promise<void> {
+  const endpoint = import.meta.env.VITE_MAP_SEARCH_URL?.trim().replace(/\/$/, '');
+  const user = firebase().auth.currentUser;
+  if (!endpoint || !user) throw new Error('Servizio notifiche non configurato.');
+  const response = await fetch(`${endpoint}/meetup-push`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${await user.getIdToken()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ meetupId }),
+    signal: AbortSignal.timeout(15_000)
+  });
+  if (!response.ok) throw new Error(`Invio notifiche non riuscito (${response.status}).`);
+}
+
+export async function createMeetup(uid: string, mySlot: TravelerSlotId, input: MeetupInput): Promise<{ id: string; notified: boolean }> {
   const { db } = firebase();
   const ref = doc(collection(db, MEETUPS));
   await setDoc(ref, {
@@ -145,6 +158,13 @@ export async function createMeetup(uid: string, mySlot: TravelerSlotId, input: M
     answers: { [mySlot]: 'ok' },
     fixed: input.fixed === true
   });
+  try {
+    await notifyMeetupCreated(ref.id);
+    return { id: ref.id, notified: true };
+  } catch (error) {
+    console.warn('Ritrovo salvato, invio push non riuscito:', error);
+    return { id: ref.id, notified: false };
+  }
 }
 
 export async function answerMeetup(id: string, slot: TravelerSlotId, answer: MeetupAnswer): Promise<void> {

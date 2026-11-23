@@ -3,7 +3,7 @@ import type { TravelerSlotId } from '../../shared/travelerProfile';
 import { haversineMeters } from '../../data/metroRouter';
 import { LOST_TTL_MS, type LiveDoc, type Meetup, type MeetupAnswer, type MeetupInput, type SharedPosition } from '../../shared/groupLive';
 import {
-  answerMeetup, createMeetup, deleteMeetup, friendlyGroupError, watchLive, watchMeetups, writeMyLive, type MyLiveState
+  answerMeetup, createMeetup, deleteMeetup, friendlyGroupError, notifyMeetupCreated, watchLive, watchMeetups, writeMyLive, type MyLiveState
 } from '../../services/groupLiveService';
 
 /**
@@ -504,9 +504,13 @@ export function currentPosition(): Promise<[number, number]> {
 
 /* ---------- Ritrovi ---------- */
 
-export async function addMeetup(input: MeetupInput): Promise<void> {
+export async function addMeetup(input: MeetupInput): Promise<{ id: string; notified: boolean }> {
   if (!me) throw new Error('Profilo non pronto');
-  await createMeetup(me.uid, me.slot, input);
+  return createMeetup(me.uid, me.slot, input);
+}
+
+export async function retryMeetupNotification(id: string): Promise<void> {
+  await notifyMeetupCreated(id);
 }
 
 export async function answer(id: string, a: MeetupAnswer): Promise<void> {

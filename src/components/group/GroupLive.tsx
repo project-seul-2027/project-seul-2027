@@ -15,7 +15,7 @@ import {
   STALE_POSITION_MS, type LiveDoc, type Meetup, type MeetupAnswer
 } from '../../shared/groupLive';
 import {
-  addMeetup, answer, clearLost, configureMe, currentPosition, dismissNotice, markHome, markOut, removeMeetup, reportLost, resumeSharing,
+  addMeetup, answer, clearLost, configureMe, currentPosition, dismissNotice, markHome, markOut, removeMeetup, reportLost, resumeSharing, retryMeetupNotification,
   setSharingAllowed, startSharing, stopSharing, useGroupLive
 } from './groupLiveStore';
 
@@ -137,6 +137,7 @@ export const MeetupSheet: React.FC<{ onClose: () => void; fixed?: boolean }> = (
   const [time, setTime] = useState(defaultTime);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -175,10 +176,28 @@ export const MeetupSheet: React.FC<{ onClose: () => void; fixed?: boolean }> = (
         pid = p.id;
         if (!name) name = p.italianName || p.name;
       }
-      await addMeetup({ label: name, placeId: pid, lat, lng, at: fixed ? endOfSeoulDay(now) : at, note, fixed });
-      onClose();
+      const result = await addMeetup({ label: name, placeId: pid, lat, lng, at: fixed ? endOfSeoulDay(now) : at, note, fixed });
+      if (result.notified) onClose();
+      else {
+        setSavedId(result.id);
+        setError('Ritrovo salvato, ma la notifica non è partita. Il gruppo lo vede comunque nell’app.');
+        setBusy(false);
+      }
     } catch (err) {
       setError((err as Error).message || 'Non sono riuscito a salvare il ritrovo.');
+      setBusy(false);
+    }
+  };
+
+  const retryNotification = async () => {
+    if (!savedId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await retryMeetupNotification(savedId);
+      onClose();
+    } catch {
+      setError('La notifica non è ancora partita. Controlla la connessione e riprova.');
       setBusy(false);
     }
   };
@@ -221,9 +240,9 @@ export const MeetupSheet: React.FC<{ onClose: () => void; fixed?: boolean }> = (
           {error && <p role="alert" className="text-xs text-amber-300 flex gap-1.5"><CircleAlert className="w-4 h-4 shrink-0" />{error}</p>}
         </div>
         <div className="px-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-          <button type="button" onClick={onClose} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 text-sm font-semibold">Annulla</button>
-          <button type="button" onClick={save} disabled={busy} className="min-h-[48px] rounded-2xl bg-amber-400 max-lg:bg-app-accent disabled:opacity-50 text-slate-950 max-lg:text-app-on-accent text-sm font-bold flex items-center justify-center gap-2" data-testid="meetup-save">
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />} {fixed ? 'Fissa il punto' : 'Avvisa il gruppo'}
+          <button type="button" onClick={onClose} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 text-sm font-semibold">{savedId ? 'Chiudi' : 'Annulla'}</button>
+          <button type="button" onClick={savedId ? retryNotification : save} disabled={busy} className="min-h-[48px] rounded-2xl bg-amber-400 max-lg:bg-app-accent disabled:opacity-50 text-slate-950 max-lg:text-app-on-accent text-sm font-bold flex items-center justify-center gap-2" data-testid="meetup-save">
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />} {savedId ? 'Riprova avviso' : fixed ? 'Fissa il punto' : 'Avvisa il gruppo'}
           </button>
         </div>
       </div>

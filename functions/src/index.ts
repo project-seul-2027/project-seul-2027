@@ -42,7 +42,10 @@ async function dispatch(m: PushMessage, authorUid: string, skip: ReadonlySet<str
     logger.info('Avviso già mandato', { key: m.key });
     return;
   }
-  const rows = (await db.collection('pushTokens').where(`prefs.${m.category}`, '==', true).get()).docs.filter((d) => d.get('uid') !== authorUid && !skip.has(String(d.get('uid'))));
+  const tokenSnapshot = m.critical === true
+    ? await db.collection('pushTokens').get()
+    : await db.collection('pushTokens').where(`prefs.${m.category}`, '==', true).get();
+  const rows = tokenSnapshot.docs.filter((d) => d.get('uid') !== authorUid && !skip.has(String(d.get('uid'))));
   const byToken = new Map(rows.map((d) => [String(d.get('token')), d.ref] as const));
   const tokens = [...byToken.keys()].filter(Boolean);
   if (tokens.length === 0) return;

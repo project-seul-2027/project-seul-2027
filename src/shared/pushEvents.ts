@@ -57,7 +57,8 @@ export const meetupMessage = (id: string, label: string, at: number, fixed: bool
   category: 'group',
   title: fixed ? 'Nuovo punto fisso' : 'Nuovo ritrovo',
   body: fixed ? clip(label, 120) : `${clip(label, 100)} alle ${seoulClock(at)}`,
-  route: 'group'
+  route: 'group',
+  critical: true
 });
 
 export const expenseMessage = (id: string, name: string, title: string, cents: number): PushMessage => ({

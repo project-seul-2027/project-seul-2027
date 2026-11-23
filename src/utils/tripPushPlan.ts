@@ -77,7 +77,7 @@ export function planPushes(input: {
   /** Avviso per tutti quelli che lo vogliono, tranne chi l'ha generato */
   const toOthers = (m: PushMessage, author: string) => {
     if (logged.has(m.key)) return;
-    const to = tokens.filter((t) => wants(t, m.category) && t.uid !== author);
+    const to = tokens.filter((t) => (m.critical === true || wants(t, m.category)) && t.uid !== author);
     if (to.length) out.push({ key: m.key, category: m.category, title: m.title, body: m.body, tag: m.key, route: m.route, critical: m.critical === true, tokens: to });
   };
 

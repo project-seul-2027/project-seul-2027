@@ -107,10 +107,11 @@ Le notifiche arrivano nella barra del telefono anche con l'app chiusa (Firebase 
 | Nuovo PDF dell'itinerario | Aggiornamenti | subito (funzioni) / ogni poche ore (GitHub) | PDF |
 | Nuova versione dell'app · messaggio a mano | Aggiornamenti | dopo il deploy / a mano | Novità |
 
-Due corsie, senza doppioni (stesse chiavi in `pushLog`, stessi messaggi in `src/shared/pushEvents.ts`):
+Tre corsie, senza doppioni (stesse chiavi in `pushLog`, stessi messaggi in `src/shared/pushEvents.ts`):
 
 1. **Rete di sicurezza (già attiva):** `.github/workflows/trip-push.yml` controlla ogni ~10 minuti (26 feb – 21 mar 2027). GitHub può ritardare i controlli programmati.
-2. **Corsia veloce (da attivare):** `functions/` contiene funzioni Firebase che mandano l'avviso in pochi secondi.
+2. **Ritrovi immediati senza Blaze:** il Worker `workers/map-search` espone `/meetup-push`, verifica autore e documento in Firestore e avvisa tutti i telefoni registrati. In Cloudflare va aggiunto il secret `FIREBASE_SERVICE_ACCOUNT` con lo stesso JSON usato nelle GitHub Actions. `SITE_URL` è già nel `wrangler.toml`.
+3. **Corsia veloce completa (facoltativa):** `functions/` contiene funzioni Firebase che mandano in pochi secondi anche gli altri avvisi.
    Servono il piano Blaze e la Firebase CLI:
    ```bash
    cp functions/.env.example functions/.env   # poi scrivi SITE_URL (e FUNCTIONS_REGION = regione di Firestore)
