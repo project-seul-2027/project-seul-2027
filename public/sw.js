@@ -20,6 +20,7 @@ const MAP_CACHE = 'seul2027-maptiles-v1';
 const MAP_HOST = 'tiles.openfreemap.org';
 const KEEP = [SHELL_CACHE, ASSET_CACHE, EXT_CACHE, OFFLINE_CACHE, MAP_CACHE];
 const MAX_ASSETS = 120;
+const WORKER_BUILD = new URL(self.location.href).searchParams.get('build') || 'unknown';
 
 const SHELL_FILES = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/badge-96.png', './icons/apple-touch-icon.png'];
 const HASHED_ASSET = /\/assets\/[^/]+-[\w-]{8,}\.(?:js|css|woff2?|svg|png|jpe?g|webp|json)$/;
@@ -154,7 +155,27 @@ self.addEventListener('push', (event) => {
     // la pagina da aprire toccando l'avviso (es. ?p=group)
     data: { url: d.url || './' }
   };
-  event.waitUntil(self.registration.showNotification(d.title || 'Seul 2027', options));
+  const receipt = {
+    id: String(d.tag || payload.fcmMessageId || `push-${Date.now()}`).slice(0, 120),
+    receivedAt: Date.now(),
+    title: String(d.title || 'Seul 2027').slice(0, 120),
+    workerBuild: WORKER_BUILD
+  };
+  const saveReceipt = new Promise((resolve) => {
+    const request = indexedDB.open('seul2027-push', 1);
+    request.onerror = () => resolve();
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('receipts')) db.createObjectStore('receipts', { keyPath: 'id' });
+    };
+    request.onsuccess = () => {
+      const tx = request.result.transaction('receipts', 'readwrite');
+      tx.objectStore('receipts').put(receipt);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    };
+  });
+  event.waitUntil(Promise.all([self.registration.showNotification(d.title || 'Seul 2027', options), saveReceipt]));
 });
 
 // Toccando l'avviso: se l'app è già aperta la si porta davanti e le si dice quale pagina mostrare

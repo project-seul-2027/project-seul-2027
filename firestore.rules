@@ -86,10 +86,14 @@ service cloud.firestore {
       allow read, delete: if isOwner(resource.data.uid);
       allow create, update: if isOwner(request.resource.data.uid)
         && tokenId.matches('^' + request.auth.uid + '_[0-9a-f]{32}$')
-        && request.resource.data.keys().hasOnly(['uid', 'token', 'prefs', 'platform', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'token', 'prefs', 'platform', 'deviceId', 'userAgent', 'standalone', 'workerBuild', 'updatedAt'])
         && request.resource.data.keys().hasAll(['uid', 'token', 'prefs', 'platform', 'updatedAt'])
         && shortString(request.resource.data.token, 400)
         && shortString(request.resource.data.platform, 20)
+        && shortString(request.resource.data.get('deviceId', ''), 80)
+        && shortString(request.resource.data.get('userAgent', ''), 300)
+        && request.resource.data.get('standalone', false) is bool
+        && shortString(request.resource.data.get('workerBuild', ''), 80)
         && request.resource.data.prefs is map
         && request.resource.data.prefs.keys().hasOnly(['updates', 'schedule', 'bookings', 'group', 'activity', 'quiet'])
         && request.resource.data.prefs.get('updates', false) is bool
@@ -99,6 +103,19 @@ service cloud.firestore {
         && request.resource.data.prefs.get('activity', false) is bool
         && request.resource.data.prefs.get('quiet', false) is bool
         && request.resource.data.updatedAt is number;
+    }
+
+    // Conferma diagnostica scritta dal telefono dopo che il service worker ha ricevuto davvero la push.
+    match /pushReceipts/{receiptId} {
+      allow read, delete: if isOwner(resource.data.uid);
+      allow create, update: if isOwner(request.resource.data.uid)
+        && receiptId.matches('^' + request.auth.uid + '_[A-Za-z0-9_-]{1,220}$')
+        && request.resource.data.keys().hasOnly(['uid', 'deviceId', 'messageId', 'title', 'receivedAt', 'workerBuild'])
+        && shortString(request.resource.data.deviceId, 80)
+        && shortString(request.resource.data.messageId, 120)
+        && shortString(request.resource.data.title, 120)
+        && request.resource.data.receivedAt is number
+        && shortString(request.resource.data.workerBuild, 80);
     }
 
     // Prezzi degli alloggi: li legge tutto il gruppo, li modifica solo chi occupa il Posto 1 (slots/t1)

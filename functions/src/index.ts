@@ -56,9 +56,13 @@ async function dispatch(m: PushMessage, authorUid: string, skip: ReadonlySet<str
     const chunk = tokens.slice(i, i + 500);
     const res = await getMessaging().sendEachForMulticast({
       tokens: chunk,
+      notification: { title: m.title, body: m.body },
       data: { title: m.title, body: m.body, url: pushUrl(siteUrl, m.route), tag: m.key, critical: critical ? '1' : '0' },
       android: { priority: critical ? 'high' : 'normal' },
-      webpush: { headers: { TTL: critical ? '1800' : '3600', Urgency: critical ? 'high' : 'normal' } }
+      webpush: {
+        headers: { TTL: critical ? '1800' : '3600', Urgency: critical ? 'high' : 'normal' },
+        fcmOptions: { link: pushUrl(siteUrl, m.route) }
+      }
     });
     sent += res.successCount;
     await Promise.all(

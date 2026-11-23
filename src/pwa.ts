@@ -34,9 +34,13 @@ if (typeof window !== 'undefined') {
 
 export function registerServiceWorker(): void {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
     // Percorso relativo: funziona anche su GitHub Pages (https://utente.github.io/nome-repo/)
-    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((err) => {
+    // Il build nella URL e updateViaCache:none impediscono a CDN/browser di lasciare sui telefoni
+    // un worker vecchio, che accetterebbe il token FCM senza saper mostrare le push più recenti.
+    navigator.serviceWorker.register(`./sw.js?build=${encodeURIComponent(BUILD_ID)}`, { scope: './', updateViaCache: 'none' }).then((registration) => {
+      void registration.update();
+    }).catch((err) => {
       console.warn('Service worker non registrato:', err);
     });
   });

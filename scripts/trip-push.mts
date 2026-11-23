@@ -125,9 +125,13 @@ for (const p of plan) {
     const chunk = list.slice(i, i + 500);
     const res = await messaging.sendEachForMulticast({
       tokens: chunk,
+      notification: { title: p.title, body: p.body },
       data: { title: p.title, body: p.body, url: pushUrl(siteUrl, p.route), tag: p.tag, critical: p.critical ? '1' : '0' },
       android: { priority: p.critical ? 'high' : 'normal' },
-      webpush: { headers: { TTL: p.critical ? '1800' : '3600', Urgency: p.critical ? 'high' : 'normal' } }
+      webpush: {
+        headers: { TTL: p.critical ? '1800' : '3600', Urgency: p.critical ? 'high' : 'normal' },
+        fcmOptions: { link: pushUrl(siteUrl, p.route) }
+      }
     });
     for (const [idx, r] of res.responses.entries()) {
       if (r.success) {

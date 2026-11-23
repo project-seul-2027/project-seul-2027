@@ -113,6 +113,47 @@ async function authorizedJson(url: string, accessToken: string, init: RequestIni
   return fetch(url, { ...init, headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } });
 }
 
+async function sendPushTest(env: Env, claims: Claims): Promise<{ accepted: number; total: number }> {
+  if (!env.FIREBASE_SERVICE_ACCOUNT) throw new Error('push-not-configured');
+  const accessToken = await googleAccessToken(env.FIREBASE_SERVICE_ACCOUNT);
+  const tokenResponse = await authorizedJson(`${firestoreBase(env.FIREBASE_PROJECT_ID)}:runQuery`, accessToken, {
+    method: 'POST',
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'pushTokens' }], select: { fields: [{ fieldPath: 'uid' }, { fieldPath: 'token' }] } } })
+  });
+  if (!tokenResponse.ok) throw new Error(`tokens:${tokenResponse.status}`);
+  const rows = await tokenResponse.json() as Array<{ document?: FirestoreDocument }>;
+  const entries = rows.flatMap((row) => {
+    if (!row.document || fieldString(row.document, 'uid') !== claims.sub) return [];
+    const token = fieldString(row.document, 'token');
+    return token ? [{ id: documentId(row.document), token }] : [];
+  });
+  const title = 'Test notifica Seul 2027';
+  const body = 'Questa è una vera notifica inviata dal server al tuo dispositivo.';
+  const url = `${env.SITE_URL.replace(/\/?$/, '/')}?p=today`;
+  const tag = `push-test-${Date.now()}`;
+  let accepted = 0;
+  for (const entry of entries) {
+    const response = await authorizedJson(`https://fcm.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/messages:send`, accessToken, {
+      method: 'POST',
+      body: JSON.stringify({ message: {
+        token: entry.token,
+        notification: { title, body },
+        data: { title, body, url, tag, critical: '0' },
+        webpush: { headers: { TTL: '300', Urgency: 'high' }, fcm_options: { link: url } }
+      } })
+    });
+    if (response.ok) {
+      accepted += 1;
+      continue;
+    }
+    const detail = await response.text();
+    if (response.status === 404 || detail.includes('UNREGISTERED')) {
+      await authorizedJson(`${firestoreBase(env.FIREBASE_PROJECT_ID)}/pushTokens/${encodeURIComponent(entry.id)}`, accessToken, { method: 'DELETE' }).catch(() => undefined);
+    }
+  }
+  return { accepted, total: entries.length };
+}
+
 async function sendMeetupPush(env: Env, claims: Claims, meetupId: string): Promise<{ sent: number; accepted: number; total: number }> {
   if (!/^[A-Za-z0-9_-]{10,80}$/.test(meetupId)) throw new Error('meetup-id');
   if (!env.FIREBASE_SERVICE_ACCOUNT) throw new Error('push-not-configured');
@@ -164,9 +205,10 @@ async function sendMeetupPush(env: Env, claims: Claims, meetupId: string): Promi
       method: 'POST',
       body: JSON.stringify({ message: {
         token: entry.token,
+        notification: { title, body },
         data: { title, body, url: appUrl, tag: author ? `${logKey}-confirm` : logKey, critical: author ? '0' : '1' },
         android: { priority: 'HIGH' },
-        webpush: { headers: { TTL: String(ttl), Urgency: 'high' } }
+        webpush: { headers: { TTL: String(ttl), Urgency: 'high' }, fcm_options: { link: appUrl } }
       } })
     });
     if (response.ok) {
@@ -305,6 +347,11 @@ export default {
       if (window && now - window.start < 60_000 && window.count >= 12) return json({ error: 'Rate limit' }, 429, origin);
       windows.set(claims.sub, !window || now - window.start >= 60_000 ? { start: now, count: 1 } : { ...window, count: window.count + 1 });
       const body = await request.json() as { query?: unknown; need?: unknown; lat?: unknown; lng?: unknown; meetupId?: unknown };
+      if (new URL(request.url).pathname.endsWith('/push-test')) {
+        const result = await sendPushTest(env, claims);
+        console.info('Push test completed', { acceptedDevices: result.accepted, registeredDevices: result.total });
+        return json(result, result.accepted === result.total && result.total > 0 ? 200 : 503, origin);
+      }
       if (new URL(request.url).pathname.endsWith('/meetup-push')) {
         if (typeof body.meetupId !== 'string') return json({ error: 'Bad request' }, 400, origin);
         const result = await sendMeetupPush(env, claims, body.meetupId);

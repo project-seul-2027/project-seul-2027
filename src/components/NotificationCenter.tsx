@@ -9,7 +9,7 @@ import type { TravelerSlotId } from '../shared/travelerProfile';
 import { isLost, seoulClock, upcomingMeetups } from '../shared/groupLive';
 import { useGroupLive } from './group/groupLiveStore';
 import { PushToggle } from './PushToggle';
-import { syncPushPrefs } from '../notifications';
+import { sendPushTest, syncPushPrefs } from '../notifications';
 import { readPrefs as readPrefsNow, usePrefs, writePrefs, type NotifyPrefs } from '../notify/prefs';
 import { clearFeed, DEFAULT_ROUTE, markFeedSeen, notifyLocal, onToast, useFeed, wasDelivered, type FeedItem } from '../notify/feed';
 import { requestOpenPage } from '../pageAddress';
@@ -156,8 +156,20 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
     if (user) void syncPushPrefs(user.id);
   };
 
-  const test = () =>
-    notifyLocal({ id: `test-${Date.now()}`, category: 'updates', title: 'Prova di notifica', body: 'Se la vedi, gli avvisi funzionano su questo telefono.' });
+  const [testingPush, setTestingPush] = useState(false);
+  const [pushTestResult, setPushTestResult] = useState<string | null>(null);
+  const test = async () => {
+    setTestingPush(true);
+    setPushTestResult(null);
+    try {
+      const result = await sendPushTest();
+      setPushTestResult(`Firebase ha accettato ${result.accepted} dispositivo${result.accepted === 1 ? '' : 'i'}.`);
+    } catch {
+      setPushTestResult('Test non riuscito. Verifica che le notifiche siano attive.');
+    } finally {
+      setTestingPush(false);
+    }
+  };
 
   return createPortal(
     <div className="nc-overlay fixed inset-0 z-[10000] bg-black/70 flex items-end sm:items-start sm:justify-end" role="dialog" aria-modal="true" aria-label="Notifiche" data-testid="notify-panel" onClick={onClose}>
@@ -265,7 +277,10 @@ const Panel: React.FC<{ onClose: () => void } & HeroOpt> = ({ onClose, heroEnabl
             <p className="nc-sub text-[11px] text-slate-500 leading-snug">
               Con l’app aperta o in secondo piano gli avvisi arrivano sempre. Ad app chiusa arrivano solo con le notifiche attive qui sopra e partono da un controllo del server ogni circa 10 minuti, quindi possono ritardare.
             </p>
-            <button type="button" onClick={test} className="nc-test w-full min-h-[44px] rounded-xl bg-slate-800 text-slate-200 text-sm font-semibold" data-testid="notify-test">Prova una notifica</button>
+            <button type="button" onClick={() => void test()} disabled={testingPush} className="nc-test w-full min-h-[44px] rounded-xl bg-slate-800 text-slate-200 text-sm font-semibold disabled:opacity-60" data-testid="notify-test">
+              {testingPush ? 'Invio in corso…' : 'Prova una notifica reale'}
+            </button>
+            {pushTestResult && <p className="text-[11px] text-slate-400" role="status">{pushTestResult}</p>}
           </section>
         </div>
       </div>

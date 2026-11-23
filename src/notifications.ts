@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getApp } from 'firebase/app';
-import { deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, setDoc, writeBatch } from 'firebase/firestore';
 import { firebase, isFirebaseConfigured } from './firebase/client';
 import { VAPID_KEY } from './firebase/push.config';
 import { isIos, isStandalone } from './pwa';
@@ -20,6 +20,17 @@ export type PushStatus = 'unsupported' | 'ios-install' | 'denied' | 'off' | 'on'
 
 const flagKey = (uid: string) => `seul2027:push:${uid}`;
 const tokenKey = (uid: string) => `seul2027:push-token:${uid}`;
+const deviceKey = 'seul2027:push-device';
+
+type PushReceipt = { id: string; receivedAt: number; title: string; workerBuild: string };
+
+function deviceId(): string {
+  const saved = readStorage(deviceKey);
+  if (saved) return saved;
+  const value = crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  writeStorage(deviceKey, value);
+  return value;
+}
 
 function readStorage(key: string): string | null {
   try {
@@ -84,15 +95,75 @@ async function fetchToken(): Promise<string> {
 async function saveToken(uid: string, token: string): Promise<void> {
   const { db } = firebase();
   const id = await tokenDocId(uid, token);
+  const registration = await navigator.serviceWorker.ready;
   await setDoc(doc(db, 'pushTokens', id), {
     uid,
     token,
     prefs: { ...readPrefs() },
     platform: platformName(),
+    deviceId: deviceId(),
+    userAgent: navigator.userAgent.slice(0, 300),
+    standalone: isStandalone(),
+    workerBuild: new URL(registration.active?.scriptURL ?? registration.installing?.scriptURL ?? location.href).searchParams.get('build') ?? 'unknown',
     updatedAt: Date.now()
   });
   writeStorage(flagKey(uid), '1');
   writeStorage(tokenKey(uid), token);
+}
+
+function readPushReceipts(): Promise<PushReceipt[]> {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('seul2027-push', 1);
+    request.onerror = () => resolve([]);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('receipts')) db.createObjectStore('receipts', { keyPath: 'id' });
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('receipts', 'readonly');
+      const all = tx.objectStore('receipts').getAll();
+      all.onerror = () => resolve([]);
+      all.onsuccess = () => resolve((all.result as PushReceipt[]).slice(-50));
+    };
+  });
+}
+
+function clearPushReceipts(ids: string[]): Promise<void> {
+  return new Promise((resolve) => {
+    if (!ids.length) return resolve();
+    const request = indexedDB.open('seul2027-push', 1);
+    request.onerror = () => resolve();
+    request.onsuccess = () => {
+      const tx = request.result.transaction('receipts', 'readwrite');
+      const store = tx.objectStore('receipts');
+      ids.forEach((id) => store.delete(id));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    };
+  });
+}
+
+/** Registra su Firestore le push realmente ricevute dal service worker, non soltanto accettate da FCM. */
+async function syncPushReceipts(uid: string): Promise<void> {
+  const receipts = await readPushReceipts();
+  if (!receipts.length) return;
+  const { db } = firebase();
+  const batch = writeBatch(db);
+  const currentDevice = deviceId();
+  for (const receipt of receipts) {
+    const safeId = receipt.id.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 100);
+    batch.set(doc(db, 'pushReceipts', `${uid}_${currentDevice}_${safeId}`), {
+      uid,
+      deviceId: currentDevice,
+      messageId: receipt.id,
+      title: receipt.title.slice(0, 120),
+      receivedAt: receipt.receivedAt,
+      workerBuild: receipt.workerBuild.slice(0, 80)
+    });
+  }
+  await batch.commit();
+  await clearPushReceipts(receipts.map((receipt) => receipt.id));
 }
 
 /** Copia sul documento del telefono ciò che l'utente vuole ricevere (lo legge il server). */
@@ -104,6 +175,21 @@ export async function syncPushPrefs(uid: string): Promise<void> {
   } catch {
     // offline: si aggiorna alla prossima apertura
   }
+}
+
+/** Test end-to-end: server → FCM → service worker, non una notifica simulata dentro l'app. */
+export async function sendPushTest(): Promise<{ accepted: number; total: number }> {
+  const endpoint = import.meta.env.VITE_MAP_SEARCH_URL?.trim().replace(/\/$/, '');
+  const user = firebase().auth.currentUser;
+  if (!endpoint || !user) throw new Error('Servizio notifiche non configurato.');
+  const response = await fetch(`${endpoint}/push-test`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${await user.getIdToken()}`, 'Content-Type': 'application/json' },
+    body: '{}',
+    signal: AbortSignal.timeout(15_000)
+  });
+  if (!response.ok) throw new Error(`Test notifiche non riuscito (${response.status}).`);
+  return response.json() as Promise<{ accepted: number; total: number }>;
 }
 
 /** Da chiamare direttamente dal tocco dell'utente (iPhone richiede il gesto per il permesso). */
@@ -143,7 +229,10 @@ export function useSyncPushRegistration(uid: string | undefined) {
     (async () => {
       try {
         const token = await fetchToken();
-        if (!cancelled) await saveToken(uid, token);
+        if (!cancelled) {
+          await saveToken(uid, token);
+          await syncPushReceipts(uid);
+        }
       } catch {
         // offline o Firebase non raggiungibile: si riprova alla prossima apertura
       }

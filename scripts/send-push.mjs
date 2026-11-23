@@ -94,8 +94,9 @@ for (let i = 0; i < tokens.length; i += 500) {
   const chunk = tokens.slice(i, i + 500);
   const result = await messaging.sendEachForMulticast({
     tokens: chunk,
+    notification: { title, body },
     data: { title, body, url: openUrl, tag, critical: '0' },
-    webpush: { headers: { TTL: '86400', Urgency: 'high' } }
+    webpush: { headers: { TTL: '86400', Urgency: 'high' }, fcmOptions: { link: openUrl } }
   });
   sent += result.successCount;
   for (const [index, response] of result.responses.entries()) {

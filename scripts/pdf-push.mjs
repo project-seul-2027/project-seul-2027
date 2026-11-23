@@ -79,8 +79,9 @@ for (let i = 0; i < tokens.length; i += 500) {
   const chunk = tokens.slice(i, i + 500);
   const res = await messaging.sendEachForMulticast({
     tokens: chunk,
+    notification: { title, body },
     data: { title, body, url, tag: 'itinerary-pdf' },
-    webpush: { headers: { TTL: '86400', Urgency: 'high' } }
+    webpush: { headers: { TTL: '86400', Urgency: 'high' }, fcmOptions: { link: url } }
   });
   sent += res.successCount;
   for (const [idx, r] of res.responses.entries()) {
