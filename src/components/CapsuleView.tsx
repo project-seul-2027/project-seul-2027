@@ -4,7 +4,8 @@ import { useAuth } from '../auth/AuthContext';
 import { isSlot } from '../types/expenses';
 import { compressImage } from '../services/galleryService';
 import { CameraCaptureModal } from './CameraCaptureModal';
-import { CAPSULE_TEXT_MAX, friendlyCapsuleError, removeCapsule, saveCapsule, watchCapsule, type CapsuleEntry } from '../services/capsuleService';
+import { CAPSULE_TEXT_MAX, friendlyCapsuleError, loadCapsuleImage, removeCapsule, saveCapsule, watchCapsule, type CapsuleEntry } from '../services/capsuleService';
+import { CapsulePhotoViewer } from './CapsulePhotoViewer';
 import { MILESTONES, WINDOW_MS, closesAt, defaultMilestone, fireAt, stateOf, type CapsuleState, type Milestone } from '../utils/capsule';
 
 const HEADING: React.CSSProperties = { fontFamily: 'Outfit, system-ui, sans-serif' };
@@ -283,6 +284,8 @@ const writeDraft = (m: Milestone, text: string): void => {
 const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; travelerId: unknown; onError: (m: string | null) => void }> = ({ milestone, now, uid, travelerId, onError }) => {
   const [text, setText] = useState(() => readDraft(milestone));
   const [thumb, setThumb] = useState('');
+  /** La stessa foto a qualità piena: si salva a parte e si mostra a schermo intero */
+  const [full, setFull] = useState('');
   const [busy, setBusy] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const libraryRef = useRef<HTMLInputElement>(null);
@@ -299,7 +302,9 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
     onError(null);
     setPreparing(true);
     try {
-      setThumb((await compressImage(file)).thumb);
+      const image = await compressImage(file);
+      setThumb(image.thumb);
+      setFull(image.full);
     } catch (e) {
       onError(e instanceof Error ? e.message : 'Non riesco a leggere questa foto.');
     } finally {
@@ -307,7 +312,7 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
     }
   };
 
-  const publish = async (input: { text: string; thumb?: string } | { skipped: true }) => {
+  const publish = async (input: { text: string; thumb?: string; full?: string } | { skipped: true }) => {
     if (!uid || !slot) {
       onError('Il tuo profilo non ha ancora un posto nel gruppo.');
       return;
@@ -347,8 +352,8 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
 
       {thumb ? (
         <div className="relative overflow-hidden rounded-xl">
-          <img src={thumb} alt="Anteprima della tua foto" className="aspect-[4/5] w-full object-cover sm:aspect-[4/3]" />
-          <button type="button" onClick={() => setThumb('')} aria-label="Togli la foto" className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#04242a]/80 text-white">
+          <img src={full || thumb} alt="Anteprima della tua foto" className="aspect-[4/5] w-full object-cover sm:aspect-[4/3]" />
+          <button type="button" onClick={() => { setThumb(''); setFull(''); }} aria-label="Togli la foto" className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#04242a]/80 text-white">
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
@@ -407,7 +412,7 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
-          onClick={() => publish({ text, thumb: thumb || undefined })}
+          onClick={() => publish({ text, thumb: thumb || undefined, full: full || undefined })}
           disabled={!ready}
           className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#52d9e6] px-4 text-sm font-semibold text-[#04242a] disabled:opacity-40"
         >
@@ -422,6 +427,43 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
   );
 };
 
+/** Foto di una risposta nel feed: parte dalla miniatura, passa da sola alla foto nitida quando entra nello schermo, e si apre a schermo intero */
+const FeedPhoto: React.FC<{ entry: CapsuleEntry; name: string; onOpen: () => void }> = ({ entry, name, onOpen }) => {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [full, setFull] = useState('');
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let alive = true;
+    const observer = new IntersectionObserver(
+      ([hit]) => {
+        if (!hit?.isIntersecting) return;
+        observer.disconnect();
+        loadCapsuleImage(entry.id)
+          .then((image) => alive && image && setFull(image))
+          .catch(() => undefined);
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => {
+      alive = false;
+      observer.disconnect();
+    };
+  }, [entry.id]);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onOpen}
+      aria-label={`Apri la foto di ${name} a schermo intero`}
+      className="block w-full cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#52d9e6]"
+    >
+      <img src={full || entry.thumb} alt={`Foto di ${name}`} className="aspect-[4/5] w-full object-cover sm:aspect-[4/3]" loading="lazy" />
+    </button>
+  );
+};
+
 /** Dopo la risposta (o a traguardo chiuso): le risposte in un feed, dalla più veloce */
 const Feed: React.FC<{
   milestone: Milestone;
@@ -433,11 +475,13 @@ const Feed: React.FC<{
   answerState: Map<string, 'done' | 'skipped'>;
   mine: CapsuleEntry | null;
 }> = ({ milestone, now, state, answers, who, members, answerState, mine }) => {
+  const [viewing, setViewing] = useState<CapsuleEntry | null>(null);
   const sorted = [...answers].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
   const waiting = members.filter((m) => !answerState.has(m.id));
   const open = state === 'open';
   return (
     <section className="space-y-4" data-testid="capsule-entries">
+      {viewing && <CapsulePhotoViewer id={viewing.id} thumb={viewing.thumb} alt={`Foto di ${who(viewing.uid)?.name ?? 'un partecipante'}`} onClose={() => setViewing(null)} />}
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#52d9e6]">{open ? 'Stanno rispondendo' : 'Traguardo chiuso'}</p>
@@ -477,7 +521,7 @@ const Feed: React.FC<{
                 </div>
                 {fast && <span className="shrink-0 rounded-md bg-[#52d9e6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#04242a]">Lampo</span>}
               </div>
-              {e.thumb && <img src={e.thumb} alt={`Foto di ${person?.name ?? 'un partecipante'}`} className="aspect-[4/5] w-full object-cover sm:aspect-[4/3]" loading="lazy" />}
+              {e.thumb && <FeedPhoto entry={e} name={person?.name ?? 'un partecipante'} onOpen={() => setViewing(e)} />}
               {e.text && (
                 <p className={`px-4 pb-4 pt-3 leading-relaxed text-slate-100 ${e.thumb ? 'text-sm' : 'text-xl font-medium text-white'}`} style={e.thumb ? undefined : HEADING}>
                   {e.text}

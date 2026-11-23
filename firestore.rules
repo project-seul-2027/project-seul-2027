@@ -292,12 +292,12 @@ service cloud.firestore {
     match /capsule/{capsuleId} {
       // Apertura di ogni traguardo (18:00 italiane = 17:00 UTC); ogni traguardo resta aperto 48 ore
       function opensAt(m) {
-        return m == 100 ? timestamp.date(2026, 11, 21, 17, 0, 0)
-          : m == 50 ? timestamp.date(2027, 1, 10, 17, 0, 0)
-          : m == 30 ? timestamp.date(2027, 1, 30, 17, 0, 0)
-          : m == 14 ? timestamp.date(2027, 2, 15, 17, 0, 0)
-          : m == 7 ? timestamp.date(2027, 2, 22, 17, 0, 0)
-          : timestamp.date(2027, 2, 28, 17, 0, 0);
+        return m == 100 ? timestamp.date(2026, 11, 21) + duration.value(17, 'h')
+          : m == 50 ? timestamp.date(2027, 1, 10) + duration.value(17, 'h')
+          : m == 30 ? timestamp.date(2027, 1, 30) + duration.value(17, 'h')
+          : m == 14 ? timestamp.date(2027, 2, 15) + duration.value(17, 'h')
+          : m == 7 ? timestamp.date(2027, 2, 22) + duration.value(17, 'h')
+          : timestamp.date(2027, 2, 28) + duration.value(17, 'h');
       }
       function inWindow(m) {
         return request.time >= opensAt(m) && request.time < opensAt(m) + duration.value(48, 'h');
@@ -322,6 +322,20 @@ service cloud.firestore {
             ? (request.resource.data.text.size() == 0 && !('thumb' in request.resource.data))
             : (request.resource.data.text.size() > 0 || 'thumb' in request.resource.data));
 
+      allow delete: if isParticipant() && resource.data.uid == request.auth.uid;
+    }
+
+    // Capsula del tempo, foto a piena qualità: stesso nome della risposta ("<traguardo>-<uid>"), scritta insieme a lei, letta solo quando serve
+    match /capsuleImages/{capsuleId} {
+      allow read: if isParticipant();
+      allow create: if isParticipant()
+        && request.resource.data.keys().hasOnly(['uid', 'data'])
+        && request.resource.data.uid == request.auth.uid
+        && capsuleId.matches('^(100|50|30|14|7|1)-' + request.auth.uid + '$')
+        && request.resource.data.data is string
+        && request.resource.data.data.size() > 100
+        && request.resource.data.data.size() <= 900000
+        && existsAfter(/databases/$(database)/documents/capsule/$(capsuleId));
       allow delete: if isParticipant() && resource.data.uid == request.auth.uid;
     }
 

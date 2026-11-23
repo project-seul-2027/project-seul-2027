@@ -85,6 +85,15 @@ export const pdfMessage = (updatedAt: number, fileName: string): PushMessage => 
   route: 'pdf'
 });
 
+/** Qualcuno ha risposto a un traguardo della capsula: l'avviso va a chi non ha ancora risposto (senza svelare cosa ha scritto). Una sola volta per persona e traguardo. */
+export const capsulePostMessage = (milestone: number, authorUid: string, name: string): PushMessage => ({
+  key: `cap-${milestone}-post-${authorUid}`,
+  category: 'activity',
+  title: `${name} ha risposto alla capsula`,
+  body: 'Rispondi anche tu: le risposte degli altri si vedono appena rispondi.',
+  route: 'capsula'
+});
+
 export const placeMessage =(id: string, name: string, place: string): PushMessage => ({
   key: `pl-${id}`,
   category: 'activity',

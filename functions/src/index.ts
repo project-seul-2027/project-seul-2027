@@ -3,6 +3,7 @@
  *   live/{uid}      → "ha perso il gruppo" (emergenza) e "è a casa"
  *   meetups/{id}    → nuovo ritrovo o punto fisso
  *   expenses/{id}   → nuova spesa · gallery/{id} → nuova foto · places/{id} → nuovo luogo
+ *   capsule/{id}    → risposta alla capsula del tempo (a chi non ha ancora risposto)
  *
  * È la "corsia veloce": il controllo programmato di GitHub (scripts/trip-push.mts, ogni ~10 minuti) resta come rete di
  * sicurezza. I due usano le stesse chiavi anti-doppione (collezione `pushLog`) e gli stessi messaggi
@@ -14,7 +15,8 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { logger } from 'firebase-functions';
-import { expenseMessage, homeMessage, lostMessage, meetupMessage, pdfMessage, photoMessage, placeMessage, pushUrl, type PushMessage } from '../../src/shared/pushEvents';
+import { isQuietRome } from '../../src/utils/capsule';
+import { capsulePostMessage, expenseMessage, homeMessage, lostMessage, meetupMessage, pdfMessage, photoMessage, placeMessage, pushUrl, type PushMessage } from '../../src/shared/pushEvents';
 
 // La regione deve essere la stessa (o vicina) del database Firestore: si cambia con FUNCTIONS_REGION in functions/.env
 const region = process.env.FUNCTIONS_REGION ?? 'europe-west1';
@@ -31,8 +33,8 @@ async function nameOf(uid: string): Promise<string> {
   return String(snap.get('firstName') || snap.get('displayName') || 'Qualcuno');
 }
 
-/** Manda l'avviso a chi lo vuole (tranne l'autore), una volta sola. */
-async function dispatch(m: PushMessage, authorUid: string): Promise<void> {
+/** Manda l'avviso a chi lo vuole (tranne l'autore e chi è in `skip`), una volta sola. */
+async function dispatch(m: PushMessage, authorUid: string, skip: ReadonlySet<string> = new Set()): Promise<void> {
   // "create" fallisce se l'avviso esiste già (mandato dal controllo programmato o da un tentativo precedente)
   try {
     await db.collection('pushLog').doc(m.key).create({ at: Date.now(), via: 'function', sent: 0, total: 0 });
@@ -40,7 +42,7 @@ async function dispatch(m: PushMessage, authorUid: string): Promise<void> {
     logger.info('Avviso già mandato', { key: m.key });
     return;
   }
-  const rows = (await db.collection('pushTokens').where(`prefs.${m.category}`, '==', true).get()).docs.filter((d) => d.get('uid') !== authorUid);
+  const rows = (await db.collection('pushTokens').where(`prefs.${m.category}`, '==', true).get()).docs.filter((d) => d.get('uid') !== authorUid && !skip.has(String(d.get('uid'))));
   const byToken = new Map(rows.map((d) => [String(d.get('token')), d.ref] as const));
   const tokens = [...byToken.keys()].filter(Boolean);
   if (tokens.length === 0) return;
@@ -109,6 +111,20 @@ export const onPdfUploaded = onDocumentWritten('appFiles/itineraryPdf', async (e
   const updatedAt = Number(after.updatedAt);
   if (!Number.isFinite(updatedAt) || updatedAt === Number(event.data?.before.data()?.updatedAt)) return;
   await dispatch(pdfMessage(updatedAt, String(after.name ?? '')), '');
+});
+
+/**
+ * Risposta alla capsula del tempo (foto o riga): avviso a chi non ha ancora risposto né saltato quel traguardo.
+ * Chi salta non fa partire niente. Di notte in Italia (22:00-08:00) non si manda: l'avviso di chiusura copre chi manca.
+ */
+export const onCapsuleCreated = onDocumentCreated('capsule/{id}', async (event) => {
+  const d = event.data?.data();
+  if (!d || d.skipped === true) return;
+  if (isQuietRome(Date.now())) return;
+  const milestone = Number(d.milestone);
+  const by = String(d.uid ?? '');
+  const answered = new Set((await db.collection('capsule').where('milestone', '==', milestone).get()).docs.map((x) => String(x.get('uid'))));
+  await dispatch(capsulePostMessage(milestone, by, await nameOf(by)), by, answered);
 });
 
 export const onPlaceCreated =onDocumentCreated('places/{id}', async (event) => {

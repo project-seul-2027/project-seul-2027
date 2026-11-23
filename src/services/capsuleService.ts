@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, type DocumentData, type Timestamp } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, setDoc, writeBatch, type DocumentData, type Timestamp } from 'firebase/firestore';
 import { firebase } from '../firebase/client';
 import { MILESTONES, type Milestone } from '../utils/capsule';
 import { TRAVELER_SLOT_IDS, type TravelerSlotId } from '../shared/travelerProfile';
@@ -9,6 +9,8 @@ import { TRAVELER_SLOT_IDS, type TravelerSlotId } from '../shared/travelerProfil
  * Non si modifica: per cambiare risposta si cancella e si riscrive.
  */
 const CAPSULE = 'capsule';
+/** capsuleImages/{stesso id}: la foto a qualità piena. Si legge solo quando serve (nel feed la miniatura, poi questa). */
+const IMAGES = 'capsuleImages';
 
 export const CAPSULE_TEXT_MAX = 280;
 
@@ -59,7 +61,7 @@ export function watchCapsule(onData: (list: CapsuleEntry[]) => void, onError: (m
   );
 }
 
-export type CapsuleInput = { text: string; thumb?: string } | { skipped: true };
+export type CapsuleInput = { text: string; thumb?: string; full?: string } | { skipped: true };
 
 export async function saveCapsule(uid: string, slot: TravelerSlotId, milestone: Milestone, input: CapsuleInput): Promise<void> {
   const { db } = firebase();
@@ -68,10 +70,37 @@ export async function saveCapsule(uid: string, slot: TravelerSlotId, milestone: 
     'skipped' in input
       ? { ...base, text: '', skipped: true }
       : { ...base, text: input.text.trim().slice(0, CAPSULE_TEXT_MAX), skipped: false, ...(input.thumb ? { thumb: input.thumb } : {}) };
-  await setDoc(doc(db, CAPSULE, `${milestone}-${uid}`), data);
+  const id = `${milestone}-${uid}`;
+  // Miniatura e foto piena si scrivono insieme: o ci sono tutte e due o nessuna
+  if (!('skipped' in input) && input.full) {
+    const batch = writeBatch(db);
+    batch.set(doc(db, CAPSULE, id), data);
+    batch.set(doc(db, IMAGES, id), { uid, data: input.full });
+    await batch.commit();
+    return;
+  }
+  await setDoc(doc(db, CAPSULE, id), data);
+}
+
+const fullCache = new Map<string, Promise<string>>();
+
+/** La foto a qualità piena di una risposta, o stringa vuota se non c'è (risposte salvate prima, solo miniatura) */
+export function loadCapsuleImage(id: string): Promise<string> {
+  let hit = fullCache.get(id);
+  if (!hit) {
+    // Dentro la promessa: se Firebase non è pronto l'errore resta una foto non caricata, non una schermata rotta
+    hit = Promise.resolve().then(() => getDoc(doc(firebase().db, IMAGES, id))).then((snap) => (snap.exists() && typeof snap.get('data') === 'string' ? (snap.get('data') as string) : ''));
+    hit.catch(() => fullCache.delete(id));
+    fullCache.set(id, hit);
+  }
+  return hit;
 }
 
 export async function removeCapsule(milestone: Milestone, uid: string): Promise<void> {
   const { db } = firebase();
-  await deleteDoc(doc(db, CAPSULE, `${milestone}-${uid}`));
+  const id = `${milestone}-${uid}`;
+  await deleteDoc(doc(db, CAPSULE, id));
+  fullCache.delete(id);
+  // Le risposte solo testo non hanno la foto piena: l'errore di cancellazione si ignora
+  await deleteDoc(doc(db, IMAGES, id)).catch(() => undefined);
 }

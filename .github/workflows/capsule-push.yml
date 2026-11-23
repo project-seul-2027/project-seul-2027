@@ -2,7 +2,8 @@
 # Alle 18:00 italiane si apre il traguardo; alle 16:00 italiane, due giorni dopo (46 ore), parte l'avviso
 # "sta per chiudere", solo per chi non ha ancora risposto né saltato.
 # GitHub esegue i controlli programmati "quando può": il 21 novembre l'unico è partito oltre quattro ore tardi.
-# Per questo si controlla ogni mezz'ora durante tutto il giorno (7:00-23:59 UTC) dall'apertura alla chiusura;
+# Per questo si controlla ogni 10 minuti durante tutto il giorno (7:00-23:59 UTC) dall'apertura alla chiusura;
+# e manda "Nome ha risposto" a chi non ha ancora risposto (in ritardo di qualche minuto: senza il piano Blaze non ci sono funzioni in tempo reale);
 # lo script manda l'avviso se è scattato da meno di 24 ore (apertura) o 110 minuti (chiusura), non di notte in Italia,
 # e mai due volte (pushLog).
 # Prova a mano: GitHub → Actions → "Capsula del tempo" → Run workflow (con "solo elenco" non manda nulla).
@@ -10,14 +11,14 @@ name: Capsula del tempo
 
 on:
   schedule:
-    - cron: '*/30 7-23 21-23 11 *'   # 100 giorni: dal 21 al 23 novembre 2026
-    - cron: '*/30 7-23 10-12 1 *'    # 50 giorni: dal 10 al 12 gennaio 2027
-    - cron: '*/30 7-23 30,31 1 *'    # 30 giorni: 30 gennaio...
-    - cron: '*/30 7-23 1 2 *'        # ...fino all'1 febbraio
-    - cron: '*/30 7-23 15-17 2 *'    # 14 giorni: dal 15 al 17 febbraio
-    - cron: '*/30 7-23 22-24 2 *'    # 7 giorni: dal 22 al 24 febbraio
-    - cron: '*/30 7-23 28 2 *'       # 1 giorno: 28 febbraio...
-    - cron: '*/30 7-23 1,2 3 *'      # ...fino al 2 marzo
+    - cron: '*/10 7-23 21-23 11 *'   # 100 giorni: dal 21 al 23 novembre 2026
+    - cron: '*/10 7-23 10-12 1 *'    # 50 giorni: dal 10 al 12 gennaio 2027
+    - cron: '*/10 7-23 30,31 1 *'    # 30 giorni: 30 gennaio...
+    - cron: '*/10 7-23 1 2 *'        # ...fino all'1 febbraio
+    - cron: '*/10 7-23 15-17 2 *'    # 14 giorni: dal 15 al 17 febbraio
+    - cron: '*/10 7-23 22-24 2 *'    # 7 giorni: dal 22 al 24 febbraio
+    - cron: '*/10 7-23 28 2 *'       # 1 giorno: 28 febbraio...
+    - cron: '*/10 7-23 1,2 3 *'      # ...fino al 2 marzo
   workflow_dispatch:
     inputs:
       dry_run:

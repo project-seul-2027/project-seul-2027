@@ -10,7 +10,7 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { planCapsulePushes } from '../src/utils/capsulePush';
+import { planCapsulePushes, type CapsulePost } from '../src/utils/capsulePush';
 import type { PushTokenDoc } from '../src/utils/tripPushPlan';
 import { pushUrl } from '../src/shared/pushEvents';
 
@@ -42,19 +42,24 @@ for (const d of (await db.collection('pushTokens').get()).docs) {
   tokens.push({ id: d.id, uid, token, prefs: (d.get('prefs') as PushTokenDoc['prefs']) ?? {} });
 }
 
-// Chi ha già risposto (o saltato), per ogni traguardo
+// Chi ha già risposto (o saltato), per ogni traguardo, e le risposte vere con l'ora di arrivo
 const answered = new Map<number, Set<string>>();
-for (const d of (await db.collection('capsule').select('milestone', 'uid').get()).docs) {
+const posts: CapsulePost[] = [];
+for (const d of (await db.collection('capsule').select('milestone', 'uid', 'skipped', 'createdAt').get()).docs) {
   const m = Number(d.get('milestone'));
   const uid = String(d.get('uid') ?? '');
   if (!answered.has(m)) answered.set(m, new Set());
   answered.get(m)!.add(uid);
+  const created = d.get('createdAt');
+  if (d.get('skipped') !== true && created && typeof created.toMillis === 'function') posts.push({ milestone: m, uid, at: created.toMillis() });
 }
+const names = new Map<string, string>();
+for (const d of (await db.collection('members').get()).docs) names.set(d.id, String(d.get('firstName') || d.get('displayName') || 'Qualcuno'));
 
 const logged = new Set<string>();
 for (const d of (await db.collection('pushLog').where('at', '>', now - 3 * 86_400_000).get()).docs) logged.add(d.id);
 
-const plan = planCapsulePushes({ now, tokens, answered, logged });
+const plan = planCapsulePushes({ now, tokens, answered, logged, posts, names });
 console.log(`Telefoni: ${tokens.length} · avvisi da mandare: ${plan.length}`);
 if (plan.length === 0) process.exit(0);
 
