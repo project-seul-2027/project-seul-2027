@@ -47,6 +47,7 @@ interface Props {
   onPreview: () => void;
   simBanner?: React.ReactNode;
   previewPanel?: React.ReactNode;
+  showTripPreview: boolean;
 }
 
 const ZONE_CITY: Record<Zone, string> = { IT: 'Milano', CN: 'Pechino', KR: 'Seul' };
@@ -72,12 +73,12 @@ function BigDuration({ ms }: { ms: number }) {
   const totalH = Math.floor(ms / 3_600_000);
   const totalM = Math.floor(ms / 60_000);
   if (days > 0) {
-    return <><span className="lead">{days}</span><span className="u">{days === 1 ? 'giorno' : 'giorni'}</span><span className="rest">{Number(hh)} h {mm} min {ss} s</span></>;
+    return <><span className="ms-cd-main"><span className="lead">{days}</span><span className="u">{days === 1 ? 'giorno' : 'giorni'}</span></span><span className="rest">{Number(hh)} h {mm} min {ss} s</span></>;
   }
   if (totalH > 0) {
-    return <><span className="lead">{totalH}</span><span className="u">ore</span><span className="rest">{mm} min {ss} s</span></>;
+    return <><span className="ms-cd-main"><span className="lead">{totalH}</span><span className="u">ore</span></span><span className="rest">{mm} min {ss} s</span></>;
   }
-  return <><span className="lead">{totalM}</span><span className="u">min</span><span className="rest">{ss} s</span></>;
+  return <><span className="ms-cd-main"><span className="lead">{totalM}</span><span className="u">min</span></span><span className="rest">{ss} s</span></>;
 }
 
 /** Testata con video dal primo pixel e sfumatura verso il blu della pagina; il contenuto sta in basso */
@@ -150,7 +151,7 @@ export const MobileOggi: React.FC<Props> = (p) => {
           )}
           <h2 className="ms-h2" data-testid="today-now" style={!isCount ? { fontSize: 40, lineHeight: 1.05, margin: '6px 0 0' } : undefined}>{title}</h2>
           {sub && <p style={{ color: '#c3cfdd', marginTop: 4 }}>{sub}</p>}
-          {L.kind === 'countdown' && L.eyebrow.startsWith('Prossimo ritrovo') && (
+          {L.kind === 'countdown' && L.eyebrow.startsWith('Prossimo ritrovo') && p.showTripPreview && (
             <div className="ms-acts" style={{ marginTop: 8 }}>
               <button type="button" className="ms-link" onClick={p.onTryTrip} data-testid="try-trip-mode">Prova il viaggio</button>
               <button type="button" className="ms-link" onClick={() => p.onGoTo('itinerary')}>Vedi il programma</button>

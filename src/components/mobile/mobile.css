@@ -185,10 +185,11 @@
 }
 
 /* Conto alla rovescia: l'unità più grande domina, le altre restano discrete */
-.ms-cd { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 10px; font-family: 'Outfit', system-ui, sans-serif; font-variant-numeric: tabular-nums; margin: 0; }
+.ms-cd { display: block; font-family: 'Outfit', system-ui, sans-serif; font-variant-numeric: tabular-nums; margin: 0; }
+.ms-cd-main { display: flex; align-items: baseline; gap: 10px; min-height: 88px; }
 .ms-cd .lead { font-size: 96px; font-weight: 400; line-height: 0.92; letter-spacing: -0.04em; }
-.ms-cd .u { font-size: 22px; font-weight: 400; color: var(--ms-text); margin-right: 14px; }
-.ms-cd .rest { font-size: 22px; font-weight: 300; color: #dbe5ef; letter-spacing: -0.01em; }
+.ms-cd .u { font-size: 22px; font-weight: 400; color: var(--ms-text); }
+.ms-cd .rest { display: block; margin-top: 2px; padding-left: 4px; font-size: 22px; font-weight: 300; color: #dbe5ef; letter-spacing: -0.01em; }
 
 /* Anteprima del viaggio: pannello e avviso stanno sotto la testata, non sotto il video */
 .ms-under { margin-top: calc(76px + env(safe-area-inset-top)); }

@@ -25,6 +25,7 @@ import {
 import {
   TRIP_REMINDERS, REMINDER_AUDIENCE_LABEL, buildIcs, reminderApplies, saveIcsFile
 } from '../utils/tripReminders';
+import { DEV_PREFERENCES_EVENT, readShowTripPreview } from '../utils/devPreferences';
 
 /** Riassunto breve di una tappa: il campo `summary`, o la prima frase del testo come ripiego. */
 const briefOf = (item: { summary?: string; activity: string }) =>
@@ -96,6 +97,7 @@ const isSeoulStop = (l: MapLocation) => l.city === 'Seul' || l.city === 'Dintorn
 
 export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabled, onToggleHero }) => {
   const { user } = useAuth();
+  const [showTripPreview, setShowTripPreview] = useState(false);
   const [sim, setSim] = useState<number | null>(simFromUrl);
   const now = useNow(sim);
   const where = useMemo(() => locateNow(now), [now]);
@@ -103,6 +105,13 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
   const day = timedDay.day;
   const before = where.phase === 'before' && sim === null;
   const after = where.phase === 'after';
+
+  useEffect(() => {
+    const sync = () => setShowTripPreview(user?.travelerId === 't1' && readShowTripPreview());
+    sync();
+    window.addEventListener(DEV_PREFERENCES_EVENT, sync);
+    return () => window.removeEventListener(DEV_PREFERENCES_EVENT, sync);
+  }, [user?.travelerId]);
 
   // --- Meteo di Seul (se manca la rete, la scheda resta senza meteo) ---
   const [weather, setWeather] = useState<LiveWeatherData | null>(null);
@@ -232,10 +241,10 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
         <>
           <PhoneCountdown />
           <p className="mt-4 text-sm text-slate-300 leading-relaxed">Ritrovo a Malpensa T1 il 1 marzo entro le 10:00. Durante il viaggio qui trovi cosa fare adesso e la strada per la prossima tappa.</p>
-          <div className="mt-4 grid grid-cols-2 gap-2.5">
-            <button type="button" onClick={() => setSim(msFromDayAndClock(3, '14:30', 'KR'))} className="min-h-[48px] px-3 rounded-2xl bg-app-accent text-app-on-accent text-sm font-bold flex items-center justify-center gap-2" data-testid="try-trip-mode">
+          <div className={`mt-4 grid gap-2.5 ${showTripPreview ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {showTripPreview && <button type="button" onClick={() => setSim(msFromDayAndClock(3, '14:30', 'KR'))} className="min-h-[48px] px-3 rounded-2xl bg-app-accent text-app-on-accent text-sm font-bold flex items-center justify-center gap-2" data-testid="try-trip-mode">
               <Eye className="w-4 h-4 shrink-0" /> Prova il viaggio
-            </button>
+            </button>}
             <button type="button" onClick={() => onGoTo('itinerary')} className="min-h-[48px] px-3 rounded-2xl bg-app-raised border border-app-control text-app-text text-sm font-semibold">
               Vedi il programma
             </button>
@@ -310,14 +319,14 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
             vi dice cosa fare adesso, cosa viene dopo e vi porta alla prossima tappa con un tocco.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
+            {showTripPreview && <button
               type="button"
               onClick={() => setSim(msFromDayAndClock(3, '14:30', 'KR'))}
               className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold flex items-center gap-2"
               data-testid="try-trip-mode"
             >
               <Eye className="w-4 h-4" /> Prova la modalità viaggio
-            </button>
+            </button>}
             <button
               type="button"
               onClick={() => onGoTo('itinerary')}
@@ -612,6 +621,7 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
           dayTitle={day.title}
           dayN={day.id + 1}
           dayTotal={TIMED_DAYS.length}
+          showTripPreview={showTripPreview}
           seoulTime={seoulTime}
           current={current ? { clock: current.clock, label: briefOf(current.item), zone: current.zone } : null}
           next={next ? { clock: next.clock, label: briefOf(next.item), zone: next.zone, inText: nextIn } : null}

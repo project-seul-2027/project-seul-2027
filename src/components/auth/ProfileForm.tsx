@@ -14,6 +14,7 @@ import {
   type TravelerProfileInput,
   validateProfileInput
 } from '../../shared/travelerProfile';
+import { readShowTripPreview, writeShowTripPreview } from '../../utils/devPreferences';
 
 type FieldErrors = Partial<Record<keyof TravelerProfileInput, string>>;
 
@@ -132,6 +133,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showTripPreview, setShowTripPreview] = useState(() => account?.travelerId === 't1' && readShowTripPreview());
 
   // Se il posto preselezionato viene occupato da qualcun altro, passa al primo libero
   useEffect(() => {
@@ -178,6 +180,11 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
 
   const setShare = (key: OptionalShareField, on: boolean) => set('visibility', { ...form.visibility, [key]: on });
   const shareProps = (key: OptionalShareField) => ({ shareOn: !!form.visibility[key], onShare: (on: boolean) => setShare(key, on) });
+
+  const setTripPreview = (enabled: boolean) => {
+    setShowTripPreview(enabled);
+    writeShowTripPreview(enabled);
+  };
 
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -581,6 +588,27 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ mode, onSaved, onCance
           </div>
         </Field>
       </Section>
+
+      {mode === 'edit' && account?.travelerId === 't1' && (
+        <Section icon={<Eye className="w-4 h-4" />} title="Strumenti di sviluppo" subtitle="Preferenze locali, visibili solo su questo dispositivo.">
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-950/60 p-3 max-lg:rounded-none max-lg:bg-transparent max-lg:px-0">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">Mostra “Prova il viaggio”</p>
+              <p className="mt-0.5 text-[11px] text-slate-500 max-lg:text-[13px] max-lg:text-[#97a5b9]">Riattiva il pulsante di anteprima nella pagina Oggi.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showTripPreview}
+              onClick={() => setTripPreview(!showTripPreview)}
+              className={`relative h-7 w-12 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 ${showTripPreview ? 'bg-cyan-500' : 'bg-slate-700'}`}
+              aria-label="Mostra Prova il viaggio"
+            >
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${showTripPreview ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+        </Section>
+      )}
 
       {formError && (
         <div role="alert" className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex gap-2">
