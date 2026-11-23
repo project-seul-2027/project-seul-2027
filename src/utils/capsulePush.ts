@@ -2,7 +2,7 @@
  * Chi deve ricevere un avviso della capsula del tempo in questo momento. Puro calcolo, senza Firebase:
  * lo usa scripts/capsule-push.mts.
  */
-import { CLOSING_LOOKBACK_MS, MILESTONES, OPEN_LOOKBACK_MS, capsuleMessage, closesAt, fireAt, isQuietRome, reminderAt, stateOf, type Milestone } from './capsule';
+import { CLOSING_LOOKBACK_MS, MILESTONES, OPEN_LOOKBACK_MS, REOPEN_100_AT, REOPEN_100_END, capsuleMessage, fireAt, isQuietRome, reminderAt, stateOf, type Milestone } from './capsule';
 import { capsulePostMessage } from '../shared/pushEvents';
 import type { PlannedPush, PushTokenDoc } from './tripPushPlan';
 
@@ -32,6 +32,11 @@ export function planCapsulePushes(input: {
   const out: PlannedPush[] = [];
   // Di notte non si manda nulla: il controllo del mattino recupera gli avvisi ancora validi
   if (isQuietRome(now)) return out;
+
+  if (now >= REOPEN_100_AT && now < REOPEN_100_END && !logged.has('cap-100-reopen-20261123')) {
+    const to = tokens;
+    if (to.length) out.push({ key: 'cap-100-reopen-20261123', category: 'activity', title: 'Capsula dei 100 giorni riaperta', body: 'Hai tempo fino a domani alle 18:30 per aggiungere una frase o una foto.', tag: 'cap-100-reopen-20261123', route: 'capsula', critical: false, tokens: to });
+  }
 
   for (const m of MILESTONES as readonly Milestone[]) {
     for (const [kind, at, lookback] of [['open', fireAt(m), OPEN_LOOKBACK_MS], ['closing', reminderAt(m), CLOSING_LOOKBACK_MS]] as const) {

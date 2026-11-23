@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronRight, Hourglass } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { watchCapsule, type CapsuleEntry } from '../services/capsuleService';
-import { closesAt, openMilestone } from '../utils/capsule';
+import { activeClosesAt, openMilestone } from '../utils/capsule';
 
 const when = (ms: number) =>
   new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
@@ -32,7 +32,7 @@ export const CapsuleNudge: React.FC<{ onOpen: () => void }> = ({ onOpen }) => {
       <Hourglass className="h-5 w-5 shrink-0 text-[#52d9e6]" aria-hidden="true" />
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-white">{m === 1 ? 'Capsula dell’ultimo giorno' : `Capsula dei ${m} giorni`}</span>
-        <span className="block text-xs text-slate-400">Cosa stai facendo adesso? Chiude {when(closesAt(m))}</span>
+        <span className="block text-xs text-slate-400">Cosa stai facendo adesso? Chiude {when(activeClosesAt(m, now))}</span>
       </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
     </button>

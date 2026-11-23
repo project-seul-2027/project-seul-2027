@@ -300,7 +300,9 @@ service cloud.firestore {
           : timestamp.date(2027, 2, 28) + duration.value(17, 'h');
       }
       function inWindow(m) {
-        return request.time >= opensAt(m) && request.time < opensAt(m) + duration.value(48, 'h');
+        return (request.time >= opensAt(m) && request.time < opensAt(m) + duration.value(48, 'h'))
+          || (m == 100 && request.time >= timestamp.date(2026, 11, 23) + duration.value(17, 'h') + duration.value(10, 'm')
+            && request.time < timestamp.date(2026, 11, 24) + duration.value(17, 'h') + duration.value(30, 'm'));
       }
 
       allow read: if isParticipant();

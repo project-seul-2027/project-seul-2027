@@ -6,6 +6,8 @@
 
 export const MILESTONES = [100, 50, 30, 14, 7, 1] as const;
 export type Milestone = (typeof MILESTONES)[number];
+export const REOPEN_100_AT = Date.UTC(2026, 10, 23, 17, 10);
+export const REOPEN_100_END = Date.UTC(2026, 10, 24, 17, 30);
 
 const HOUR = 3_600_000;
 /** Quanto resta aperto un traguardo */
@@ -31,7 +33,10 @@ export const reminderAt = (m: Milestone): number => fireAt(m) + REMINDER_AFTER_M
 
 export type CapsuleState = 'upcoming' | 'open' | 'closed';
 export const stateOf = (m: Milestone, now: number): CapsuleState =>
-  now < fireAt(m) ? 'upcoming' : now < closesAt(m) ? 'open' : 'closed';
+  m === 100 && now >= REOPEN_100_AT && now < REOPEN_100_END ? 'open'
+    : now < fireAt(m) ? 'upcoming' : now < closesAt(m) ? 'open' : 'closed';
+export const activeClosesAt = (m: Milestone, now: number): number =>
+  m === 100 && now >= REOPEN_100_AT && now < REOPEN_100_END ? REOPEN_100_END : closesAt(m);
 
 /** Il traguardo aperto adesso, se c'è (le finestre non si sovrappongono mai: tra due traguardi passano almeno 6 giorni) */
 export const openMilestone = (now: number): Milestone | null => MILESTONES.find((m) => stateOf(m, now) === 'open') ?? null;

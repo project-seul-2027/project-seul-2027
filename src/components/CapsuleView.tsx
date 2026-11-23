@@ -6,7 +6,7 @@ import { compressImage } from '../services/galleryService';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { CAPSULE_TEXT_MAX, friendlyCapsuleError, loadCapsuleImage, removeCapsule, saveCapsule, watchCapsule, type CapsuleEntry } from '../services/capsuleService';
 import { CapsulePhotoViewer } from './CapsulePhotoViewer';
-import { MILESTONES, WINDOW_MS, closesAt, defaultMilestone, fireAt, stateOf, type CapsuleState, type Milestone } from '../utils/capsule';
+import { MILESTONES, WINDOW_MS, activeClosesAt, defaultMilestone, fireAt, stateOf, type CapsuleState, type Milestone } from '../utils/capsule';
 
 const HEADING: React.CSSProperties = { fontFamily: 'Outfit, system-ui, sans-serif' };
 const MIN = 60_000;
@@ -207,7 +207,7 @@ export const CapsuleView: React.FC = () => {
       {state === 'open' && mine?.skipped && (
         <section className="space-y-4 rounded-xl bg-[rgba(96,150,214,0.13)] px-5 py-6 text-center" data-testid="capsule-skipped">
           <p className="text-base font-semibold text-white" style={HEADING}>Oggi passi.</p>
-          <p className="text-sm text-slate-300">Puoi ancora rispondere fino a {romeDay(closesAt(selected))} alle {romeClock(closesAt(selected))}.</p>
+          <p className="text-sm text-slate-300">Puoi ancora rispondere fino a {romeDay(activeClosesAt(selected, now))} alle {romeClock(activeClosesAt(selected, now))}.</p>
           <button
             type="button"
             onClick={() => user && removeCapsule(selected, user.id).catch((e) => setError(friendlyCapsuleError(e)))}
@@ -293,7 +293,7 @@ const Composer: React.FC<{ milestone: Milestone; now: number; uid: string; trave
   const [cameraOpen, setCameraOpen] = useState(false);
   const slot = isSlot(travelerId) ? travelerId : null;
   const ready = !!uid && !!slot && !busy && !preparing && (text.trim().length > 0 || thumb !== '');
-  const left = closesAt(milestone) - now;
+  const left = activeClosesAt(milestone, now) - now;
   const fraction = left / WINDOW_MS;
   const cd = countdown(left);
 
@@ -550,7 +550,7 @@ const Feed: React.FC<{
 };
 
 function closesIn(milestone: Milestone, now: number): string {
-  const left = countdown(closesAt(milestone) - now);
+  const left = countdown(activeClosesAt(milestone, now) - now);
   return `chiude tra ${left.big} ${left.unit}`;
 }
 

@@ -11,6 +11,7 @@ name: Capsula del tempo
 
 on:
   schedule:
+    - cron: '*/10 7-23 23,24 11 *'   # riapertura dei 100 giorni
     - cron: '*/10 7-23 21-23 11 *'   # 100 giorni: dal 21 al 23 novembre 2026
     - cron: '*/10 7-23 10-12 1 *'    # 50 giorni: dal 10 al 12 gennaio 2027
     - cron: '*/10 7-23 30,31 1 *'    # 30 giorni: 30 gennaio...
