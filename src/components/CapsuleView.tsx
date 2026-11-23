@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Check, Clock, Image as ImageIcon, Loader2, Lock, MessageCircle, RotateCcw, Send, Trash2, X } from 'lucide-react';
+import { Camera, Check, ChevronDown, Clock, Image as ImageIcon, Loader2, Lock, MessageCircle, RotateCcw, Send, Trash2, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { isSlot } from '../types/expenses';
 import { compressImage } from '../services/galleryService';
@@ -480,21 +480,21 @@ const Feed: React.FC<{
   mine: CapsuleEntry | null;
 }> = ({ milestone, now, state, answers, comments, currentUserId, who, members, answerState, mine }) => {
   const [viewing, setViewing] = useState<CapsuleEntry | null>(null);
+  const [openComments, setOpenComments] = useState<Set<string>>(new Set());
   const sorted = [...answers].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
   const waiting = members.filter((m) => !answerState.has(m.id));
   const open = state === 'open';
   return (
     <section className="space-y-4" data-testid="capsule-entries">
       {viewing && <CapsulePhotoViewer id={viewing.id} thumb={viewing.thumb} alt={`Foto di ${who(viewing.uid)?.name ?? 'un partecipante'}`} onClose={() => setViewing(null)} />}
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#52d9e6]">{open ? 'Stanno rispondendo' : 'Traguardo chiuso'}</p>
-          <p className="mt-1 text-lg font-semibold text-white" style={HEADING}>
-            {answers.length} {answers.length === 1 ? 'risposta' : 'risposte'} {open && mine ? '· la tua è già qui' : ''}
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#52d9e6]">{open ? 'Risposte del gruppo' : 'Traguardo chiuso'}</p>
+          <p className="mt-1 text-lg font-semibold text-white" style={HEADING}>{answers.length} {answers.length === 1 ? 'risposta' : 'risposte'}</p>
+          {open && mine && <p className="mt-1 text-xs text-slate-400">La tua risposta è già qui</p>}
         </div>
         {open && (
-          <p className="shrink-0 text-right text-xs text-slate-400">
+          <p className="shrink-0 rounded-full bg-[rgba(82,217,230,0.12)] px-2.5 py-1 text-right text-[11px] font-medium text-[#b8f4fa]">
             {closesIn(milestone, now)}
           </p>
         )}
@@ -514,30 +514,36 @@ const Feed: React.FC<{
           const delta = (e.createdAt ?? fireAt(milestone)) - fireAt(milestone);
           const fast = delta >= 0 && delta < 10 * MIN;
           return (
-            <li key={e.id} className="overflow-hidden rounded-xl bg-[rgba(96,150,214,0.13)]" data-rank={i + 1}>
-              <div className="flex items-center gap-3 px-4 pb-2 pt-3">
-                <Avatar src={person?.avatar} name={person?.name ?? 'Qualcuno'} size={36} state="done" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">{person?.name ?? 'Qualcuno'}</p>
-                  <p className="text-[11px] text-slate-400">
-                    {e.createdAt ? romeClock(e.createdAt) : '--:--'} · {afterOpen(delta)}
-                  </p>
+            <li key={e.id} className="overflow-hidden rounded-2xl bg-[rgba(96,150,214,0.13)]" data-rank={i + 1}>
+              <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.42fr)]">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 px-4 pb-2 pt-4">
+                    <Avatar src={person?.avatar} name={person?.name ?? 'Qualcuno'} size={36} state="done" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-white">{person?.name ?? 'Qualcuno'}</p>
+                      <p className="text-[11px] text-slate-400">{e.createdAt ? romeClock(e.createdAt) : '--:--'} · {afterOpen(delta)}</p>
+                    </div>
+                    {fast && <span className="shrink-0 rounded-md bg-[#52d9e6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#04242a]">Lampo</span>}
+                  </div>
+                  {e.thumb && <FeedPhoto entry={e} name={person?.name ?? 'un partecipante'} onOpen={() => setViewing(e)} />}
+                  {e.text && (
+                    <p className={`px-4 pb-5 pt-3 leading-relaxed text-slate-100 ${e.thumb ? 'text-sm' : 'text-xl font-medium text-white'}`} style={e.thumb ? undefined : HEADING}>{e.text}</p>
+                  )}
+                  {!e.text && <div className="h-3" aria-hidden="true" />}
                 </div>
-                {fast && <span className="shrink-0 rounded-md bg-[#52d9e6] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[#04242a]">Lampo</span>}
+                <CapsuleComments
+                  entry={e}
+                  comments={comments.filter((comment) => comment.capsuleId === e.id)}
+                  currentUserId={currentUserId}
+                  who={who}
+                  expanded={openComments.has(e.id)}
+                  onToggle={() => setOpenComments((current) => {
+                    const next = new Set(current);
+                    if (next.has(e.id)) next.delete(e.id); else next.add(e.id);
+                    return next;
+                  })}
+                />
               </div>
-              {e.thumb && <FeedPhoto entry={e} name={person?.name ?? 'un partecipante'} onOpen={() => setViewing(e)} />}
-              {e.text && (
-                <p className={`px-4 pb-4 pt-3 leading-relaxed text-slate-100 ${e.thumb ? 'text-sm' : 'text-xl font-medium text-white'}`} style={e.thumb ? undefined : HEADING}>
-                  {e.text}
-                </p>
-              )}
-              {!e.text && <div className="h-3" aria-hidden="true" />}
-              <CapsuleComments
-                entry={e}
-                comments={comments.filter((comment) => comment.capsuleId === e.id)}
-                currentUserId={currentUserId}
-                who={who}
-              />
             </li>
           );
         })}
@@ -564,12 +570,16 @@ const CapsuleComments: React.FC<{
   comments: CapsuleComment[];
   currentUserId: string;
   who: (uid: string) => { id: string; name: string; avatar?: string } | undefined;
-}> = ({ entry, comments, currentUserId, who }) => {
+  expanded: boolean;
+  onToggle: () => void;
+}> = ({ entry, comments, currentUserId, who, expanded, onToggle }) => {
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
   const canComment = !!currentUserId && currentUserId !== entry.uid;
+
+  if (!canComment && comments.length === 0) return null;
 
   const submit = async () => {
     if (!canComment || !text.trim()) return;
@@ -598,43 +608,46 @@ const CapsuleComments: React.FC<{
   };
 
   return (
-    <section className="border-t border-white/[0.08] px-4 py-3" aria-label="Commenti">
-      <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-        <MessageCircle className="h-3.5 w-3.5 text-[#52d9e6]" aria-hidden="true" />
-        {comments.length} {comments.length === 1 ? 'commento' : 'commenti'}
-      </p>
+    <section className="border-t border-white/[0.08] px-4 py-2.5 lg:border-l lg:border-t-0 lg:px-4 lg:py-4" aria-label="Commenti">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex min-h-11 w-full items-center gap-2 text-left text-sm text-slate-300 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6]"
+      >
+        <MessageCircle className="h-4 w-4 shrink-0 text-[#52d9e6]" aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold text-slate-200">{comments.length === 0 ? 'Commenta' : `${comments.length} ${comments.length === 1 ? 'commento' : 'commenti'}`}</span>
+          {comments.length > 0 && <span className="mt-0.5 block truncate text-[11px] text-slate-500">Ultimo commento di {who(comments[comments.length - 1].authorId)?.name ?? 'qualcuno'}</span>}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+      </button>
 
-      {comments.length > 0 && (
-        <ul className="mt-3 space-y-2.5">
-          {comments.map((comment) => {
-            const person = who(comment.authorId);
-            return (
-              <li key={comment.id} className="flex gap-2 text-sm">
-                <Avatar src={person?.avatar} name={person?.name ?? 'Qualcuno'} size={25} />
-                <div className="min-w-0 flex-1 rounded-lg bg-[#0a1119] px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="min-w-0 truncate text-xs font-semibold text-white">
-                      {person?.name ?? 'Qualcuno'}
-                      {comment.createdAt && <span className="ml-1.5 font-normal text-slate-500">{romeClock(comment.createdAt)}</span>}
-                    </p>
-                    {comment.authorId === currentUserId && (
-                      <button type="button" onClick={() => void remove(comment.id)} disabled={deletingId !== null} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:text-rose-200 disabled:opacity-50" aria-label="Elimina il tuo commento">
-                        {deletingId === comment.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-0.5 break-words text-sm text-slate-200">{comment.text}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {expanded && (
+        <div className="pt-2">
+          {comments.length > 0 && (
+            <ul className="space-y-3 border-t border-white/[0.08] pt-3">
+              {comments.map((comment) => {
+                const person = who(comment.authorId);
+                return (
+                  <li key={comment.id} className="flex gap-2 text-sm">
+                    <Avatar src={person?.avatar} name={person?.name ?? 'Qualcuno'} size={25} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 truncate text-xs font-semibold text-white">{person?.name ?? 'Qualcuno'}{comment.createdAt && <span className="ml-1.5 font-normal text-slate-500">{romeClock(comment.createdAt)}</span>}</p>
+                        {comment.authorId === currentUserId && <button type="button" onClick={() => void remove(comment.id)} disabled={deletingId !== null} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:text-rose-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#52d9e6] disabled:opacity-50" aria-label="Elimina il tuo commento">{deletingId === comment.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}</button>}
+                      </div>
+                      <p className="mt-0.5 break-words text-sm text-slate-200">{comment.text}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-      {commentError && <p role="alert" className="mt-2 text-xs text-rose-200">{commentError}</p>}
+          {commentError && <p role="alert" className="mt-2 text-xs text-rose-200">{commentError}</p>}
 
-      {canComment && (
-        <form
+          {canComment && <form
           className="mt-3 flex items-end gap-2"
           onSubmit={(event) => {
             event.preventDefault();
@@ -653,7 +666,8 @@ const CapsuleComments: React.FC<{
           <button type="submit" disabled={submitting || !text.trim()} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#52d9e6] text-[#04242a] transition-transform active:scale-95 disabled:opacity-40" aria-label="Invia commento">
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
           </button>
-        </form>
+        </form>}
+        </div>
       )}
     </section>
   );

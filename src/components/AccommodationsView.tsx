@@ -433,7 +433,6 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
           myVote={myVote}
           votes={Object.fromEntries(Object.entries(votersByAcc).map(([k, v]) => [k, v.length]))}
           leadingId={leadingVotes > 0 ? leading.id : null}
-          totalVotes={totalVotes}
           voteError={voteError}
           busy={isVoting}
           onVote={handleVote}
