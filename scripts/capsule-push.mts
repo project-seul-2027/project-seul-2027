@@ -82,8 +82,8 @@ for (const p of plan) {
     const res = await messaging.sendEachForMulticast({
       tokens: chunk,
       data: { title: p.title, body: p.body, url: pushUrl(siteUrl, p.route), tag: p.tag, critical: '0' },
-      android: { priority: 'normal' },
-      webpush: { headers: { TTL: '7200', Urgency: 'normal' } }
+      android: { priority: 'high' },
+      webpush: { headers: { TTL: '86400', Urgency: 'high' } }
     });
     failures += res.failureCount;
     for (const [idx, r] of res.responses.entries()) {
