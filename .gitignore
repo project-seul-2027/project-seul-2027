@@ -5,7 +5,7 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
+.env.example
 .impeccable/
 PRODUCT.md
 # Cronologia degli aggiornamenti: si rigenera da git a ogni dev/build (scripts/generate-changelog.mjs)
