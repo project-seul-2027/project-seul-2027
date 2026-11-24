@@ -113,7 +113,7 @@ async function authorizedJson(url: string, accessToken: string, init: RequestIni
   return fetch(url, { ...init, headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } });
 }
 
-async function sendPushTest(env: Env, claims: Claims): Promise<{ accepted: number; total: number }> {
+async function sendPushTest(env: Env, claims: Claims, testId = `push-test-${Date.now()}`): Promise<{ accepted: number; total: number; testId: string }> {
   if (!env.FIREBASE_SERVICE_ACCOUNT) throw new Error('push-not-configured');
   const accessToken = await googleAccessToken(env.FIREBASE_SERVICE_ACCOUNT);
   const tokenResponse = await authorizedJson(`${firestoreBase(env.FIREBASE_PROJECT_ID)}:runQuery`, accessToken, {
@@ -130,7 +130,7 @@ async function sendPushTest(env: Env, claims: Claims): Promise<{ accepted: numbe
   const title = 'Test notifica Seul 2027';
   const body = 'Questa è una vera notifica inviata dal server al tuo dispositivo.';
   const url = `${env.SITE_URL.replace(/\/?$/, '/')}?p=today`;
-  const tag = `push-test-${Date.now()}`;
+  const tag = testId;
   let accepted = 0;
   for (const entry of entries) {
     const response = await authorizedJson(`https://fcm.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/messages:send`, accessToken, {
@@ -151,7 +151,7 @@ async function sendPushTest(env: Env, claims: Claims): Promise<{ accepted: numbe
       await authorizedJson(`${firestoreBase(env.FIREBASE_PROJECT_ID)}/pushTokens/${encodeURIComponent(entry.id)}`, accessToken, { method: 'DELETE' }).catch(() => undefined);
     }
   }
-  return { accepted, total: entries.length };
+  return { accepted, total: entries.length, testId: tag };
 }
 
 async function sendMeetupPush(env: Env, claims: Claims, meetupId: string): Promise<{ sent: number; accepted: number; total: number }> {
@@ -326,8 +326,10 @@ async function kakaoSearch(q: string, key: string, isAddress: boolean): Promise<
   }
   return kakaoHits(await response.json() as { documents?: Array<Record<string, unknown>> }, q, isAddress);
 }
+type ExecutionContextLike = { waitUntil(promise: Promise<unknown>): void };
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContextLike): Promise<Response> {
     const origin = request.headers.get('Origin') || '';
     const origins = env.APP_ORIGINS.split(',').map((item) => item.trim());
     if (!origins.includes(origin)) {
@@ -346,8 +348,18 @@ export default {
       const now = Date.now(), window = windows.get(claims.sub);
       if (window && now - window.start < 60_000 && window.count >= 12) return json({ error: 'Rate limit' }, 429, origin);
       windows.set(claims.sub, !window || now - window.start >= 60_000 ? { start: now, count: 1 } : { ...window, count: window.count + 1 });
-      const body = await request.json() as { query?: unknown; need?: unknown; lat?: unknown; lng?: unknown; meetupId?: unknown };
+      const body = await request.json() as { query?: unknown; need?: unknown; lat?: unknown; lng?: unknown; meetupId?: unknown; delaySeconds?: unknown };
       if (new URL(request.url).pathname.endsWith('/push-test')) {
+        const delaySeconds = Math.min(10, Math.max(0, Number(body.delaySeconds) || 0));
+        if (delaySeconds > 0) {
+          const testId = `push-test-${Date.now()}`;
+          ctx.waitUntil((async () => {
+            await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+            const result = await sendPushTest(env, claims, testId);
+            console.info('Delayed push test completed', { acceptedDevices: result.accepted, registeredDevices: result.total });
+          })());
+          return json({ accepted: 0, total: 0, testId, scheduled: true }, 202, origin);
+        }
         const result = await sendPushTest(env, claims);
         console.info('Push test completed', { acceptedDevices: result.accepted, registeredDevices: result.total });
         return json(result, result.accepted === result.total && result.total > 0 ? 200 : 503, origin);

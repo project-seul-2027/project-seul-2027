@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { ProfileForm } from './auth/ProfileForm';
 import { useAuth } from '../auth/AuthContext';
+import { NotificationDiagnostics } from './NotificationDiagnostics';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
@@ -15,9 +16,11 @@ interface GoogleAuthModalProps {
  */
 export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const [section, setSection] = useState<'profile' | 'notifications'>('profile');
 
   useEffect(() => {
     if (!isOpen) return;
+    setSection('profile');
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -54,8 +57,14 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClos
             <X className="w-5 h-5" />
           </button>
         </div>
+        <div className="px-6 max-lg:px-5 shrink-0" role="tablist" aria-label="Sezioni del profilo">
+          <div className="flex gap-6 border-b border-slate-800/80">
+            <button type="button" role="tab" aria-selected={section === 'profile'} onClick={() => setSection('profile')} className={`min-h-[44px] border-b-2 text-sm font-medium transition-colors ${section === 'profile' ? 'border-[#52d9e6] text-white' : 'border-transparent text-slate-400'}`}>Profilo</button>
+            <button type="button" role="tab" aria-selected={section === 'notifications'} onClick={() => setSection('notifications')} className={`min-h-[44px] border-b-2 text-sm font-medium transition-colors ${section === 'notifications' ? 'border-[#52d9e6] text-white' : 'border-transparent text-slate-400'}`}>Notifiche</button>
+          </div>
+        </div>
         <div className="p-6 max-lg:px-5 max-lg:pt-2 max-lg:pb-0 overflow-y-auto">
-          <ProfileForm mode="edit" onCancel={onClose} />
+          {section === 'profile' ? <ProfileForm mode="edit" onCancel={onClose} /> : <NotificationDiagnostics />}
         </div>
       </div>
     </div>
