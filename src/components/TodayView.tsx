@@ -26,6 +26,9 @@ import {
   TRIP_REMINDERS, REMINDER_AUDIENCE_LABEL, buildIcs, reminderApplies, saveIcsFile
 } from '../utils/tripReminders';
 import { DEV_PREFERENCES_EVENT, readShowTripPreview } from '../utils/devPreferences';
+import { cycleStopStatus, useItineraryLive } from '../services/itineraryLiveService';
+import { useSeoulHome } from '../services/homeInfoService';
+import { StopStatusButton } from './itinerary/DayLiveControls';
 
 /** Riassunto breve di una tappa: il campo `summary`, o la prima frase del testo come ripiego. */
 const briefOf = (item: { summary?: string; activity: string }) =>
@@ -43,7 +46,7 @@ const timeLabel = (t: string): string => {
 };
 
 
-export type TodayTarget = 'wallet' | 'places' | 'sos' | 'map' | 'show' | 'weather' | 'expenses' | 'flights' | 'itinerary' | 'pdf' | 'gallery' | 'capsula';
+export type TodayTarget = 'wallet' | 'places' | 'sos' | 'map' | 'show' | 'weather' | 'expenses' | 'flights' | 'itinerary' | 'pdf' | 'gallery' | 'capsula' | 'recap';
 
 interface TodayViewProps {
   /** Apre la mappa già in modalità percorso: dalla posizione GPS verso la destinazione */
@@ -141,13 +144,27 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
   useEffect(() => setPickedStop(null), [day.id]);
   const stop = stops.find((s) => s.id === pickedStop) ?? stops[0] ?? null;
 
-  const homeId = user?.accommodationPreference ?? 'acc_c';
+  const { homeDoc: seoulHome } = useSeoulHome();
+  const homeId = seoulHome.confirmedAccId ?? user?.accommodationPreference ?? 'acc_c';
   const home = ACCOMMODATIONS.find((a) => a.id === homeId) ?? ACCOMMODATIONS[2];
 
-  // --- Attività ora e dopo ---
+  const { byDay: liveByDay } = useItineraryLive();
+  const liveDay = liveByDay[day.id];
+
+  // --- Attività ora e dopo (salta le tappe segnate come saltate dal gruppo) ---
   const items = timedDay.items;
-  const current = where.currentIndex >= 0 ? items[where.currentIndex] : null;
-  const next = where.nextIndex >= 0 ? items[where.nextIndex] : null;
+  const current =
+    where.currentIndex >= 0 && liveDay?.stopStates[`s_${where.currentIndex}`] !== 'skipped'
+      ? items[where.currentIndex]
+      : null;
+  const effectiveNextIndex = useMemo(() => {
+    if (where.nextIndex < 0) return -1;
+    for (let idx = where.nextIndex; idx < items.length; idx += 1) {
+      if (liveDay?.stopStates[`s_${idx}`] !== 'skipped') return idx;
+    }
+    return -1;
+  }, [where.nextIndex, items.length, liveDay]);
+  const next = effectiveNextIndex >= 0 ? items[effectiveNextIndex] : null;
   const [showPast, setShowPast] = useState(false);
 
   // --- Promemoria per questo utente ---
@@ -198,9 +215,25 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
   const seoulDateIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));
   const completedStops = useMemo(() => {
     if (where.phase !== 'during') return [];
-    const completed = current ? items.slice(0, where.currentIndex) : next ? items.slice(0, where.nextIndex) : items;
-    return completed.map((entry) => briefOf(entry.item));
-  }, [where.phase, current, next, items, where.currentIndex, where.nextIndex]);
+    const cutoff = current ? where.currentIndex : effectiveNextIndex >= 0 ? effectiveNextIndex : items.length;
+    const names: string[] = [];
+    const seen = new Set<string>();
+    const push = (label: string) => {
+      if (label && !seen.has(label)) {
+        seen.add(label);
+        names.push(label);
+      }
+    };
+    items.forEach((entry, idx) => {
+      const st = liveDay?.stopStates[`s_${idx}`];
+      if (st === 'skipped') return;
+      if (st === 'done' || idx < cutoff) push(briefOf(entry.item));
+    });
+    (liveDay?.addedStops ?? []).forEach((added) => {
+      if (liveDay?.stopStates[`a_${added.id}`] === 'done') push(added.name);
+    });
+    return names;
+  }, [where.phase, current, effectiveNextIndex, items, where.currentIndex, liveDay]);
   const recapCard = where.phase === 'during' && (
     <DailyRecap
       dayNumber={day.id}
@@ -523,7 +556,8 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
     </section>
   );
 
-  const timelineCard = items.length > 0 && (
+  const addedStops = liveDay?.addedStops ?? [];
+  const timelineCard = (items.length > 0 || addedStops.length > 0 || !!liveDay?.note) && (
     <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -532,35 +566,65 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
         </div>
         <button type="button" onClick={() => onGoTo('itinerary')} className="shrink-0 text-[11px] text-cyan-300 hover:text-cyan-200 font-semibold mt-1">Giorno completo</button>
       </div>
+      {liveDay?.note && (
+        <div data-keep-style className="mt-3 rounded-xl bg-[#152231] px-3 py-2 text-xs text-slate-200 leading-relaxed">
+          <span className="font-semibold text-[#52d9e6]">Nota del gruppo:</span> {liveDay.note}
+        </div>
+      )}
       {where.currentIndex > 0 && !showPast && (
         <button type="button" onClick={() => setShowPast(true)} className="mt-3 text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1">
           <ChevronDown className="w-3.5 h-3.5" /> {where.currentIndex} già {where.currentIndex === 1 ? 'fatta' : 'fatte'}
         </button>
       )}
-      <ol className="mt-3 relative">
-        {items.map((it, i) => {
-          const past = i < where.currentIndex;
-          if (past && !showPast) return null;
-          const isNow = i === where.currentIndex;
-          const isNext = i === where.nextIndex;
-          return (
-            <li key={i} className="relative pl-6 pb-4 last:pb-0" data-testid={isNow ? 'timeline-now' : undefined}>
-              <span aria-hidden className="absolute left-[5px] top-2 bottom-0 w-px bg-slate-800" />
-              <span aria-hidden className={`absolute left-0 top-1.5 w-[11px] h-[11px] rounded-full border-2 ${
-                isNow ? 'bg-cyan-400 border-cyan-300 shadow-[0_0_0_4px_rgba(34,211,238,0.18)]' : isNext ? 'border-amber-400 bg-slate-900' : past ? 'bg-slate-700 border-slate-700' : 'border-slate-600 bg-slate-900'
-              }`} />
-              <div className={`${past ? 'opacity-50' : ''}`}>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-mono font-bold ${isNow ? 'text-cyan-300' : isNext ? 'text-amber-300' : 'text-slate-400'}`}>{timeLabel(it.item.time)}</span>
-                  {isNow && <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-950 bg-cyan-400 rounded px-1.5 py-0.5">ora</span>}
-                  {isNext && <span className="text-[9px] font-bold uppercase tracking-wider text-amber-950 bg-amber-400 rounded px-1.5 py-0.5">poi</span>}
+      {items.length > 0 && (
+        <ol className="mt-3 relative">
+          {items.map((it, i) => {
+            const past = i < where.currentIndex;
+            const status = liveDay?.stopStates[`s_${i}`];
+            if (past && !showPast && status !== 'moved') return null;
+            const isNow = i === where.currentIndex && status !== 'skipped';
+            const isNext = i === effectiveNextIndex && status !== 'skipped';
+            const label = briefOf(it.item);
+            return (
+              <li key={i} className="relative pl-6 pb-4 last:pb-0" data-testid={isNow ? 'timeline-now' : undefined}>
+                <span aria-hidden className="absolute left-[5px] top-2 bottom-0 w-px bg-slate-800" />
+                <span aria-hidden className={`absolute left-0 top-1.5 w-[11px] h-[11px] rounded-full border-2 ${
+                  status === 'done' ? 'bg-[#52d9e6] border-[#52d9e6]' : isNow ? 'bg-cyan-400 border-cyan-300 shadow-[0_0_0_4px_rgba(34,211,238,0.18)]' : isNext ? 'border-amber-400 bg-slate-900' : past || status === 'skipped' ? 'bg-slate-700 border-slate-700' : 'border-slate-600 bg-slate-900'
+                }`} />
+                <div className={`flex items-start justify-between gap-2 ${(past && status !== 'moved') || status === 'skipped' ? 'opacity-50' : ''}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-mono font-bold tabular-nums ${isNow ? 'text-cyan-300' : isNext ? 'text-amber-300' : 'text-slate-400'}`}>{timeLabel(it.item.time)}</span>
+                      {isNow && <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-950 bg-cyan-400 rounded px-1.5 py-0.5">ora</span>}
+                      {isNext && <span className="text-[9px] font-bold uppercase tracking-wider text-amber-950 bg-amber-400 rounded px-1.5 py-0.5">poi</span>}
+                    </div>
+                    <div className={`text-[13px] leading-snug ${status === 'skipped' ? 'line-through text-slate-400' : isNow ? 'text-white font-semibold' : 'text-slate-300'}`}>{label}{it.item.summary && it.item.summary !== it.item.activity && (<details className="mt-1 text-[12px] text-slate-400"><summary className="cursor-pointer select-none text-cyan-300/90">Dettagli</summary><p className="mt-1 leading-relaxed">{it.item.activity}</p></details>)}</div>
+                  </div>
+                  <StopStatusButton status={status} label={label} onCycle={() => void cycleStopStatus(day.id, `s_${i}`)} />
                 </div>
-                <div className={`text-[13px] leading-snug ${isNow ? 'text-white font-semibold' : 'text-slate-300'}`}>{briefOf(it.item)}{it.item.summary && it.item.summary !== it.item.activity && (<details className="mt-1 text-[12px] text-slate-400"><summary className="cursor-pointer select-none text-cyan-300/90">Dettagli</summary><p className="mt-1 leading-relaxed">{it.item.activity}</p></details>)}</div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {addedStops.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-2">
+          <p className="text-xs font-semibold text-[#52d9e6]">Tappe aggiunte dal gruppo</p>
+          {addedStops.map((a) => {
+            const st = liveDay?.stopStates[`a_${a.id}`];
+            return (
+              <div key={a.id} className={`flex items-start justify-between gap-2 ${st === 'skipped' ? 'opacity-50' : ''}`}>
+                <div className="min-w-0 flex-1">
+                  {a.time && <span className="text-xs font-mono font-bold text-slate-400 mr-2 tabular-nums">{a.time}</span>}
+                  <span className={`text-[13px] font-semibold ${st === 'skipped' ? 'line-through text-slate-400' : 'text-slate-100'}`}>{a.name}</span>
+                  {a.note && <p className="text-xs text-slate-400 mt-0.5 leading-snug">{a.note}</p>}
+                </div>
+                <StopStatusButton status={st} label={a.name} onCycle={() => void cycleStopStatus(day.id, `a_${a.id}`)} />
               </div>
-            </li>
-          );
-        })}
-      </ol>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 
@@ -626,9 +690,11 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
           current={current ? { clock: current.clock, label: briefOf(current.item), zone: current.zone } : null}
           next={next ? { clock: next.clock, label: briefOf(next.item), zone: next.zone, inText: nextIn } : null}
           following={items
-            .slice(Math.max(where.nextIndex, where.currentIndex) + 1)
+            .map((t, idx) => ({ t, idx }))
+            .filter(({ idx }) => idx > Math.max(effectiveNextIndex, where.currentIndex) && liveDay?.stopStates[`s_${idx}`] !== 'skipped')
             .slice(0, 2)
-            .map((t) => ({ clock: t.clock, label: briefOf(t.item), zone: t.zone, inText: formatCountdown(t.ts - now) }))}
+            .map(({ t }) => ({ clock: t.clock, label: briefOf(t.item), zone: t.zone, inText: formatCountdown(t.ts - now) }))}
+          dayNote={liveDay?.note}
           done={done}
           free={free}
           metro={metro}
@@ -683,7 +749,12 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
       <h2 data-testid="today-now" style={{ ...DISP, fontSize: 40, lineHeight: 1.05, margin: '10px 0 0' }}>
         {after ? 'Bentornati! Spero sia stato bellissimo.' : current ? briefOf(current.item) : next ? briefOf(next.item) : done ? 'Le attività di oggi sono finite.' : day.title}
       </h2>
-      {after && <p className="mt-2 text-[15px] text-app-muted">La galleria e le spese restano qui per ripensarci con calma.</p>}
+      {after && (
+        <div className="mt-4 space-y-3">
+          <p className="text-[15px] text-app-muted">La galleria, le spese e i ricordi della capsula restano qui per ripensarci con calma.</p>
+          <button type="button" onClick={() => onGoTo('recap')} className={cyanBtn}>Rivedi i ricordi del viaggio</button>
+        </div>
+      )}
       {!current && next && !after && <p className="mt-2 text-[15px] text-app-muted">alle {next.clock || next.item.time} · tra {nextIn}</p>}
       {current && next && (
         <div className="mt-5 flex items-baseline gap-5" style={{ borderTop: RULE, paddingTop: 16 }}>
@@ -707,27 +778,57 @@ export const TodayView: React.FC<TodayViewProps> = ({ onRoute, onGoTo, heroEnabl
     </section>
   );
 
-  const dTimeline = items.length > 0 && (
+  const dTimeline = (items.length > 0 || addedStops.length > 0 || !!liveDay?.note) && (
     <section>
       <Head label={`${day.dayOfWeek} ${day.dateStr.replace(' 2027', '')}`} title={day.title} action={{ text: 'Giorno completo', onClick: () => onGoTo('itinerary') }} />
+      {liveDay?.note && (
+        <div data-keep-style className="mt-3 rounded-xl bg-[#101c29] px-3.5 py-2.5 text-[14px] text-slate-200 leading-relaxed">
+          <span className="font-semibold text-[#52d9e6]">Nota del gruppo:</span> {liveDay.note}
+        </div>
+      )}
       {where.currentIndex > 0 && !showPast && (
         <button type="button" onClick={() => setShowPast(true)} className="mt-3 text-[13px] text-app-muted hover:text-app-text flex items-center gap-1"><ChevronDown className="w-3.5 h-3.5" /> {where.currentIndex} già {where.currentIndex === 1 ? 'fatta' : 'fatte'}</button>
       )}
-      <ol className="mt-4" style={{ borderBottom: RULE }}>
-        {items.map((it, i) => {
-          const past = i < where.currentIndex;
-          if (past && !showPast) return null;
-          const isNow = i === where.currentIndex;
-          const isNext = i === where.nextIndex;
-          return (
-            <li key={i} data-testid={isNow ? 'timeline-now' : undefined} className="grid items-start gap-5" style={{ gridTemplateColumns: '84px minmax(0,1fr) auto', borderTop: RULE, padding: '16px 0', opacity: past ? 0.5 : 1 }}>
-              <span style={{ ...DISP, fontSize: 20, fontVariantNumeric: 'tabular-nums', color: isNow ? '#00C5E8' : isNext ? '#FBBF24' : '#60A5FA' }}>{timeLabel(it.item.time)}</span>
-              <div className={`text-[16px] leading-snug ${isNow ? 'font-bold' : 'font-medium text-slate-200'}`}>{briefOf(it.item)}{it.item.summary && it.item.summary !== it.item.activity && (<details className="mt-1.5 text-[14px] text-app-muted"><summary className="cursor-pointer select-none text-app-accent">Dettagli</summary><p className="mt-1.5 leading-relaxed">{it.item.activity}</p></details>)}</div>
-              {(isNow || isNext) && <span style={{ ...MONO, color: isNow ? '#00C5E8' : '#FBBF24' }}>{isNow ? 'ora' : 'poi'}</span>}
-            </li>
-          );
-        })}
-      </ol>
+      {items.length > 0 && (
+        <ol className="mt-4" style={{ borderBottom: RULE }}>
+          {items.map((it, i) => {
+            const past = i < where.currentIndex;
+            const status = liveDay?.stopStates[`s_${i}`];
+            if (past && !showPast && status !== 'moved') return null;
+            const isNow = i === where.currentIndex && status !== 'skipped';
+            const isNext = i === effectiveNextIndex && status !== 'skipped';
+            const label = briefOf(it.item);
+            return (
+              <li key={i} data-testid={isNow ? 'timeline-now' : undefined} className="grid items-start gap-5" style={{ gridTemplateColumns: '84px minmax(0,1fr) auto', borderTop: RULE, padding: '16px 0', opacity: (past && status !== 'moved') || status === 'skipped' ? 0.5 : 1 }}>
+                <span style={{ ...DISP, fontSize: 20, fontVariantNumeric: 'tabular-nums', color: isNow ? '#00C5E8' : isNext ? '#FBBF24' : '#60A5FA' }}>{timeLabel(it.item.time)}</span>
+                <div className={`text-[16px] leading-snug ${status === 'skipped' ? 'line-through text-slate-400' : isNow ? 'font-bold' : 'font-medium text-slate-200'}`}>{label}{it.item.summary && it.item.summary !== it.item.activity && (<details className="mt-1.5 text-[14px] text-app-muted"><summary className="cursor-pointer select-none text-app-accent">Dettagli</summary><p className="mt-1.5 leading-relaxed">{it.item.activity}</p></details>)}</div>
+                <div className="flex items-center gap-2.5">
+                  {(isNow || isNext) && <span style={{ ...MONO, color: isNow ? '#00C5E8' : '#FBBF24' }}>{isNow ? 'ora' : 'poi'}</span>}
+                  <StopStatusButton status={status} label={label} onCycle={() => void cycleStopStatus(day.id, `s_${i}`)} />
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {addedStops.length > 0 && (
+        <div className="mt-4 space-y-2.5">
+          <p className="text-[13px] font-semibold text-[#52d9e6]">Tappe aggiunte dal gruppo</p>
+          {addedStops.map((a) => {
+            const st = liveDay?.stopStates[`a_${a.id}`];
+            return (
+              <div key={a.id} className="grid items-center gap-5" style={{ gridTemplateColumns: '84px minmax(0,1fr) auto', borderTop: RULE, padding: '12px 0', opacity: st === 'skipped' ? 0.5 : 1 }}>
+                <span style={{ ...DISP, fontSize: 18, fontVariantNumeric: 'tabular-nums', color: '#52d9e6' }}>{a.time || 'Extra'}</span>
+                <div className="min-w-0">
+                  <p className={`text-[15px] font-semibold ${st === 'skipped' ? 'line-through text-slate-400' : 'text-slate-100'}`}>{a.name}</p>
+                  {a.note && <p className="text-[13px] text-app-muted mt-0.5">{a.note}</p>}
+                </div>
+                <StopStatusButton status={st} label={a.name} onCycle={() => void cycleStopStatus(day.id, `a_${a.id}`)} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 

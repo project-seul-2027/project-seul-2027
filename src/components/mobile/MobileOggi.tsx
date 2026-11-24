@@ -42,12 +42,13 @@ interface Props {
   heroEnabled: boolean;
   onToggleHero: () => void;
   onRoute: (id: string) => void;
-  onGoTo: (tab: 'itinerary' | 'places' | 'map' | 'show' | 'wallet') => void;
+  onGoTo: (tab: 'itinerary' | 'places' | 'map' | 'show' | 'wallet' | 'recap') => void;
   onTryTrip: () => void;
   onPreview: () => void;
   simBanner?: React.ReactNode;
   previewPanel?: React.ReactNode;
   showTripPreview: boolean;
+  dayNote?: string;
 }
 
 const ZONE_CITY: Record<Zone, string> = { IT: 'Milano', CN: 'Pechino', KR: 'Seul' };
@@ -194,7 +195,10 @@ export const MobileOggi: React.FC<Props> = (p) => {
         {p.after ? (
           <>
             <h2 className="ms-h2" data-testid="today-now">Bentornati! Spero sia stato bellissimo.</h2>
-            <p className="ms-mute" style={{ marginTop: 6 }}>La galleria e le spese restano qui per ripensarci con calma.</p>
+            <p className="ms-mute" style={{ marginTop: 6 }}>La galleria, le spese e i ricordi della capsula restano qui per ripensarci con calma.</p>
+            <div className="ms-acts" style={{ marginTop: 10 }}>
+              <button type="button" className="ms-link" onClick={() => p.onGoTo('recap')}>Rivedi il riepilogo e la capsula</button>
+            </div>
           </>
         ) : focus ? (
           <>
@@ -217,6 +221,12 @@ export const MobileOggi: React.FC<Props> = (p) => {
             <h2 className="ms-h2" data-testid="today-now">{p.dayTitle}</h2>
             <p className="ms-mute" style={{ marginTop: 6 }}>Giornata libera: scegliete tra i luoghi salvati dal gruppo.</p>
           </>
+        )}
+
+        {!p.after && p.dayNote && (
+          <div style={{ marginTop: 12, paddingLeft: 12, borderLeft: '2px solid #52d9e6' }}>
+            <p className="ms-sm" style={{ color: '#dbe5ef' }}><strong style={{ color: '#52d9e6' }}>Nota del gruppo:</strong> {p.dayNote}</p>
+          </div>
         )}
 
         {p.metro.level !== 'none' && (

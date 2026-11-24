@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ArrowRight, ExternalLink, MapPin, Search } from 'lucide-react';
 import { ITINERARY_DAYS, MAP_LOCATIONS, type ItineraryDay } from '../../data/tripData';
+import { cycleStopStatus, useItineraryLive } from '../../services/itineraryLiveService';
+import { AddedStopsSection, DayNoteBar, StopStatusButton } from '../itinerary/DayLiveControls';
 
 const MONO = { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '.08em', color: '#94A3B8', textTransform: 'uppercase' } as const;
 const DISP = { fontFamily: "'Outfit', sans-serif", fontWeight: 800, letterSpacing: '-.03em' } as const;
@@ -40,6 +42,7 @@ export function DesktopItinerary({ onViewOnMap, focusDay, onFocusHandled }: Prop
   const [phase, setPhase] = useState('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number>(1);
+  const { byDay } = useItineraryLive();
 
   useEffect(() => {
     if (!focusDay) return;
@@ -123,7 +126,11 @@ export function DesktopItinerary({ onViewOnMap, focusDay, onFocusHandled }: Prop
                     <span style={{ ...DISP, fontSize: 28, lineHeight: 1, color: dayColor(d), fontVariantNumeric: 'tabular-nums' }}>{dayNumber(d)}</span>
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-bold text-app-text">{d.title}</span>
-                      <span className="block truncate text-[13px] text-app-muted">{d.dayOfWeek} {d.dateStr.replace(' 2027', '')} · {d.phase}</span>
+                      <span className="block truncate text-[13px] text-app-muted">
+                        {d.dayOfWeek} {d.dateStr.replace(' 2027', '')} · {d.phase}
+                        {byDay[d.id]?.note ? ' · Nota' : ''}
+                        {(byDay[d.id]?.addedStops.length ?? 0) > 0 ? ` · +${byDay[d.id].addedStops.length}` : ''}
+                      </span>
                     </span>
                   </button>
                 </li>
@@ -142,6 +149,8 @@ export function DesktopItinerary({ onViewOnMap, focusDay, onFocusHandled }: Prop
                 </div>
               </div>
               <p className="mt-2 text-[16px] text-[#CBD5E1]">{day.subtitle}</p>
+
+              <DayNoteBar dayId={day.id} liveDoc={byDay[day.id]} />
 
               {(badgesOf(day).length > 0 || day.costsEstimate) && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -170,18 +179,25 @@ export function DesktopItinerary({ onViewOnMap, focusDay, onFocusHandled }: Prop
                 <section style={{ marginTop: 40, borderTop: RULE, paddingTop: 24 }}>
                   <p style={{ ...MONO, margin: 0, color }}>Tabella di marcia oraria</p>
                   <div className="mt-4" style={{ borderBottom: RULE }}>
-                    {day.schedule.map((item, i) => (
-                      <div key={i} className="grid items-baseline gap-5" style={{ gridTemplateColumns: '130px minmax(0,1fr)', borderTop: RULE, padding: '14px 0' }}>
-                        <span style={{ ...DISP, fontSize: 17, color: item.isHighlight ? '#00C5E8' : '#60A5FA', fontVariantNumeric: 'tabular-nums' }}>{item.time}</span>
-                        <div className="min-w-0">
-                          <p className={`text-[15px] leading-snug ${item.isHighlight ? 'font-bold' : 'font-medium text-slate-200'}`}>{item.activity}</p>
-                          {item.notes && <p className="mt-1 text-[13px] text-app-muted">{item.notes}</p>}
+                    {day.schedule.map((item, i) => {
+                      const stopKey = `s_${i}`;
+                      const status = byDay[day.id]?.stopStates[stopKey];
+                      return (
+                        <div key={i} className="grid items-center gap-5" style={{ gridTemplateColumns: '130px minmax(0,1fr) auto', borderTop: RULE, padding: '14px 0' }}>
+                          <span style={{ ...DISP, fontSize: 17, color: item.isHighlight ? '#00C5E8' : '#60A5FA', fontVariantNumeric: 'tabular-nums' }}>{item.time}</span>
+                          <div className={`min-w-0 ${status === 'skipped' ? 'opacity-50 line-through' : ''}`}>
+                            <p className={`text-[15px] leading-snug ${item.isHighlight ? 'font-bold' : 'font-medium text-slate-200'}`}>{item.activity}</p>
+                            {item.notes && <p className="mt-1 text-[13px] text-app-muted">{item.notes}</p>}
+                          </div>
+                          <StopStatusButton status={status} label={item.summary ?? item.activity.slice(0, 40)} onCycle={() => void cycleStopStatus(day.id, stopKey)} />
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
               )}
+
+              <AddedStopsSection dayId={day.id} liveDoc={byDay[day.id]} onViewOnMap={onViewOnMap} />
 
               {day.bulletPoints.length > 0 && (
                 <section className="mt-8">

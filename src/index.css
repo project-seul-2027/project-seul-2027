@@ -991,3 +991,69 @@ textarea.xp-field { height: auto; padding: 12px 14px; resize: none; }
   .pdfv-well { background: transparent; scrollbar-width: thin; scrollbar-color: rgba(234, 240, 246, 0.18) transparent; }
   .pdf-row:focus-visible, .pdf-btn:focus-visible, .pdfv-btn:focus-visible, .pdfv-zoom:focus-visible { outline: 2px solid var(--ms-accent); outline-offset: 2px; }
 }
+
+/* Alloggi (mobile): transizioni fluide GPU-only su tasti, schede e passaggio al dettaglio */
+.alloggi-tap {
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1), background-color 180ms ease, color 180ms ease, opacity 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.alloggi-tap:active:not(:disabled) { transform: scale(0.97); }
+.alloggi-tab-in { animation: alloggi-tab-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.alloggi-list-return { animation: alloggi-list-back 240ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.alloggi-detail-hero { animation: alloggi-hero-settle 420ms cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
+.alloggi-detail-body { animation: alloggi-body-rise 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.alloggi-price-pop { animation: alloggi-price-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.alloggi-vote-pop { animation: alloggi-vote-confirm 260ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.alloggi-modal-bg { animation: alloggi-fade 180ms ease-out both; }
+.alloggi-modal-card { animation: alloggi-modal-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes alloggi-tab-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes alloggi-list-back {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes alloggi-hero-settle {
+  from { opacity: 0.72; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes alloggi-body-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes alloggi-price-in {
+  from { opacity: 0.5; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes alloggi-vote-confirm {
+  0% { transform: scale(0.95); }
+  55% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@keyframes alloggi-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes alloggi-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alloggi-tap,
+  .alloggi-tap:active:not(:disabled),
+  .alloggi-tab-in,
+  .alloggi-list-return,
+  .alloggi-detail-hero,
+  .alloggi-detail-body,
+  .alloggi-price-pop,
+  .alloggi-vote-pop,
+  .alloggi-modal-bg,
+  .alloggi-modal-card {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

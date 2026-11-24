@@ -6,6 +6,8 @@ import { DEFAULT_HOME_ID, loadHomeId, stopsOfDay, tripDayAt } from '../map/tripT
 import { SOS_SNAPSHOT_KEY } from './SosView';
 import { loadGroupContacts } from '../services/tripCardSnapshot';
 import { QuickMeetupSheet } from './QuickMeetupSheet';
+import { SeoulHomeCard } from './SeoulHomeCard';
+import { useItineraryLive } from '../services/itineraryLiveService';
 
 const HEADING: React.CSSProperties = { fontFamily: 'Outfit, system-ui, sans-serif' };
 
@@ -53,7 +55,9 @@ export const TripCardView: React.FC = () => {
   const today = tripDayAt();
   const [dayId, setDayId] = useState<number>(today?.id ?? ITINERARY_DAYS[0].id);
   const [meetupOpen, setMeetupOpen] = useState(false);
+  const { byDay } = useItineraryLive();
   const day = ITINERARY_DAYS.find((d) => d.id === dayId) ?? ITINERARY_DAYS[0];
+  const liveDay = byDay[day.id];
   const stops = useMemo(() => stopsOfDay(day), [day]);
 
   const homeId = loadHomeId() ?? DEFAULT_HOME_ID;
@@ -94,22 +98,52 @@ export const TripCardView: React.FC = () => {
 
       <div data-motion="list" className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
       <Card title={day.title} icon={<CalendarDays className="h-4 w-4" />} testId="trip-card-program">
+        {liveDay?.note && (
+          <p className="rounded-lg bg-[#0a1119] px-3 py-2 text-xs sm:text-sm text-[#52d9e6] leading-snug" data-testid="trip-card-day-note">
+            Nota del gruppo: <span className="text-white">{liveDay.note}</span>
+          </p>
+        )}
         {day.schedule && day.schedule.length > 0 ? (
           <ol className="space-y-2.5">
-            {day.schedule.map((item, i) => (
-              <li key={`${item.time}-${i}`} className="grid grid-cols-[3.5rem_1fr] gap-3 text-sm">
-                <span className={`tabular-nums ${item.isHighlight ? 'font-semibold text-[#52d9e6]' : 'text-slate-400'}`}>{item.time}</span>
-                <span className={item.isHighlight ? 'font-semibold text-white' : 'text-slate-200'}>
-                  {item.activity}
-                  {item.notes && <span className="block text-xs text-slate-400">{item.notes}</span>}
-                </span>
-              </li>
-            ))}
+            {day.schedule.map((item, i) => {
+              const st = liveDay?.stopStates[`s_${i}`];
+              return (
+                <li key={`${item.time}-${i}`} className={`grid grid-cols-[3.5rem_1fr] gap-3 text-sm ${st === 'skipped' ? 'opacity-50 line-through' : ''}`}>
+                  <span className={`tabular-nums ${item.isHighlight ? 'font-semibold text-[#52d9e6]' : 'text-slate-400'}`}>{item.time}</span>
+                  <span className={item.isHighlight ? 'font-semibold text-white' : 'text-slate-200'}>
+                    {item.activity}
+                    {st === 'done' && <span className="ml-1.5 text-xs font-semibold text-[#52d9e6]">· fatta</span>}
+                    {st === 'moved' && <span className="ml-1.5 text-xs font-semibold text-amber-300">· spostata</span>}
+                    {item.notes && <span className="block text-xs text-slate-400">{item.notes}</span>}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         ) : (
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-slate-200">
             {(day.bulletPoints ?? []).map((b) => <li key={b}>{b}</li>)}
           </ul>
+        )}
+        {(liveDay?.addedStops.length ?? 0) > 0 && (
+          <div className="pt-2.5 border-t border-white/10 space-y-2">
+            <p className="text-xs font-semibold text-[#52d9e6]">Tappe extra del gruppo</p>
+            <ol className="space-y-2">
+              {liveDay!.addedStops.map((st) => {
+                const status = liveDay!.stopStates[`a_${st.id}`];
+                return (
+                  <li key={st.id} className={`grid grid-cols-[3.5rem_1fr] gap-3 text-sm ${status === 'skipped' ? 'opacity-50 line-through' : ''}`}>
+                    <span className="tabular-nums text-[#52d9e6] font-medium">{st.time || 'Extra'}</span>
+                    <span className="text-slate-200">
+                      <strong className="font-semibold text-white">{st.name}</strong>
+                      {status === 'done' && <span className="ml-1.5 text-xs font-semibold text-[#52d9e6]">· fatta</span>}
+                      {st.note && <span className="block text-xs text-slate-400">{st.note}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         )}
       </Card>
 
@@ -143,9 +177,13 @@ export const TripCardView: React.FC = () => {
             {home.koreanAddress && <KoreanText text={home.koreanAddress} />}
             {homeAcc?.metroWalk && <Line label="Metro"><span>{homeAcc.metroWalk}</span></Line>}
             {homeAcc?.typeDescription && <Line label="Appartamento"><span>{homeAcc.typeDescription}</span></Line>}
+            <SeoulHomeCard variant="compact" />
           </>
         ) : (
-          <p className="text-sm text-slate-400">Nessun alloggio scelto: lo imposti dalla mappa con il pulsante Casa.</p>
+          <>
+            <p className="text-sm text-slate-400">Nessun alloggio scelto: lo imposti dalla mappa con il pulsante Casa.</p>
+            <SeoulHomeCard variant="compact" />
+          </>
         )}
       </Card>
 

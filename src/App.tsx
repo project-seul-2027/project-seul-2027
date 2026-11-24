@@ -13,6 +13,8 @@ import { OFFICIAL_METRO_SOURCES } from './data/seoulMetroOfficialData';
 import { ItineraryView } from './components/ItineraryView';
 import { DesktopItinerary } from './components/desktop/DesktopItinerary';
 import { InteractiveMap } from './components/InteractiveMap';
+import { WalkMiniPanel } from './map/WalkMiniPanel';
+import type { WalkState } from './map/WalkPanel';
 import { AccommodationsView } from './components/AccommodationsView';
 import { FlightsAndLayoverView } from './components/FlightsAndLayoverView';
 import { BudgetTrackerView } from './components/BudgetTrackerView';
@@ -52,6 +54,8 @@ import { MobileBottomNav, MoreSheet, QuickActionsSheet, useBackToClose, type Qui
 import { SECTIONS, sectionById } from './components/mobile/sections';
 import { TripCardView } from './components/TripCardView';
 import { CapsuleView } from './components/CapsuleView';
+import { TripRecapView } from './components/TripRecapView';
+import { BookingsPanel } from './components/group/BookingsPanel';
 import { requestIntent } from './utils/quickIntent';
 import { 
   Sparkles, Download, Home, Users, ChevronDown, CheckCircle, LogOut, Loader2, UserCog, CloudSun, Camera,
@@ -84,7 +88,7 @@ export default function App() {
   return <TripPortal />;
 }
 
-type Tab = 'cover' | 'today' | 'scheda' | 'capsula' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
+type Tab = 'cover' | 'today' | 'scheda' | 'capsula' | 'recap' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery' | 'packing' | 'bookings' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
 
 /** Tipo di animazione d'ingresso della pagina (vedi index.css, classi page-anim-*). */
 type PageAnimKind = 'none' | 'rise' | 'slide-left' | 'slide-right' | 'fade';
@@ -112,7 +116,7 @@ function pageTransition(from: Tab, to: Tab, desktop: boolean): PageAnimKind {
   return 'fade';
 }
 
-const ALL_TABS: Tab[] = ['today', 'scheda', 'capsula', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
+const ALL_TABS: Tab[] = ['today', 'scheda', 'capsula', 'recap', 'wallet', 'show', 'places', 'sos', 'itinerary', 'accommodations', 'map', 'weather', 'gallery', 'packing', 'bookings', 'expenses', 'flights', 'budget', 'guide', 'pdf', 'group', 'changelog'];
 
 /** Desktop may open a page from its URL. Mobile cold launches always start at Oggi. */
 function initialTab(): Tab {
@@ -159,6 +163,9 @@ function TripPortal() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const heroAnim = useHeroAnimation();
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [mapVisited, setMapVisited] = useState(activeTab === 'map');
+  const [activeWalk, setActiveWalk] = useState<WalkState | null>(null);
+  if (activeTab === 'map' && !mapVisited) setMapVisited(true);
   // Indirizzo statico: la URL segue la pagina aperta (solo desktop nel browser)
   useEffect(() => { writePageToUrl(activeTab); }, [activeTab]);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
@@ -181,25 +188,26 @@ function TripPortal() {
   const { updateAvailable, newVersion, applyUpdate } = useUpdateAvailable();
   useSyncPushRegistration(currentUser.id);
   // Notifica toccata con l'app già aperta (messaggio del service worker) o avviso toccato nell'elenco: apre la pagina giusta
+  const openPageRef = useRef<(id: string | null) => void>(() => {});
+  openPageRef.current = (id: string | null) => {
+    if (id && (ALL_TABS as string[]).includes(id)) {
+      setIsMoreOpen(false);
+      setIsActionsOpen(false);
+      setActiveTab(id as Tab);
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  };
   useEffect(() => {
-    const open = (id: string | null) => {
-      if (id && (ALL_TABS as string[]).includes(id)) {
-        setIsMoreOpen(false);
-        setIsActionsOpen(false);
-        setActiveTab(id as Tab);
-        window.scrollTo({ top: 0, behavior: 'auto' });
-      }
-    };
     const onSw = (e: MessageEvent) => {
       const d = e.data as { type?: string; url?: string } | null;
       if (d?.type !== 'open-page' || !d.url) return;
       try {
-        open(pageFromUrl(new URL(d.url).search));
+        openPageRef.current(pageFromUrl(new URL(d.url).search));
       } catch {
         /* indirizzo non valido: si ignora */
       }
     };
-    const onApp = (e: Event) => open((e as CustomEvent<string>).detail);
+    const onApp = (e: Event) => openPageRef.current((e as CustomEvent<string>).detail);
     navigator.serviceWorker?.addEventListener('message', onSw);
     window.addEventListener('seul:open-page', onApp);
     return () => {
@@ -643,7 +651,7 @@ function TripPortal() {
       )}
 
       {/* Main Content Area */}
-      <main key={activeTab === 'pdf' ? 'pdf' : itineraryVersion} ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-5 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['today','itinerary','map'].includes(activeTab) ? '' : 'ms-skin'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing','scheda','capsula'].includes(activeTab) ? 'desk-flat' : ''}`}>
+      <main ref={mainRef} className={`flex-1 max-w-7xl w-full mx-auto px-5 sm:px-8 py-5 sm:py-8 ${activeTab === 'today' ? 'lg:max-w-none lg:mx-0 lg:p-0' : 'page-skin lg:max-w-none lg:mx-0 lg:px-10 lg:pt-4 lg:pb-12'} ${['today','itinerary','map'].includes(activeTab) ? '' : 'ms-skin'} ${['group','expenses','gallery','places','wallet','sos','show','guide','pdf','budget','changelog','packing','bookings','scheda','capsula','recap'].includes(activeTab) ? 'desk-flat' : ''}`}>
         {/* Invito a installare l'app (solo telefono, finché non è installata o chiusa) */}
         {!isDesktop && !install.standalone && !installBannerHidden && !updateAvailable && !inTripWindow() && (install.canPrompt || install.needsIosInstructions) && (
           <div className="mb-5 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-cyan-950/70 to-slate-900 border border-cyan-500/30 max-lg:fixed max-lg:inset-x-4 max-lg:bottom-[calc(96px+env(safe-area-inset-bottom))] max-lg:z-[60] max-lg:mb-0 max-lg:rounded-2xl max-lg:border-0 max-lg:bg-[#0f1c2b] max-lg:[background-image:none] max-lg:shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
@@ -673,7 +681,33 @@ function TripPortal() {
         {/* Motori senza schermo: restano fuori dal contenitore animato, così non si rimontano al cambio pagina */}
         <GroupLiveEngine />
         <TripNotifierEngine />
-        <div key={activeTab} className={PAGE_ANIM_CLASS[pageAnim.kind]}>
+        {mapVisited && (
+          <div hidden={activeTab !== 'map'} className="space-y-4" data-testid="persistent-map">
+            {/* Su telefono la mappa occupa tutto lo schermo e il titolo non serve */}
+            <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="hidden text-xl font-bold font-display text-white">
+                  Mappa Interattiva (Tappe e Alloggi in Italiano)
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Tutti i 4 alloggi a confronto, quartieri di Seul e gite fuori porta. Puoi passare liberamente tra Mappa Dark e Mappa Chiara.
+                </p>
+              </div>
+            </div>
+
+            <InteractiveMap
+              visible={activeTab === 'map'}
+              onWalkStateChange={setActiveWalk}
+              selectedLocationId={targetLocationId}
+              selectedDayFilter={targetDayFilter}
+              routeRequest={routeRequest}
+              onSelectLocation={(loc) => {
+                if (loc) setTargetLocationId(loc.id);
+              }}
+            />
+          </div>
+        )}
+        <div key={`${activeTab}-${activeTab === 'pdf' ? 'pdf' : itineraryVersion}`} className={PAGE_ANIM_CLASS[pageAnim.kind]}>
         {(activeTab === 'today' || (activeTab === 'cover' && !isDesktop)) && (
           <TodayView
             onRoute={handleRouteFromToday}
@@ -690,8 +724,17 @@ function TripPortal() {
         )}
 
         {activeTab === 'scheda' && <TripCardView />}
-        {activeTab === 'capsula' && <CapsuleView />}
+        {activeTab === 'capsula' && <CapsuleView onOpenRecap={() => goToTab('recap')} />}
+        {activeTab === 'recap' && <TripRecapView onGoTo={(tab) => goToTab(tab)} />}
         {activeTab === 'wallet' && <WalletView />}
+        {activeTab === 'bookings' && (
+          <BookingsPanel
+            onOpenDay={(dayId) => {
+              setFocusItineraryDay({ id: dayId, nonce: Date.now() });
+              goToTab('itinerary');
+            }}
+          />
+        )}
         {activeTab === 'show' && <ShowKoreanView />}
         {activeTab === 'places' && <PlacesView onShowMap={() => goToTab('map')} onRoute={handleRouteFromToday} />}
         {activeTab === 'sos' && <SosView />}
@@ -714,30 +757,7 @@ function TripPortal() {
           <AccommodationsView onViewOnMap={handleViewOnMap} />
         )}
 
-        {activeTab === 'map' && (
-          <div className="space-y-4">
-            {/* Su telefono la mappa occupa tutto lo schermo e il titolo non serve */}
-            <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h2 className="hidden text-xl font-bold font-display text-white">
-                  Mappa Interattiva (Tappe e Alloggi in Italiano)
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Tutti i 4 alloggi a confronto, quartieri di Seul e gite fuori porta. Puoi passare liberamente tra Mappa Dark e Mappa Chiara.
-                </p>
-              </div>
-            </div>
 
-            <InteractiveMap
-              selectedLocationId={targetLocationId}
-              selectedDayFilter={targetDayFilter}
-              routeRequest={routeRequest}
-              onSelectLocation={(loc) => {
-                if (loc) setTargetLocationId(loc.id);
-              }}
-            />
-          </div>
-        )}
 
         {activeTab === 'weather' && (
           <WeatherView
@@ -784,6 +804,7 @@ function TripPortal() {
 
         {activeTab === 'changelog' && <ChangelogView />}
         </div>
+        {!isDesktop && activeWalk && activeTab !== 'map' && <div aria-hidden="true" className="h-24" />}
       </main>
 
       <GoogleAuthModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
@@ -894,6 +915,9 @@ function TripPortal() {
       {/* ============================================================ */}
       {!isDesktop && (
         <>
+          {activeWalk && activeTab !== 'map' && !isMoreOpen && !isActionsOpen && !isProfileOpen && !isNavEditorOpen && !isInstallHelpOpen && (
+            <WalkMiniPanel walk={activeWalk} onOpen={() => goToTab('map')} />
+          )}
           <MobileBottomNav
             activeTab={activeTab === 'cover' ? 'today' : activeTab}
             primary={nav.primaryIds as Exclude<Tab, 'cover'>[]}

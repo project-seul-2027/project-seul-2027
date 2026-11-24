@@ -7,10 +7,13 @@ import {
   Calculator, ArrowRightLeft, RefreshCw, PiggyBank
 } from 'lucide-react';
 import { FoldText } from './mobile/FoldText';
+import { MobilePreventivo } from './mobile/MobilePreventivo';
+import { useMediaQuery } from '../pwa';
 import { ACCOMMODATIONS, formatAccommodationEur, priceAccommodation } from '../data/tripData';
 import { accommodationPriceService, type PriceOverrides } from '../services/accommodationPriceService';
 
 export const BudgetTrackerView: React.FC = () => {
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [activeTab, setActiveTab] = useState<'estimates' | 'saver_tips' | 'converter'>('estimates');
 
   // Live Exchange Rates state
@@ -56,6 +59,17 @@ export const BudgetTrackerView: React.FC = () => {
     setRates(updated);
     setIsLoadingRates(false);
   };
+
+  if (!isDesktop) {
+    return (
+      <MobilePreventivo
+        accommodations={accommodations}
+        rates={rates}
+        isLoadingRates={isLoadingRates}
+        onRefreshRates={handleRefreshRates}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

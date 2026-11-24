@@ -6,6 +6,8 @@ import { OPTIONAL_SHARE_FIELDS, type GroupMember, type OptionalShareField } from
 import { CHECKLIST_ITEMS, countDone } from '../shared/tripChecklist';
 import { useGroupChecklists } from './useGroupChecklists';
 import { GroupLiveCard } from './group/GroupLive';
+import { GroupPollsPanel } from './group/GroupPollsPanel';
+import { BookingsPanel } from './group/BookingsPanel';
 import { PhoneGroupView } from './mobile/PhoneGroup';
 import { useMediaQuery } from '../pwa';
 
@@ -361,6 +363,12 @@ export const GroupView: React.FC<{ onRoute?: (placeId: string) => void; onShowMa
             </div>
           );
         })}
+      </div>
+
+      {/* Sondaggi lampo e Prenotazioni / scadenze condivise */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <GroupPollsPanel />
+        <BookingsPanel />
       </div>
 
       {/* Checklist dei preparativi: righe = cosa fare, colonne = i 4 posti. Ognuno spunta solo le proprie caselle. */}

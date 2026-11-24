@@ -55,6 +55,8 @@ import { ARRIVED_METERS, defaultHomeId, loadDone, loadHomeId, saveDone, saveHome
 import { savePlace } from './places/placesStore';
 
 interface InteractiveMapProps {
+  visible?: boolean;
+  onWalkStateChange?: (state: WalkState | null) => void;
   selectedLocationId?: string | null;
   onSelectLocation?: (location: MapLocation | null) => void;
   selectedDayFilter?: number | null;
@@ -244,7 +246,9 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   selectedLocationId,
   onSelectLocation,
   selectedDayFilter: initialDayFilter = null,
-  routeRequest = null
+  routeRequest = null,
+  visible = true,
+  onWalkStateChange
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -281,6 +285,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   }, []);
   const focusRef = useRef<(latlng: LatLng, zoom: number, snap?: SheetSnap) => void>(() => {});
   const pendingFocusRef = useRef<{ latlng: LatLng; zoom: number } | null>(null);
+  const userMovedMapRef = useRef(false);
 
   const [mapMode, setMapModeState] = useState<MapInteractionMode>('explore');
   /** Cambia modalità; sul telefono porta il foglio all'altezza giusta (percorso: a metà) */
@@ -608,6 +613,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const focusLatLng = (latlng: LatLng, zoom: number, snap: SheetSnap = sheetSnapRef.current) => {
     const map = mapInstanceRef.current;
     if (!map) return;
+    userMovedMapRef.current = true;
     const { top, bottom } = insetsFor(snap);
     const dy = (bottom - top) / 2;
     const base = L.latLng(latlng[0], latlng[1]);
@@ -654,7 +660,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   // Telefono: la mappa occupa lo spazio tra l'intestazione dell'app e la barra in basso
   useLayoutEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile || !visible) return;
     const sticky = document.querySelector('[data-app-sticky]') as HTMLElement | null;
     const bottomNav = document.querySelector('[data-app-bottomnav]') as HTMLElement | null;
     const update = () => {
@@ -675,11 +681,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
     };
-  }, [isMobile]);
+  }, [isMobile, visible]);
 
   // Telefono: la pagina dietro la mappa non scorre (si muove solo la mappa)
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile || !visible) return;
     const html = document.documentElement;
     const prev = { overflow: html.style.overflow, over: html.style.overscrollBehavior };
     // la pagina riparte dall'alto, così l'intestazione fissa è al suo posto e la mappa le sta sotto
@@ -690,7 +696,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       html.style.overflow = prev.overflow;
       html.style.overscrollBehavior = prev.over;
     };
-  }, [isMobile]);
+  }, [isMobile, visible]);
 
   // Sync external day filter if changed
   useEffect(() => {
@@ -742,6 +748,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
       mapInstanceRef.current = map;
 
+      map.on('dragstart', () => {
+        userMovedMapRef.current = true;
+      });
+
       // Telefono: tenendo premuto un punto si apre la sua scheda (Leaflet manda contextmenu al tocco lungo)
       map.on('contextmenu', (e: L.LeafletMouseEvent) => {
         if (!isMobileRef.current || mapModeRef.current === 'route') return;
@@ -758,11 +768,20 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     }
   }, []);
 
-  // La mappa segue le dimensioni del contenitore (rotazione, tastiera, foglio che cambia layout)
+  // La mappa segue le dimensioni del contenitore (rotazione, tastiera, foglio che cambia layout).
+  // Alla prima apertura su telefono il contenitore può partire con altezza ridotta durante la transizione di pagina:
+  // finché l'utente non ha spostato la mappa, manteniamo il centro esatto su Seul (37.5568, 126.9738) allo stesso zoom.
   useEffect(() => {
     const el = mapContainerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => mapInstanceRef.current?.invalidateSize({ pan: false }));
+    const ro = new ResizeObserver(() => {
+      const map = mapInstanceRef.current;
+      if (!map || !el.clientWidth || !el.clientHeight) return;
+      map.invalidateSize({ pan: false, animate: false });
+      if (!userMovedMapRef.current && !selectedIdRef.current && !pendingFocusRef.current && el.clientHeight > 100) {
+        map.setView([37.5568, 126.9738], map.getZoom(), { animate: false });
+      }
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -1163,11 +1182,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   // La mappa segue la posizione; trascinandola si smette di seguire
   useEffect(() => {
-    if (mapMode !== 'walk' || !walkFollow || !here) return;
+    if (!visible || mapMode !== 'walk' || !walkFollow || !here) return;
     const map = mapInstanceRef.current;
     if (!map) return;
     focusRef.current(here, Math.max(map.getZoom(), 16), 'peek');
-  }, [mapMode, walkFollow, here]);
+  }, [visible, mapMode, walkFollow, here]);
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || mapMode !== 'walk') return;
@@ -1207,7 +1226,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     };
   }, [mapMode]);
 
-  const walkState: WalkState | null =
+  const walkState = useMemo<WalkState | null>(() =>
     mapMode === 'walk' && walkTarget
       ? {
           target: walkTarget,
@@ -1220,7 +1239,20 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           follow: walkFollow,
           gpsActive: geoState.status === 'active' && !!geoState.coords
         }
-      : null;
+      : null, [mapMode, walkTarget, walkRoute, walkLoading, walkProgress, walkFollow, geoState.status, geoState.coords]);
+
+  useEffect(() => {
+    onWalkStateChange?.(walkState);
+  }, [walkState, onWalkStateChange]);
+
+  // The same Leaflet instance survives page changes; refresh its size when revealed.
+  useEffect(() => {
+    if (!visible) return;
+    const frame = requestAnimationFrame(() => {
+      mapInstanceRef.current?.invalidateSize({ pan: false, animate: false });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [visible]);
 
   // Uscite della metro (OpenStreetMap, salvate nell'app): numeri sulla mappa da zoom 16, solo sul telefono
   const exitsLayerRef = useRef<L.LayerGroup | null>(null);

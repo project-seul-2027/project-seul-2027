@@ -13,6 +13,10 @@ import {
   answer, clearLost, dismissNotice, markHome, markOut, removeMeetup, reportLost, setSharingAllowed, stopSharing
 } from '../group/groupLiveStore';
 import { MeetupSheet, shareModeText, useGroupLiveModel, type StatusKind } from '../group/GroupLive';
+import { GroupPollsPanel } from '../group/GroupPollsPanel';
+import { BookingsPanel } from '../group/BookingsPanel';
+import { usePolls } from '../../services/pollsService';
+import { useBookings } from '../../services/bookingsService';
 import type { useGroupChecklists } from '../useGroupChecklists';
 
 /**
@@ -26,7 +30,7 @@ import type { useGroupChecklists } from '../useGroupChecklists';
 type Travelers = ReturnType<typeof useAuth>['travelers'];
 type Checklists = ReturnType<typeof useGroupChecklists>['all'];
 type Model = ReturnType<typeof useGroupLiveModel>;
-type PhoneTab = 'now' | 'people' | 'prep';
+type PhoneTab = 'now' | 'bookings' | 'people' | 'prep';
 
 interface Props {
   meId: string | undefined;
@@ -515,17 +519,32 @@ export const PhoneGroupView: React.FC<Props> = (p) => {
   const [tab, setTab] = useState<PhoneTab>('now');
   // + → Ritrovo / Ho perso il gruppo: la scheda "Adesso" si apre da sola
   const model = useGroupLiveModel({ onIntent: () => setTab('now') });
+  const { unvotedOpenCount } = usePolls(model.slot ?? null);
+  const { todoCount: bookingsTodo } = useBookings();
   const anyLost = model.iAmLost || model.slots.some((s) => s !== model.slot && model.statusOf(s).lost);
   const myDone = p.meId ? countDone(p.checklists[p.meId]) : 0;
   const total = CHECKLIST_ITEMS.length;
   const tabs: { id: PhoneTab; label: string; badge?: React.ReactNode }[] = [
-    { id: 'now', label: 'Adesso', badge: anyLost ? <span className="w-2 h-2 rounded-full bg-fam-sos" aria-label="Qualcuno ha perso il gruppo" /> : undefined },
+    {
+      id: 'now',
+      label: 'Adesso',
+      badge: anyLost ? (
+        <span className="w-2 h-2 rounded-full bg-fam-sos" aria-label="Qualcuno ha perso il gruppo" />
+      ) : unvotedOpenCount > 0 ? (
+        <span className="text-[11px] tabular-nums text-[#52d9e6]">{unvotedOpenCount}</span>
+      ) : undefined
+    },
+    {
+      id: 'bookings',
+      label: 'Prenota',
+      badge: bookingsTodo > 0 ? <span className="text-[11px] tabular-nums opacity-80">{bookingsTodo}</span> : undefined
+    },
     { id: 'people', label: 'Persone', badge: <span className="text-[11px] tabular-nums opacity-80">{p.group.length}</span> },
-    { id: 'prep', label: 'Preparativi', badge: p.meId && myDone < total ? <span className="text-[11px] tabular-nums opacity-80">{myDone}/{total}</span> : undefined }
+    { id: 'prep', label: 'Documenti', badge: p.meId && myDone < total ? <span className="text-[11px] tabular-nums opacity-80">{myDone}/{total}</span> : undefined }
   ];
   return (
     <div className="space-y-5" data-testid="phone-group">
-      <div className="grid grid-cols-3 gap-5 border-b border-white/10" role="tablist" aria-label="Sezioni del gruppo">
+      <div className="grid grid-cols-4 gap-2 border-b border-white/10" role="tablist" aria-label="Sezioni del gruppo">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -535,16 +554,22 @@ export const PhoneGroupView: React.FC<Props> = (p) => {
             aria-selected={tab === t.id}
             aria-controls={`pg-panel-${t.id}`}
             onClick={() => setTab(t.id)}
-            className={`min-h-[46px] rounded-none border-b-2 -mb-px text-[14px] font-semibold flex items-center justify-center gap-1.5 transition-[color,transform,border-color] duration-200 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6] ${tab === t.id ? 'border-[#52d9e6] text-[#52d9e6]' : 'border-transparent text-[#9aa9b8]'}`}
+            className={`min-h-[46px] rounded-none border-b-2 -mb-px text-[13px] font-semibold flex items-center justify-center gap-1 transition-[color,transform,border-color] duration-200 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6] ${tab === t.id ? 'border-[#52d9e6] text-[#52d9e6]' : 'border-transparent text-[#9aa9b8]'}`}
             data-testid={`pg-tab-${t.id}`}
           >
-            {t.label}
+            <span className="truncate">{t.label}</span>
             {t.badge}
           </button>
         ))}
       </div>
       <div key={tab} id={`pg-panel-${tab}`} role="tabpanel" aria-labelledby={`pg-tab-${tab}`} className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300">
-        {tab === 'now' && <NowPanel model={model} group={p.group} travelers={p.travelers} onRoute={p.onRoute} onShowMap={p.onShowMap} />}
+        {tab === 'now' && (
+          <div className="space-y-5">
+            <NowPanel model={model} group={p.group} travelers={p.travelers} onRoute={p.onRoute} onShowMap={p.onShowMap} />
+            <GroupPollsPanel />
+          </div>
+        )}
+        {tab === 'bookings' && <BookingsPanel />}
         {tab === 'people' && <PeoplePanel meId={p.meId} group={p.group} travelers={p.travelers} onOpenMember={p.onOpenMember} />}
         {tab === 'prep' && <PrepPanel meId={p.meId} group={p.group} travelers={p.travelers} checklists={p.checklists} checklistError={p.checklistError} onToggleCheck={p.onToggleCheck} />}
       </div>

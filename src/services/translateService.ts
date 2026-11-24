@@ -1,6 +1,9 @@
 import { TRANSLATE_API_KEY } from '../firebase/translate.config';
 
-export type TranslateDir = 'it-ko' | 'ko-it';
+export type TranslateDir = 'it-ko' | 'ko-it' | 'it-zh' | 'zh-it';
+
+/** Codici lingua di Google Cloud Translation: il cinese è quello semplificato della Cina continentale */
+const API_LANG: Record<string, string> = { it: 'it', ko: 'ko', zh: 'zh-CN' };
 
 const KEY_OVERRIDE = 'seul2027:translate:key';
 const PLACEHOLDER = 'INCOLLA_QUI_LA_CHIAVE_TRADUZIONE';
@@ -39,7 +42,7 @@ export async function translate(text: string, dir: TranslateDir): Promise<string
   if (q.length > 500) throw new TranslateError('Testo troppo lungo: massimo 500 caratteri.');
   if (!translateConfigured()) throw new TranslateError('Traduzione non configurata: manca la chiave nel file translate.config.ts.');
   if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new TranslateError('Sei offline: la traduzione libera ha bisogno di internet. Le frasi pronte funzionano anche senza.');
-  const [source, target] = dir === 'it-ko' ? ['it', 'ko'] : ['ko', 'it'];
+  const [source, target] = dir.split('-').map((c) => API_LANG[c]);
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10_000);
   try {

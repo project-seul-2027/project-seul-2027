@@ -1,7 +1,7 @@
 import type React from 'react';
 import {
-  Compass, CalendarDays, Map, Camera, WalletCards, Languages, Bookmark, ShieldAlert, Luggage, Wallet, Home, CloudSun,
-  Plane, Coins, BookOpen, FileText, Users, History, IdCard, Hourglass
+  Compass, CalendarDays, CalendarClock, Map, Camera, WalletCards, Languages, Bookmark, ShieldAlert, Luggage, Wallet, Home, CloudSun,
+  Plane, Coins, BookOpen, FileText, Users, History, IdCard, Hourglass, Sparkles
 } from 'lucide-react';
 
 /**
@@ -10,8 +10,8 @@ import {
  * Le classi sono scritte per intero perché Tailwind le trovi.
  */
 export type SectionId =
-  | 'today' | 'scheda' | 'capsula' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery'
-  | 'packing' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
+  | 'today' | 'scheda' | 'capsula' | 'recap' | 'wallet' | 'show' | 'places' | 'sos' | 'itinerary' | 'accommodations' | 'map' | 'weather' | 'gallery'
+  | 'packing' | 'bookings' | 'expenses' | 'flights' | 'budget' | 'guide' | 'pdf' | 'group' | 'changelog';
 
 export type SectionGroup = 'Viaggio' | 'Gruppo' | 'Strumenti' | 'Preparazione';
 
@@ -32,23 +32,25 @@ export interface SectionInfo {
 
 export const SECTIONS: SectionInfo[] = [
   { id: 'today', label: 'Oggi', title: 'Oggi', icon: Compass, group: null, fg: 'text-fam-today', tile: 'bg-fam-today/15', keywords: 'adesso ora programma oggi orologi fusi' },
-  { id: 'itinerary', label: 'Itinerario', title: 'Itinerario', icon: CalendarDays, group: 'Viaggio', fg: 'text-fam-itinerary', tile: 'bg-fam-itinerary/15', keywords: 'programma calendario giorni tappe piano' },
+  { id: 'itinerary', label: 'Itinerario', title: 'Itinerario', icon: CalendarDays, group: 'Viaggio', fg: 'text-fam-itinerary', tile: 'bg-fam-itinerary/15', keywords: 'programma calendario giorni tappe piano note spostata saltata fatta' },
   { id: 'scheda', label: 'Scheda', title: 'Scheda viaggio', icon: IdCard, group: 'Viaggio', fg: 'text-fam-itinerary', tile: 'bg-fam-itinerary/15', keywords: 'scheda viaggio offline senza rete indirizzi voli alloggio contatti ritrovo appuntamento' },
   { id: 'accommodations', label: 'Alloggi', title: 'Alloggi', icon: Home, group: 'Viaggio', fg: 'text-fam-itinerary', tile: 'bg-fam-itinerary/15', keywords: 'hotel casa dormire alloggio airbnb indirizzo' },
   { id: 'flights', label: 'Voli e scalo', title: 'Voli e scalo', icon: Plane, group: 'Viaggio', fg: 'text-fam-flights', tile: 'bg-fam-flights/15', keywords: 'volo aereo aeroporto pechino scalo imbarco check-in malpensa incheon' },
   { id: 'map', label: 'Mappa', title: 'Mappa', icon: Map, group: 'Viaggio', fg: 'text-fam-tools', tile: 'bg-fam-tools/15', keywords: 'metro percorso strada navigazione portami gps linea' },
   { id: 'weather', label: 'Meteo', title: 'Meteo', icon: CloudSun, group: 'Viaggio', fg: 'text-fam-weather', tile: 'bg-fam-weather/15', keywords: 'tempo pioggia temperatura aria clima previsioni' },
-  { id: 'expenses', label: 'Spese', title: 'Spese', icon: Wallet, group: 'Gruppo', fg: 'text-fam-money', tile: 'bg-fam-money/15', keywords: 'soldi budget saldo debiti conto pagare won euro cassa' },
+  { id: 'expenses', label: 'Spese', title: 'Spese', icon: Wallet, group: 'Gruppo', fg: 'text-fam-money', tile: 'bg-fam-money/15', keywords: 'soldi budget saldo debiti conto pagare won euro cassa tax-free tax refund iva rimborso incheon' },
   { id: 'gallery', label: 'Galleria', title: 'Galleria', icon: Camera, group: 'Gruppo', fg: 'text-fam-gallery', tile: 'bg-fam-gallery/15', keywords: 'foto video fotocamera immagini ricordi album' },
   { id: 'capsula', label: 'Capsula', title: 'Capsula del tempo', icon: Hourglass, group: 'Gruppo', fg: 'text-fam-group', tile: 'bg-fam-group/15', keywords: 'capsula del tempo countdown giorni alla partenza foto risposte prima di partire' },
+  { id: 'recap', label: 'Ricordi', title: 'Ricordi del viaggio', icon: Sparkles, group: 'Gruppo', fg: 'text-fam-gallery', tile: 'bg-fam-gallery/15', keywords: 'ricordi riepilogo diario fine viaggio statistiche capsula rilettura momenti' },
   { id: 'places', label: 'Luoghi', title: 'Luoghi', icon: Bookmark, group: 'Gruppo', fg: 'text-fam-places', tile: 'bg-fam-places/15', keywords: 'posti salvati wishlist ristoranti negozi da vedere' },
-  { id: 'group', label: 'Gruppo adesso', title: 'Il gruppo', icon: Users, group: 'Gruppo', fg: 'text-fam-group', tile: 'bg-fam-group/15', keywords: 'partecipanti amici posizione ritrovo dove sono perso persone' },
-  { id: 'show', label: 'In coreano', title: 'In coreano', icon: Languages, group: 'Strumenti', fg: 'text-fam-tools', tile: 'bg-fam-tools/15', keywords: 'traduci traduzione coreano frasi taxi allergie lingua hangul' },
+  { id: 'group', label: 'Gruppo adesso', title: 'Il gruppo', icon: Users, group: 'Gruppo', fg: 'text-fam-group', tile: 'bg-fam-group/15', keywords: 'partecipanti amici posizione ritrovo dove sono perso persone sondaggio voto decisione prenotazioni scadenze biglietti dmz valorant' },
+  { id: 'show', label: 'In coreano', title: 'In coreano', icon: Languages, group: 'Strumenti', fg: 'text-fam-tools', tile: 'bg-fam-tools/15', keywords: 'traduci traduzione coreano frasi taxi allergie lingua hangul cinese mandarino pechino scalo transito 240 aeroporto ascolta pronuncia prezzi numeri won' },
   { id: 'wallet', label: 'Wallet', title: 'Wallet', icon: WalletCards, group: 'Strumenti', fg: 'text-fam-money', tile: 'bg-fam-money/15', keywords: 'biglietti carta imbarco tessere qr documenti t-money pass' },
   { id: 'sos', label: 'SOS', title: 'SOS', icon: ShieldAlert, group: 'Strumenti', fg: 'text-fam-sos', tile: 'bg-fam-sos/15', keywords: 'emergenza ambasciata polizia ospedale aiuto 112 119 assicurazione' },
   { id: 'guide', label: 'Guida', title: 'Guida', icon: BookOpen, group: 'Strumenti', fg: 'text-fam-tools', tile: 'bg-fam-tools/15', keywords: 'consigli guida pratica regole usanze sim internet mance' },
   { id: 'pdf', label: 'PDF', title: 'PDF', icon: FileText, group: 'Strumenti', fg: 'text-fam-tools', tile: 'bg-fam-tools/15', keywords: 'documento stampa itinerario pdf scarica' },
-  { id: 'packing', label: 'Valigia', title: 'Valigia', icon: Luggage, group: 'Preparazione', fg: 'text-fam-prep', tile: 'bg-fam-prep/15', keywords: 'bagaglio checklist cosa portare lista' },
+  { id: 'packing', label: 'Valigia', title: 'Valigia', icon: Luggage, group: 'Preparazione', fg: 'text-fam-prep', tile: 'bg-fam-prep/15', keywords: 'bagaglio checklist cosa portare lista in comune condivisi multipresa bilancia' },
+  { id: 'bookings', label: 'Prenotazioni', title: 'Prenotazioni', icon: CalendarClock, group: 'Preparazione', fg: 'text-fam-prep', tile: 'bg-fam-prep/15', keywords: 'prenotazioni scadenze biglietti da prenotare dmz valorant ktx tiananmen catchtable' },
   { id: 'budget', label: 'Preventivo', title: 'Preventivo', icon: Coins, group: 'Preparazione', fg: 'text-fam-prep', tile: 'bg-fam-prep/15', keywords: 'costi stima prezzi budget quanto costa' },
   { id: 'changelog', label: 'Novità', title: 'Novità', icon: History, group: 'Preparazione', fg: 'text-fam-prep', tile: 'bg-fam-prep/15', keywords: 'changelog versione aggiornamenti novita' }
 ];

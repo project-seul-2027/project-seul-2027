@@ -3,10 +3,11 @@ import { categoryIconSvg } from './map/categoryIcons';
 import { useQuickIntent } from '../utils/quickIntent';
 import { createPortal } from 'react-dom';
 import {
-  Bookmark, Check, CircleAlert, ExternalLink, Loader2, LocateFixed, Map as MapIcon, MapPin, Navigation, Pencil, Plus, Search, ThumbsDown, ThumbsUp, Trash2, X
+  Bookmark, CalendarPlus, Check, CircleAlert, ExternalLink, Loader2, LocateFixed, Map as MapIcon, MapPin, Navigation, Pencil, Plus, Search, ThumbsDown, ThumbsUp, Trash2, X
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { MAP_LOCATIONS, getNaverMapSearchUrl } from '../data/tripData';
+import { ITINERARY_DAYS, MAP_LOCATIONS, getNaverMapSearchUrl } from '../data/tripData';
+import { addStopToDay, useItineraryLive } from '../services/itineraryLiveService';
 import { haversineMeters } from '../data/metroRouter';
 import type { TravelerSlotId } from '../shared/travelerProfile';
 import { isSlot } from '../types/expenses';
@@ -287,6 +288,11 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
   const [mode, setMode] = useState<Mode>('all');
   const [cat, setCat] = useState<PlaceCategory | 'all'>('all');
   const [sheet, setSheet] = useState<{ place?: SharedPlace | null; shared?: Shared | null } | null>(null);
+  const [promotePlace, setPromotePlace] = useState<SharedPlace | null>(null);
+  const [promoteDayId, setPromoteDayId] = useState<number>(1);
+  const [promoteTime, setPromoteTime] = useState<string>('Sera');
+  const [promoteNote, setPromoteNote] = useState<string>('');
+  const { daysForPlace } = useItineraryLive();
   // Pulsante + → Luogo
   useQuickIntent('place', () => setSheet({}));
   const [gps, setGps] = useState<[number, number] | null>(null);
@@ -433,6 +439,9 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     {c.label} · <span className={p.priority === 'must' ? 'text-violet-300 font-semibold' : ''}>{pr.label}</span> · di {p.addedBySlot === slot ? 'te' : bySlot[p.addedBySlot]?.name ?? 'un amico'}
                     {n && <> · <span className="text-cyan-300">a {formatDistance(n.m)} da {n.label}</span></>}
+                    {daysForPlace(p.id).length > 0 && (
+                      <> · <span className="text-[#52d9e6] font-semibold">Giorno {daysForPlace(p.id).map((d) => d + 1).join(', ')}</span></>
+                    )}
                   </p>
                   {p.address && <p className="text-xs text-slate-300 mt-1.5 leading-snug flex items-start gap-1"><MapPin className="w-3.5 h-3.5 text-violet-300 shrink-0 mt-px" /> {p.address}</p>}
                   {p.note && <p className="text-xs text-slate-300 mt-1.5 leading-snug">{p.note}</p>}
@@ -473,7 +482,21 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
                 {p.link && (
                   <a href={p.link} target="_blank" rel="noopener noreferrer" className="min-h-[44px] px-3 rounded-xl bg-slate-800 text-slate-200 text-[13px] font-semibold flex items-center justify-center gap-1.5"><ExternalLink className="w-3.5 h-3.5" /> Link</a>
                 )}
-                <button type="button" onClick={() => markVisited(p.id, !p.visited)} aria-pressed={p.visited} className={`min-h-[44px] px-3 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-1.5 col-span-2 ${p.visited ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-200'}`} data-testid="place-visited">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const existingDays = daysForPlace(p.id);
+                    setPromotePlace(p);
+                    setPromoteDayId(existingDays[0] ?? 1);
+                    setPromoteTime(p.category === 'night' || p.category === 'food' ? 'Sera' : 'Pomeriggio');
+                    setPromoteNote(p.note ?? '');
+                  }}
+                  className="min-h-[44px] px-3 rounded-xl bg-slate-800 text-[#52d9e6] text-[13px] font-semibold flex items-center justify-center gap-1.5"
+                  data-testid="place-promote-itinerary"
+                >
+                  <CalendarPlus className="w-3.5 h-3.5" /> Nell’itinerario
+                </button>
+                <button type="button" onClick={() => markVisited(p.id, !p.visited)} aria-pressed={p.visited} className={`min-h-[44px] px-3 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-1.5 ${p.visited ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-200'}`} data-testid="place-visited">
                   <Check className="w-3.5 h-3.5" /> {p.visited ? 'Visitato' : 'Segna visitato'}
                 </button>
               </div>
@@ -481,6 +504,120 @@ export const PlacesView: React.FC<{ onShowMap: () => void; onRoute?: (destinatio
           );
         })}
       </ul>
+
+      {promotePlace &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Aggiungi luogo all'itinerario"
+            className="fixed inset-0 z-[10000] bg-black/70 flex items-end sm:items-center justify-center sm:p-6"
+            onClick={() => setPromotePlace(null)}
+            data-keep-style
+          >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void addStopToDay(promoteDayId, {
+                  placeId: promotePlace.id,
+                  name: promotePlace.name,
+                  time: promoteTime.trim() || 'Extra',
+                  note: promoteNote.trim(),
+                  lat: promotePlace.lat,
+                  lng: promotePlace.lng,
+                  addedBySlot: slot
+                });
+                setPromotePlace(null);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-[#0a1119] border border-white/10 p-5 space-y-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+              data-keep-style
+              data-testid="promote-place-sheet"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-base font-semibold text-white">Metti nell’itinerario</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{promotePlace.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPromotePlace(null)}
+                  aria-label="Chiudi"
+                  className="h-9 w-9 rounded-lg text-slate-400 hover:text-white flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div>
+                <label htmlFor="promote-day" className="block text-xs text-slate-300 mb-1">Giorno del viaggio</label>
+                <select
+                  id="promote-day"
+                  value={promoteDayId}
+                  onChange={(e) => setPromoteDayId(Number(e.target.value))}
+                  className="w-full min-h-11 rounded-xl bg-[#101c29] border border-white/10 px-3 text-sm text-white focus:outline-none focus:border-[#52d9e6]"
+                >
+                  {ITINERARY_DAYS.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      Giorno {d.id + 1} ({d.dateStr.replace(' 2027', '')}) · {d.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="promote-time" className="block text-xs text-slate-300 mb-1">Momento / Orario</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {['Mattina', 'Pranzo', 'Pomeriggio', 'Sera', '20:00'].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setPromoteTime(preset)}
+                      className={`min-h-8 px-2.5 rounded-lg text-xs font-medium ${
+                        promoteTime === preset ? 'bg-[#52d9e6] text-[#04242a] font-semibold' : 'bg-[#101c29] text-slate-300'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  id="promote-time"
+                  type="text"
+                  value={promoteTime}
+                  onChange={(e) => setPromoteTime(e.target.value)}
+                  maxLength={30}
+                  placeholder="Es. 19:30 o Dopo cena"
+                  className="w-full min-h-11 rounded-xl bg-[#101c29] border border-white/10 px-3 text-sm text-white focus:outline-none focus:border-[#52d9e6]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="promote-note" className="block text-xs text-slate-300 mb-1">Nota per il gruppo (opzionale)</label>
+                <input
+                  id="promote-note"
+                  type="text"
+                  value={promoteNote}
+                  onChange={(e) => setPromoteNote(e.target.value)}
+                  maxLength={200}
+                  placeholder="Es. consigliato per il pollo fritto"
+                  className="w-full min-h-11 rounded-xl bg-[#101c29] border border-white/10 px-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#52d9e6]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  className="flex-1 min-h-11 rounded-xl bg-[#52d9e6] hover:bg-[#6ae2ee] text-[#04242a] text-sm font-semibold"
+                  data-testid="promote-place-confirm"
+                >
+                  Aggiungi al Giorno {promoteDayId + 1}
+                </button>
+              </div>
+            </form>
+          </div>,
+          document.body
+        )}
 
       {sheet && <PlaceSheet onClose={() => setSheet(null)} shared={sheet.shared} place={sheet.place} myUid={user.id} mySlot={slot} />}
     </div>

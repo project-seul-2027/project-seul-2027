@@ -39,6 +39,7 @@ const GROUPS: { title: string | null; items: Item[] }[] = [
       { id: 'expenses', label: 'Spese', dot: '#34D399' },
       { id: 'gallery', label: 'Galleria', dot: '#F472B6' },
       { id: 'capsula', label: 'Capsula del tempo', dot: '#2DD4BF' },
+      { id: 'recap', label: 'Ricordi', dot: '#F472B6' },
       { id: 'places', label: 'Luoghi', dot: '#A78BFA' },
     ],
   },
@@ -55,6 +56,7 @@ const GROUPS: { title: string | null; items: Item[] }[] = [
   {
     title: 'Preparazione',
     items: [
+      { id: 'bookings', label: 'Prenotazioni', dot: '#94A3B8' },
       { id: 'packing', label: 'Valigia', dot: '#94A3B8' },
       { id: 'budget', label: 'Preventivo', dot: '#94A3B8' },
       { id: 'changelog', label: 'Novità', dot: '#94A3B8' },

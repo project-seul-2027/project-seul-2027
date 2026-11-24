@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ITINERARY_DAYS, MAP_LOCATIONS, type ItineraryDay } from '../data/tripData';
 import { TIMED_DAYS, locateNow } from '../utils/tripClock';
 import { Search, ChevronLeft } from 'lucide-react';
+import { cycleStopStatus, useItineraryLive, type DayLiveDoc } from '../services/itineraryLiveService';
+import { AddedStopsSection, DayNoteBar, StopStatusButton } from './itinerary/DayLiveControls';
 import './mobile/mobile.css';
 
 interface ItineraryViewProps {
@@ -34,7 +36,7 @@ const firstSentence = (text: string) => {
   return m ? { lead: m[1], rest: text.slice(m[0].length) } : { lead: text, rest: '' };
 };
 
-const DayPage: React.FC<{ day: ItineraryDay; total: number; onBack: () => void; onViewOnMap: ItineraryViewProps['onViewOnMap'] }> = ({ day, total, onBack, onViewOnMap }) => {
+const DayPage: React.FC<{ day: ItineraryDay; total: number; liveDoc?: DayLiveDoc; onBack: () => void; onViewOnMap: ItineraryViewProps['onViewOnMap'] }> = ({ day, total, liveDoc, onBack, onViewOnMap }) => {
   const timed = TIMED_DAYS.find((t) => t.day.id === day.id);
   const dateLine = `${cap(day.dayOfWeek)} ${day.dateStr.replace(' 2027', '').toLowerCase()} · giorno ${day.id + 1} di ${total}`;
   const base = day.subtitle.trim().replace(/[.\s]+$/, '');
@@ -52,7 +54,9 @@ const DayPage: React.FC<{ day: ItineraryDay; total: number; onBack: () => void; 
       </div>
 
       <h1 className="ms-fr" style={{ fontSize: 34, lineHeight: 1.1, fontWeight: 500, letterSpacing: '-0.02em' }}>{day.title}</h1>
-      <p className="ms-mute" style={{ margin: '10px 0 20px' }}>{subtitle}</p>
+      <p className="ms-mute" style={{ margin: '10px 0 14px' }}>{subtitle}</p>
+
+      <DayNoteBar dayId={day.id} liveDoc={liveDoc} />
 
       {day.isSpecialEvent && (
         <div style={{ margin: '0 0 18px', paddingLeft: 12, borderLeft: '2px solid #f87171' }}>
@@ -68,17 +72,20 @@ const DayPage: React.FC<{ day: ItineraryDay; total: number; onBack: () => void; 
           {day.schedule.map((item, i) => {
             const t = timed?.items[i];
             const { lead, rest } = firstSentence(item.activity);
+            const stopKey = `s_${i}`;
+            const status = liveDoc?.stopStates[stopKey];
             return (
-              <div className={`ms-row${item.isHighlight ? ' next' : ''}`} key={i}>
+              <div className={`ms-row${item.isHighlight ? ' next' : ''}`} key={i} style={{ gridTemplateColumns: '68px minmax(0,1fr) auto', alignItems: 'start' }}>
                 <span className="t">
                   {t?.clock || item.time}
                   {t && <span className={`z ${ZONE_CLASS[t.zone]}`}>{ZONE_CITY[t.zone]}</span>}
                 </span>
-                <p>
+                <p className={status === 'skipped' ? 'opacity-50 line-through' : ''}>
                   <strong style={{ fontWeight: 600 }}>{lead}</strong>
                   {rest ? ` ${rest}` : ''}
                   {item.notes && <span className="ms-mute" style={{ display: 'block', marginTop: 2, fontSize: 14 }}>{item.notes}</span>}
                 </p>
+                <StopStatusButton status={status} label={lead} onCycle={() => void cycleStopStatus(day.id, stopKey)} />
               </div>
             );
           })}
@@ -86,6 +93,8 @@ const DayPage: React.FC<{ day: ItineraryDay; total: number; onBack: () => void; 
       ) : (
         <p style={{ lineHeight: 1.55 }}>{day.description}</p>
       )}
+
+      <AddedStopsSection dayId={day.id} liveDoc={liveDoc} onViewOnMap={onViewOnMap} />
 
       {day.schedule && day.schedule.length > 0 && day.description && (
         <p className="ms-mute" style={{ marginTop: 16, lineHeight: 1.55 }}>{day.description}</p>
@@ -133,6 +142,7 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
   const [activePhase, setActivePhase] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [openDayId, setOpenDayId] = useState<number | null>(null);
+  const { byDay } = useItineraryLive();
 
   // Arrivo da un altro tab (es. galleria): apre la pagina del giorno richiesto
   useEffect(() => {
@@ -172,6 +182,7 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
       <DayPage
         day={openDay}
         total={total}
+        liveDoc={byDay[openDay.id]}
         onBack={() => { setOpenDayId(null); window.scrollTo({ top: 0, behavior: 'auto' }); }}
         onViewOnMap={onViewOnMap}
       />
@@ -229,7 +240,19 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({ onViewOnMap, focus
               <div>
                 <h3>{day.title}</h3>
                 <p>{day.subtitle}</p>
-                {isToday && <span className="now">Oggi</span>}
+                {(() => {
+                  const ld = byDay[day.id];
+                  const extra = ld?.addedStops.length ?? 0;
+                  const hasNote = !!ld?.note;
+                  if (!isToday && !extra && !hasNote) return null;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {isToday && <span className="now">Oggi</span>}
+                      {hasNote && <span className="text-xs font-medium text-[#52d9e6]">Nota del gruppo</span>}
+                      {extra > 0 && <span className="text-xs font-medium text-[#52d9e6]">+{extra} {extra === 1 ? 'tappa' : 'tappe'}</span>}
+                    </div>
+                  );
+                })()}
               </div>
             </button>
           );

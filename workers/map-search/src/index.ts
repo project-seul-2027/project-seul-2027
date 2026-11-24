@@ -5,6 +5,7 @@ interface Env {
   ALLOWED_EMAILS: string;
   KAKAO_REST_API_KEY?: string;
   FIREBASE_SERVICE_ACCOUNT?: string;
+  GEMINI_API_KEY?: string;
 }
 
 type Precision = 'place' | 'address' | 'street' | 'area' | 'unknown';
@@ -326,6 +327,204 @@ async function kakaoSearch(q: string, key: string, isAddress: boolean): Promise<
   }
   return kakaoHits(await response.json() as { documents?: Array<Record<string, unknown>> }, q, isAddress);
 }
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MAX_BASE64_LEN = 2_000_000;
+
+interface VisionGroupProfile {
+  name: string;
+  diet: string;
+  allergies: string;
+}
+
+const MENU_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    restaurantHint: { type: 'STRING' },
+    currency: { type: 'STRING', enum: ['KRW', 'CNY', 'EUR'] },
+    notes: { type: 'STRING' },
+    dishes: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          original: { type: 'STRING' },
+          italian: { type: 'STRING' },
+          description: { type: 'STRING' },
+          price: { type: 'NUMBER' },
+          spicy: { type: 'STRING', enum: ['none', 'mild', 'hot'] },
+          allergens: { type: 'ARRAY', items: { type: 'STRING' } },
+          warnings: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                person: { type: 'STRING' },
+                reason: { type: 'STRING' },
+                severity: { type: 'STRING', enum: ['high', 'medium'] }
+              },
+              required: ['person', 'reason', 'severity']
+            }
+          }
+        },
+        required: ['original', 'italian', 'description', 'allergens', 'warnings']
+      }
+    }
+  },
+  required: ['dishes']
+};
+
+const RECEIPT_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    title: { type: 'STRING' },
+    amount: { type: 'NUMBER' },
+    currency: { type: 'STRING', enum: ['KRW', 'CNY', 'EUR'] },
+    category: { type: 'STRING', enum: ['food', 'transport', 'activity', 'shopping', 'accommodation', 'other'] },
+    date: { type: 'STRING' },
+    itemsSummary: { type: 'STRING' },
+    confidence: { type: 'STRING', enum: ['high', 'medium', 'low'] }
+  },
+  required: ['title', 'amount', 'currency', 'category', 'confidence']
+};
+
+async function callGeminiVision(
+  apiKey: string,
+  imageBase64: string,
+  mimeType: string,
+  prompt: string,
+  schema: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mimeType, data: imageBase64 } }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.1
+        }
+      }),
+      signal: AbortSignal.timeout(24_000)
+    }
+  );
+  if (!response.ok) {
+    console.warn('Gemini vision returned HTTP error', { status: response.status });
+    throw new ProviderError(`gemini:${response.status}`);
+  }
+  const payload = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  const rawText = payload.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawText) throw new ProviderError('gemini:empty');
+  return JSON.parse(rawText) as Record<string, unknown>;
+}
+
+async function handleVisionScan(env: Env, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const apiKey = env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error('vision-not-configured');
+  const kind = body.kind === 'menu' || body.kind === 'receipt' ? body.kind : null;
+  const imageBase64 = typeof body.imageBase64 === 'string' ? body.imageBase64.trim() : '';
+  const mimeType = typeof body.mimeType === 'string' && ALLOWED_MIME.has(body.mimeType) ? body.mimeType : '';
+  if (!kind || !imageBase64 || !mimeType) throw new Error('vision-bad-request');
+  if (imageBase64.length > MAX_BASE64_LEN) throw new Error('vision-too-large');
+
+  if (kind === 'menu') {
+    const lang = body.lang === 'zh' ? 'zh' : 'ko';
+    const rawProfiles = Array.isArray(body.groupProfiles) ? body.groupProfiles : [];
+    const profiles: VisionGroupProfile[] = rawProfiles
+      .slice(0, 6)
+      .map((item) => {
+        const p = item as Record<string, unknown>;
+        return {
+          name: String(p?.name ?? '').slice(0, 40).trim(),
+          diet: String(p?.diet ?? '').slice(0, 80).trim(),
+          allergies: String(p?.allergies ?? '').slice(0, 160).trim()
+        };
+      })
+      .filter((p) => p.name);
+    const profilesText = profiles.length
+      ? profiles
+          .map((p) => `- ${p.name}: dieta="${p.diet || 'nessuna'}", allergie="${p.allergies || 'nessuna'}"`)
+          .join('\n')
+      : '- Nessuna restrizione specificata';
+    const langName = lang === 'zh' ? 'cinese semplificato (Pechino)' : 'coreano (Seul)';
+    const prompt = [
+      `Sei un assistente culinario per un gruppo di amici italiani in viaggio. Analizza la foto di questo menu in ${langName}.`,
+      'Estrai fino a 20 piatti principali leggibili. Per ciascun piatto fornisci:',
+      '- original: testo originale esatto dal menu (senza prezzo)',
+      '- italian: nome chiaro in italiano',
+      '- description: una breve frase in italiano che spiega cos’è e gli ingredienti tipici (inclusi brodi/salse nascoste come brodo di acciughe, strutto, salsa di soia o d’ostrica)',
+      '- price: numero intero o decimale se leggibile (es. 14000 per ₩14,000), altrimenti ometti',
+      '- spicy: "none", "mild" o "hot"',
+      '- allergens: elenco breve di allergeni tipici in italiano (es. "glutine", "soia", "pesce", "crostacei", "arachidi", "sesamo", "uova", "latte", "maiale")',
+      '- warnings: incrocia il piatto con questi profili del gruppo e segnala SOLO i conflitti reali o probabili (severity "high" per allergie o ingredienti certi, "medium" per possibili tracce/brodi):',
+      profilesText,
+      'Rispondi solo con il JSON richiesto. Tutto il testo descrittivo deve essere in italiano naturale.'
+    ].join('\n');
+
+    const data = await callGeminiVision(apiKey, imageBase64, mimeType, prompt, MENU_SCHEMA);
+    const dishes = Array.isArray(data.dishes) ? data.dishes : [];
+    return {
+      kind: 'menu',
+      lang,
+      ...(typeof data.restaurantHint === 'string' && data.restaurantHint.trim() ? { restaurantHint: data.restaurantHint.trim().slice(0, 80) } : {}),
+      ...(data.currency === 'KRW' || data.currency === 'CNY' || data.currency === 'EUR' ? { currency: data.currency } : { currency: lang === 'zh' ? 'CNY' : 'KRW' }),
+      ...(typeof data.notes === 'string' && data.notes.trim() ? { notes: data.notes.trim().slice(0, 240) } : {}),
+      dishes: dishes.slice(0, 24)
+    };
+  }
+
+  const defaultDate = typeof body.defaultDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.defaultDate) ? body.defaultDate : '';
+  const currencyHint = body.currencyHint === 'KRW' || body.currencyHint === 'CNY' || body.currencyHint === 'EUR' ? body.currencyHint : 'KRW';
+  const prompt = [
+    'Estrai i dati principali da questo scontrino o ricevuta di pagamento per registrare una spesa di viaggio.',
+    `Valuta probabile se non esplicita: ${currencyHint}. Data di riferimento se non leggibile: ${defaultDate || 'non indicata'}.`,
+    'Regole:',
+    '- title: nome breve e leggibile del negozio/ristorante o tipo di spesa in italiano (es. "GS25 Minimarket", "BBQ Hongdae", "Taxi Pechino"), max 50 caratteri.',
+    '- amount: totale FINALE pagato come numero positivo (attenzione ai separatori delle migliaia in Corea: 48,500 KRW = 48500).',
+    '- currency: "KRW" (won coreani, ₩/원), "CNY" (yuan cinesi, ¥/元/RMB), o "EUR" (€).',
+    '- category: scegli una tra "food", "transport", "activity", "shopping", "accommodation", "other".',
+    '- date: formato "YYYY-MM-DD" solo se chiaramente leggibile sullo scontrino, altrimenti stringa vuota.',
+    '- itemsSummary: breve riepilogo in italiano delle voci principali (max 120 caratteri), se leggibili.',
+    '- confidence: "high" se totale e valuta sono chiarissimi, "medium" se parzialmente sfocato, "low" se incerto.',
+    'Rispondi solo con il JSON richiesto.'
+  ].join('\n');
+
+  const data = await callGeminiVision(apiKey, imageBase64, mimeType, prompt, RECEIPT_SCHEMA);
+  const amount = Number(data.amount);
+  const currency = data.currency === 'KRW' || data.currency === 'CNY' || data.currency === 'EUR' ? data.currency : currencyHint;
+  const validCats = new Set(['food', 'transport', 'activity', 'shopping', 'accommodation', 'other']);
+  const category = typeof data.category === 'string' && validCats.has(data.category) ? data.category : 'other';
+  const rawDate = typeof data.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.date.trim()) ? data.date.trim() : undefined;
+  const confidence = data.confidence === 'high' || data.confidence === 'medium' || data.confidence === 'low' ? data.confidence : 'medium';
+
+  return {
+    kind: 'receipt',
+    title: typeof data.title === 'string' && data.title.trim() ? data.title.trim().slice(0, 60) : 'Spesa da scontrino',
+    amount: Number.isFinite(amount) && amount > 0 ? amount : 0,
+    currency,
+    category,
+    ...(rawDate ? { date: rawDate } : {}),
+    ...(typeof data.itemsSummary === 'string' && data.itemsSummary.trim() ? { itemsSummary: data.itemsSummary.trim().slice(0, 140) } : {}),
+    confidence
+  };
+}
+
 type ExecutionContextLike = { waitUntil(promise: Promise<unknown>): void };
 
 export default {
@@ -348,7 +547,26 @@ export default {
       const now = Date.now(), window = windows.get(claims.sub);
       if (window && now - window.start < 60_000 && window.count >= 12) return json({ error: 'Rate limit' }, 429, origin);
       windows.set(claims.sub, !window || now - window.start >= 60_000 ? { start: now, count: 1 } : { ...window, count: window.count + 1 });
-      const body = await request.json() as { query?: unknown; need?: unknown; lat?: unknown; lng?: unknown; meetupId?: unknown; delaySeconds?: unknown };
+      const body = await request.json() as Record<string, unknown>;
+      if (new URL(request.url).pathname.endsWith('/tts')) {
+        const text = typeof body.text === 'string' ? body.text.trim().slice(0, 200) : '';
+        const tl = body.lang === 'zh' ? 'zh-CN' : 'ko';
+        if (!text) return json({ error: 'Bad request' }, 400, origin);
+        const upstream = await fetch(
+          `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(text)}`,
+          { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8_000) }
+        );
+        if (!upstream.ok) return json({ error: 'TTS failed' }, 502, origin);
+        return new Response(upstream.body, {
+          status: 200,
+          headers: { ...corsHeaders(origin), 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=86400' }
+        });
+      }
+      if (new URL(request.url).pathname.endsWith('/vision-scan')) {
+        const result = await handleVisionScan(env, body);
+        console.info('Vision scan completed', { kind: result.kind });
+        return json(result, 200, origin);
+      }
       if (new URL(request.url).pathname.endsWith('/push-test')) {
         const delaySeconds = Math.min(10, Math.max(0, Number(body.delaySeconds) || 0));
         if (delaySeconds > 0) {
@@ -422,6 +640,10 @@ export default {
       if (AUTH_ERRORS.has(reason)) return json({ error: 'Not signed in' }, 401, origin);
       if (reason === 'meetup-id' || reason === 'meetup-owner') return json({ error: 'Meetup not available' }, 403, origin);
       if (reason === 'push-not-configured' || reason === 'service-account') return json({ error: 'Push service not configured' }, 503, origin);
+      if (reason === 'vision-not-configured') return json({ error: 'vision-not-configured' }, 503, origin);
+      if (reason === 'vision-too-large') return json({ error: 'Image too large' }, 413, origin);
+      if (reason === 'vision-bad-request') return json({ error: 'Bad request' }, 400, origin);
+      if (error instanceof ProviderError) return json({ error: 'Upstream AI error' }, 502, origin);
       if (error instanceof SyntaxError) return json({ error: 'Bad request' }, 400, origin);
       return json({ error: 'Search failed' }, 500, origin);
     }

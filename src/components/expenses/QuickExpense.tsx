@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowLeftRight, CircleAlert, PlaneTakeoff } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { ArrowLeftRight, Camera, Check, CircleAlert, Image as ImageIcon, Loader2, PlaneTakeoff } from 'lucide-react';
 import type { TravelerSlotId } from '../../shared/travelerProfile';
 import type { Traveler } from '../../data/tripData';
 import type { LiveExchangeRates } from '../../services/currencyService';
+import { scanReceiptPhoto, VisionScanError } from '../../services/visionScanService';
 import { LEAVER_SLOT, presentSlots } from '../../shared/tripPresence';
 import {
   CURRENCY_SYMBOL, formatEur, sharesFromInput, toEurCents, todayIso, validateInput,
@@ -66,6 +67,8 @@ export interface QuickDraft {
   category: ExpenseCategory;
   currency: ExpenseCurrency;
   amount: number;
+  date?: string;
+  note?: string;
   participants: TravelerSlotId[];
   /** La lista è stata cambiata a mano (altrimenti si ricalcola con la data) */
   peopleTouched: boolean;
@@ -81,17 +84,58 @@ export const QuickExpenseBody: React.FC<{
   onSubmit: (input: ExpenseInput) => void;
   onMore: (draft: QuickDraft) => void;
 }> = ({ me, travelers, rates, recents, nameOf, onSubmit, onMore }) => {
-  const date = todayIso();
+  const [date, setDate] = useState(todayIso);
   const present = useMemo(() => presentSlots(date), [date]);
   const [amountText, setAmountText] = useState('');
   const [currency, setCurrency] = useState<ExpenseCurrency>('KRW');
   const [preset, setPreset] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('food');
+  const [note, setNote] = useState('');
   const [participants, setParticipants] = useState<TravelerSlotId[]>(present);
   const [peopleTouched, setPeopleTouched] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const scanCamRef = useRef<HTMLInputElement>(null);
+  const scanLibRef = useRef<HTMLInputElement>(null);
+
+  const handleReceiptFile = async (file: File | undefined) => {
+    if (!file) return;
+    setScanBusy(true);
+    setError(null);
+    setScanNotice(null);
+    try {
+      const res = await scanReceiptPhoto(file, date, currency);
+      if (res.amount > 0) {
+        const formatted = res.currency === 'KRW' ? String(Math.round(res.amount)) : String(res.amount).replace('.', ',');
+        setAmountText(formatted);
+      }
+      setCurrency(res.currency);
+      if (res.title) {
+        setTitle(res.title);
+        setPreset(null);
+      }
+      setCategory(res.category);
+      if (res.date) {
+        setDate(res.date);
+        if (!peopleTouched) setParticipants(presentSlots(res.date));
+      }
+      if (res.itemsSummary) setNote(res.itemsSummary);
+      setScanNotice(
+        res.confidence === 'low'
+          ? 'Scontrino letto: controlla importo e descrizione prima di salvare.'
+          : 'Scontrino letto: controlla i dati e premi Salva spesa.'
+      );
+    } catch (err) {
+      setError(err instanceof VisionScanError ? err.message : 'Impossibile leggere lo scontrino.');
+    } finally {
+      setScanBusy(false);
+      if (scanCamRef.current) scanCamRef.current.value = '';
+      if (scanLibRef.current) scanLibRef.current.value = '';
+    }
+  };
 
   const amount = parseAmountText(amountText);
   const rate = currency === 'EUR' ? 1 : rates[currency];
@@ -112,7 +156,7 @@ export const QuickExpenseBody: React.FC<{
     splitMode: 'equal',
     participants: shareWith,
     exactAmounts: {},
-    note: '',
+    note: note.trim(),
     isPrivate
   });
   const share = cents > 0 && participants.includes(payer) ? sharesFromInput(input())[payer] ?? 0 : 0;
@@ -139,6 +183,54 @@ export const QuickExpenseBody: React.FC<{
 
   return (
     <div className="xp-stack">
+      <div className="flex items-center gap-2">
+        <input
+          ref={scanCamRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(ev) => void handleReceiptFile(ev.target.files?.[0])}
+        />
+        <input
+          ref={scanLibRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(ev) => void handleReceiptFile(ev.target.files?.[0])}
+        />
+        <button
+          type="button"
+          disabled={scanBusy}
+          onClick={() => scanCamRef.current?.click()}
+          className="flex-1 min-h-11 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-60 px-3 text-xs sm:text-sm font-medium text-slate-200 flex items-center justify-center gap-2 transition-colors"
+          data-testid="quick-scan-receipt"
+        >
+          {scanBusy ? <Loader2 className="w-4 h-4 animate-spin text-[#52d9e6]" /> : <Camera className="w-4 h-4 text-[#52d9e6]" />}
+          {scanBusy ? 'Lettura scontrino…' : 'Scansiona scontrino'}
+        </button>
+        <button
+          type="button"
+          disabled={scanBusy}
+          onClick={() => scanLibRef.current?.click()}
+          aria-label="Scegli scontrino dalla galleria"
+          className="min-h-11 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-60 text-slate-300 flex items-center justify-center transition-colors"
+          data-testid="quick-scan-gallery"
+        >
+          <ImageIcon className="w-4 h-4" />
+        </button>
+      </div>
+
+      {scanNotice && (
+        <p className="text-xs text-[#52d9e6] flex items-start gap-1.5" data-testid="quick-scan-notice">
+          <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+          <span>
+            {scanNotice}
+            {date !== todayIso() && ` Data: ${date}.`}
+          </span>
+        </p>
+      )}
+
       <div>
         <div className="xp-amount-row">
           <input
@@ -155,7 +247,7 @@ export const QuickExpenseBody: React.FC<{
             data-testid="quick-amount"
           />
           <div className="xp-seg" role="group" aria-label="Valuta">
-            {(['KRW', 'EUR'] as ExpenseCurrency[]).map((c) => (
+            {(['KRW', 'EUR', 'CNY'] as ExpenseCurrency[]).map((c) => (
               <button key={c} type="button" onClick={() => setCurrency(c)} aria-pressed={currency === c}>
                 {CURRENCY_SYMBOL[c]}
               </button>
@@ -270,7 +362,19 @@ export const QuickExpenseBody: React.FC<{
         </button>
         <button
           type="button"
-          onClick={() => onMore({ title: title.trim(), category, currency, amount: amount > 0 ? amount : 0, participants, peopleTouched, isPrivate })}
+          onClick={() =>
+            onMore({
+              title: title.trim(),
+              category,
+              currency,
+              amount: amount > 0 ? amount : 0,
+              date,
+              note: note.trim() || undefined,
+              participants,
+              peopleTouched,
+              isPrivate
+            })
+          }
           className="xp-ghost"
           data-testid="quick-more"
         >

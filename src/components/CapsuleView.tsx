@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, Check, ChevronDown, Clock, Image as ImageIcon, Loader2, Lock, MessageCircle, RotateCcw, Send, Trash2, X } from 'lucide-react';
+import { Camera, Check, ChevronDown, ChevronRight, Clock, Image as ImageIcon, Loader2, Lock, MessageCircle, RotateCcw, Send, Trash2, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
+import { requestOpenPage } from '../pageAddress';
 import { isSlot } from '../types/expenses';
 import { compressImage } from '../services/galleryService';
 import { CameraCaptureModal } from './CameraCaptureModal';
@@ -154,7 +155,7 @@ const MyAnswer: React.FC<{ milestone: Milestone; uid: string; hint: string; onEr
   );
 };
 
-export const CapsuleView: React.FC = () => {
+export const CapsuleView: React.FC<{ onOpenRecap?: () => void }> = ({ onOpenRecap }) => {
   const { user, group } = useAuth();
   const [now, setNow] = useState(() => Date.now());
   const [entries, setEntries] = useState<CapsuleEntry[]>([]);
@@ -186,6 +187,18 @@ export const CapsuleView: React.FC = () => {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 pb-10 lg:max-w-none" data-testid="capsule">
       <h1 className="sr-only" style={HEADING}>Capsula del tempo</h1>
+
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => (onOpenRecap ? onOpenRecap() : requestOpenPage('recap'))}
+          data-keep-style
+          className="min-h-11 px-3.5 rounded-xl bg-[#101c29] hover:bg-[#152231] text-xs font-semibold text-[#52d9e6] inline-flex items-center gap-1.5 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#52d9e6]"
+        >
+          Rileggi tutta la capsula
+          <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+        </button>
+      </div>
 
       <Timeline now={now} selected={selected} answeredByMe={answeredByMe} onPick={setSelected} />
 

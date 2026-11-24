@@ -51,32 +51,36 @@ export const cleanKoreanName = (s: string) => s.split('/')[0].trim();
 
 /* ---------- Allergeni: dall'italiano al coreano ---------- */
 
-interface Allergen {
+export interface Allergen {
   keys: string[];
   ko: string;
   rom: string;
   it: string;
+  /** Cinese semplificato, per lo scalo a Pechino */
+  zh: string;
+  /** Pinyin con i toni */
+  py: string;
 }
 
 const ALLERGENS: Allergen[] = [
-  { keys: ['arachid', 'noccioline', 'peanut'], ko: '땅콩', rom: 'ttangkong', it: 'arachidi' },
-  { keys: ['frutta a guscio', 'frutta secca', 'noci', 'mandorl', 'nocciol', 'anacard', 'pistacch'], ko: '견과류', rom: 'gyeongwaryu', it: 'frutta a guscio' },
-  { keys: ['latte', 'latticin', 'lattosio', 'formagg'], ko: '우유', rom: 'uyu', it: 'latte e latticini' },
-  { keys: ['uov', 'uovo'], ko: '달걀', rom: 'dalgyal', it: 'uova' },
-  { keys: ['glutine', 'frumento', 'grano', 'celiac'], ko: '밀', rom: 'mil', it: 'glutine / grano' },
-  { keys: ['soia'], ko: '대두', rom: 'daedu', it: 'soia' },
-  { keys: ['sesamo'], ko: '참깨', rom: 'chamkkae', it: 'sesamo' },
-  { keys: ['gamber', 'crostacei', 'granchi', 'aragost', 'scampi'], ko: '갑각류', rom: 'gapgakryu', it: 'crostacei (gamberi, granchi)' },
-  { keys: ['molluschi', 'cozze', 'vongole', 'calamar', 'polpo', 'seppia'], ko: '조개류', rom: 'jogaeryu', it: 'molluschi' },
-  { keys: ['pesce', 'pesci'], ko: '생선', rom: 'saengseon', it: 'pesce' },
-  { keys: ['maiale', 'suino'], ko: '돼지고기', rom: 'dwaejigogi', it: 'carne di maiale' },
-  { keys: ['manzo', 'bovino'], ko: '소고기', rom: 'sogogi', it: 'carne di manzo' },
-  { keys: ['pollo'], ko: '닭고기', rom: 'dakgogi', it: 'pollo' },
-  { keys: ['solfiti'], ko: '아황산염', rom: 'ahwangsanyeom', it: 'solfiti' },
-  { keys: ['pesca', 'pesche'], ko: '복숭아', rom: 'boksunga', it: 'pesca' }
+  { keys: ['arachid', 'noccioline', 'peanut'], ko: '땅콩', rom: 'ttangkong', it: 'arachidi', zh: '花生', py: 'huāshēng' },
+  { keys: ['frutta a guscio', 'frutta secca', 'noci', 'mandorl', 'nocciol', 'anacard', 'pistacch'], ko: '견과류', rom: 'gyeongwaryu', it: 'frutta a guscio', zh: '坚果', py: 'jiānguǒ' },
+  { keys: ['latte', 'latticin', 'lattosio', 'formagg'], ko: '우유', rom: 'uyu', it: 'latte e latticini', zh: '牛奶和奶制品', py: 'niúnǎi hé nǎizhìpǐn' },
+  { keys: ['uov', 'uovo'], ko: '달걀', rom: 'dalgyal', it: 'uova', zh: '鸡蛋', py: 'jīdàn' },
+  { keys: ['glutine', 'frumento', 'grano', 'celiac'], ko: '밀', rom: 'mil', it: 'glutine / grano', zh: '小麦（麸质）', py: 'xiǎomài (fūzhì)' },
+  { keys: ['soia'], ko: '대두', rom: 'daedu', it: 'soia', zh: '大豆', py: 'dàdòu' },
+  { keys: ['sesamo'], ko: '참깨', rom: 'chamkkae', it: 'sesamo', zh: '芝麻', py: 'zhīma' },
+  { keys: ['gamber', 'crostacei', 'granchi', 'aragost', 'scampi'], ko: '갑각류', rom: 'gapgakryu', it: 'crostacei (gamberi, granchi)', zh: '虾蟹等甲壳类', py: 'xiā xiè děng jiǎqiàolèi' },
+  { keys: ['molluschi', 'cozze', 'vongole', 'calamar', 'polpo', 'seppia'], ko: '조개류', rom: 'jogaeryu', it: 'molluschi', zh: '贝类', py: 'bèilèi' },
+  { keys: ['pesce', 'pesci'], ko: '생선', rom: 'saengseon', it: 'pesce', zh: '鱼', py: 'yú' },
+  { keys: ['maiale', 'suino'], ko: '돼지고기', rom: 'dwaejigogi', it: 'carne di maiale', zh: '猪肉', py: 'zhūròu' },
+  { keys: ['manzo', 'bovino'], ko: '소고기', rom: 'sogogi', it: 'carne di manzo', zh: '牛肉', py: 'niúròu' },
+  { keys: ['pollo'], ko: '닭고기', rom: 'dakgogi', it: 'pollo', zh: '鸡肉', py: 'jīròu' },
+  { keys: ['solfiti'], ko: '아황산염', rom: 'ahwangsanyeom', it: 'solfiti', zh: '亚硫酸盐', py: 'yàliúsuānyán' },
+  { keys: ['pesca', 'pesche'], ko: '복숭아', rom: 'boksunga', it: 'pesca', zh: '桃子', py: 'táozi' }
 ];
 
-export const ALLERGEN_OPTIONS = ALLERGENS.map((a) => ({ key: a.keys[0], it: a.it, ko: a.ko }));
+export const ALLERGEN_OPTIONS = ALLERGENS.map((a) => ({ key: a.keys[0], it: a.it, ko: a.ko, zh: a.zh }));
 
 export function detectAllergens(text: string): Allergen[] {
   const t = text.toLowerCase();

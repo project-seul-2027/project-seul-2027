@@ -3,15 +3,10 @@ import { ACCOMMODATIONS, formatAccommodationEur, priceAccommodation } from '../d
 import { accommodationPriceService, type PriceOverrides } from '../services/accommodationPriceService';
 import { useAuth } from '../auth/AuthContext';
 import type { AccommodationId } from '../shared/travelerProfile';
-import { 
-  Home, MapPin, Banknote, Sparkles, CheckCircle2, 
-  XCircle, Train, Bus, ShieldCheck, ArrowRight, HelpCircle, 
-  Calculator, User, Users, Info, Heart, Award
-} from 'lucide-react';
-import { FoldText } from './mobile/FoldText';
 import { useMediaQuery } from '../pwa';
 import { MobileAlloggi } from './mobile/MobileAlloggi';
 import { MobileAlloggioDetail } from './mobile/MobileAlloggioDetail';
+import { SeoulHomeCard } from './SeoulHomeCard';
 import './mobile/mobile.css';
 
 interface AccommodationsViewProps {
@@ -26,8 +21,8 @@ const PriceEditor: React.FC<{ accId: string; current: number; canEdit: boolean }
   if (!canEdit) return null;
   if (!editing) {
     return (
-      <button type="button" onClick={() => { setValue(String(current)); setEditing(true); }} className="text-xs text-cyan-400 hover:text-cyan-300 underline-offset-2 hover:underline">
-        Modifica prezzo
+      <button type="button" onClick={() => { setValue(String(current)); setEditing(true); }} className="min-h-11 text-xs font-semibold text-[#52d9e6] hover:underline underline-offset-2">
+        Modifica prezzo totale
       </button>
     );
   }
@@ -46,7 +41,7 @@ const PriceEditor: React.FC<{ accId: string; current: number; canEdit: boolean }
     }
   };
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs" onClick={(e) => e.stopPropagation()}>
+    <div className="flex flex-wrap items-center gap-2 text-xs py-1" onClick={(e) => e.stopPropagation()}>
       <input
         type="number"
         inputMode="decimal"
@@ -55,11 +50,12 @@ const PriceEditor: React.FC<{ accId: string; current: number; canEdit: boolean }
         value={value}
         onChange={(e) => setValue(e.target.value)}
         aria-label="Totale 17 notti in euro"
-        className="w-24 bg-slate-950 border border-slate-700 rounded-md px-2 py-1 text-white tabular-nums"
+        style={{ borderRadius: 10, background: 'var(--ms-fill, rgba(96,150,214,0.13))' }}
+        className="w-28 min-h-11 px-3 text-sm text-[#eaf0f6] tabular-nums outline-none"
       />
-      <span className="text-slate-400">€ totali (17 notti)</span>
-      <button type="button" onClick={save} disabled={saving} className="px-2.5 py-1 rounded-md bg-cyan-500 text-slate-950 font-semibold disabled:opacity-50">Salva</button>
-      <button type="button" onClick={() => setEditing(false)} className="text-slate-400 hover:text-white">Annulla</button>
+      <span className="text-slate-400">€ (17n)</span>
+      <button type="button" onClick={save} disabled={saving} style={{ borderRadius: 10, background: '#52d9e6' }} className="min-h-11 px-3.5 text-[#04242a] font-semibold disabled:opacity-50">Salva</button>
+      <button type="button" onClick={() => setEditing(false)} className="min-h-11 px-2 text-slate-400 hover:text-white">Annulla</button>
       {error && <span className="text-rose-400 w-full">{error}</span>}
     </div>
   );
@@ -68,6 +64,7 @@ const PriceEditor: React.FC<{ accId: string; current: number; canEdit: boolean }
 export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOnMap }) => {
   const [selectedAccId, setSelectedAccId] = useState<string>('acc_a');
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [returnedFromDetail, setReturnedFromDetail] = useState(false);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   // Voti del gruppo: salvati su Firestore nel profilo di ciascuno, visibili a tutti in tempo reale
@@ -118,34 +115,6 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
     }
   };
 
-  const VoteButton: React.FC<{ accId: string; large?: boolean }> = ({ accId, large }) => {
-    const voters = votersByAcc[accId] ?? [];
-    const mine = myVote === accId;
-    return (
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleVote(accId);
-        }}
-        disabled={isVoting}
-        aria-pressed={mine}
-        title={mine ? 'Il tuo voto: clicca per ritirarlo' : 'Vota questo alloggio'}
-        className={`rounded-lg font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-60 ${
-          large ? 'px-4 py-2 text-xs rounded-xl' : 'px-2 py-1 text-[11px]'
-        } ${
-          mine
-            ? 'bg-red-500/20 text-red-300 border border-red-500/50'
-            : 'bg-slate-950 text-slate-400 hover:text-red-300 border border-slate-800 hover:border-red-500/30'
-        }`}
-      >
-        <Heart className={`${large ? 'w-4 h-4' : 'w-3.5 h-3.5'} ${mine ? 'fill-red-400 text-red-400' : ''}`} />
-        <span className="font-mono">
-          {large ? (mine ? 'Il tuo voto è qui' : 'Vota questo alloggio') : `${voters.length} ${voters.length === 1 ? 'voto' : 'voti'}`}
-        </span>
-      </button>
-    );
-  };
-
   if (isDesktop) {
     const sel = accs.find((a) => a.id === selectedAccId) || accs[0];
     const rule = 'border-t border-slate-800/80';
@@ -175,6 +144,7 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
 
     return (
       <div className="space-y-12 animate-in fade-in duration-200">
+        <SeoulHomeCard variant="full" />
         <section className="max-w-3xl space-y-3">
           <p className="text-sm text-slate-400">
             Enko Stay · 2-19 marzo 2027 · 17 notti · 4 persone all'inizio, Pietro riparte il 10 marzo
@@ -410,285 +380,36 @@ export const AccommodationsView: React.FC<AccommodationsViewProps> = ({ onViewOn
   const detailAcc = detailId ? accs.find((a) => a.id === detailId) : null;
   if (detailAcc) {
     return (
-      <div className="ms-deep">
-        <MobileAlloggioDetail
-          acc={detailAcc}
-          mine={myVote === detailAcc.id}
-          voters={votersByAcc[detailAcc.id] ?? []}
-          busy={isVoting}
-          priceEditor={<PriceEditor key={detailAcc.id} accId={detailAcc.id} current={detailAcc.totalEur17Nights} canEdit={canEditPrice} />}
-          onBack={() => setDetailId(null)}
-          onVote={() => handleVote(detailAcc.id)}
-          onMap={() => onViewOnMap(detailAcc.id)}
-        />
-      </div>
+      <MobileAlloggioDetail
+        acc={detailAcc}
+        mine={myVote === detailAcc.id}
+        voters={votersByAcc[detailAcc.id] ?? []}
+        busy={isVoting}
+        priceEditor={<PriceEditor key={detailAcc.id} accId={detailAcc.id} current={detailAcc.totalEur17Nights} canEdit={canEditPrice} />}
+        onBack={() => {
+          setReturnedFromDetail(true);
+          setDetailId(null);
+        }}
+        onVote={() => handleVote(detailAcc.id)}
+        onMap={() => onViewOnMap(detailAcc.id)}
+      />
     );
   }
 
   return (
-    <div className={`space-y-8 animate-in fade-in duration-200${isDesktop ? '' : ' ms-deep'}`}>
-      {!isDesktop && (
-        <MobileAlloggi
-          accs={accs}
-          myVote={myVote}
-          votes={Object.fromEntries(Object.entries(votersByAcc).map(([k, v]) => [k, v.length]))}
-          leadingId={leadingVotes > 0 ? leading.id : null}
-          voteError={voteError}
-          busy={isVoting}
-          onVote={handleVote}
-          onOpen={setDetailId}
-        />
-      )}
-      {/* Top Header Banner */}
-      <div
-        className={
-          isDesktop
-            ? 'pb-6 border-b border-white/[0.06] space-y-4'
-            : 'hidden'
-        }
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div>
-              <h2 className="text-xl font-bold font-display text-white lg:hidden">
-                Dove Dormire: 4 Alloggi a Confronto
-              </h2>
-              <p className="text-xs text-slate-400">
-                Enko Stay · 2-19 marzo 2027 (17 notti) · 4 persone all'inizio (Pietro riparte il 10 marzo, gli altri 3 fino al 19)
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs px-3 py-1.5 rounded-full bg-blue-950/60 text-blue-300 border border-blue-500/40 font-mono flex items-center gap-1.5">
-              <span>Base ipotizzata: Mapo / Hongdae</span>
-            </span>
-          </div>
-        </div>
-
-        <FoldText className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-          Gli annunci mostrano un prezzo mensile (non il totale del soggiorno). I totali in euro qui sotto sono quelli mostrati dal sito per le date scelte (commissione Enko inclusa), per le 17 notti (2-19 marzo). Nessun annuncio indica indirizzo preciso, numero di letti o metratura: le distanze a piedi sono quelle dichiarate dagli host, il resto sono stime da verificare su Naver Map.
-        </FoldText>
-
-        {/* Votazione del gruppo */}
-        <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-start gap-2.5">
-            <div className="space-y-0.5">
-              <div className="font-bold text-white">
-                {leadingVotes > 0 ? (
-                  <>
-                    In testa: <span className="text-cyan-400">{leading.name}</span>{' '}
-                    <span className="text-slate-400 font-normal">({leadingVotes} {leadingVotes === 1 ? 'voto' : 'voti'} · {totalVotes}/4 hanno votato)</span>
-                  </>
-                ) : (
-                  <>Votazione aperta: nessun voto ancora espresso</>
-                )}
-              </div>
-              <div className="text-[11px] text-slate-400">
-                {myVote ? (
-                  <>
-                    Hai votato l'alloggio <strong className="text-slate-200">{accs.find((a) => a.id === myVote)?.code}</strong>. Clicca di nuovo sul cuore per ritirare il voto.
-                  </>
-                ) : (
-                  <>Clicca sul cuore di un alloggio per votarlo: il voto è visibile a tutto il gruppo.</>
-                )}
-              </div>
-              {voteError && <div role="alert" className="text-[11px] text-red-400">{voteError}</div>}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Come dividere l'affitto (Fissato dal PDF) */}
-      <div
-        className={
-          isDesktop
-            ? 'pt-6 space-y-4'
-            : 'bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4'
-        }
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-          <div className={isDesktop ? 'flex items-center gap-2 text-cyan-400 font-bold text-sm sm:text-base' : 'flex items-center gap-2'}>
-            <h3 className={isDesktop ? '' : "font-[Outfit] text-[21px] font-medium leading-tight tracking-[-0.01em] text-[#eaf0f6]"}>Come dividere l'affitto</h3>
-          </div>
-          <span className={isDesktop ? 'text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800' : 'text-[14px] text-[#97a5b9]'}>
-            Regola: ogni notte costa totale / 17 e la pagano i presenti
-          </span>
-        </div>
-
-        <p className="text-xs text-slate-300 leading-relaxed">
-          Siete in <strong>4 dall'inizio</strong>. <strong>Pietro riparte il 10 marzo</strong> e paga <strong>8 notti</strong> (2-9 marzo). Gli altri tre amici restano fino al 19 marzo e pagano tutte le 17 notti. Il prezzo di ogni alloggio è fisso.
-        </p>
-
-        {/* Telefono: una riga per alloggio, tre cifre con il loro nome */}
-        {!isDesktop && (
-          <ul>
-            {accs.map((acc) => (
-              <li key={acc.id} className="border-t border-[rgba(234,240,246,.11)]">
-                <button type="button" onClick={() => setDetailId(acc.id)} className="w-full text-left py-3 active:opacity-70">
-                  <span className="flex items-baseline gap-3">
-                    <span className="font-[Outfit] text-[28px] font-normal leading-none text-[#eaf0f6]">{acc.code}</span>
-                    <span className="text-[15px] font-semibold text-[#eaf0f6]">{acc.name.replace(/^Alloggio [A-Z]:\s*/, '')}</span>
-                  </span>
-                  <span className="mt-2 grid grid-cols-3 gap-3 tabular-nums">
-                    {[
-                      { l: 'Totale 17 notti', v: acc.totalEur17Nights },
-                      { l: 'Pietro, 8 notti', v: acc.pietroCost8Nights },
-                      { l: 'Ognuno dei 3', v: acc.other3Cost17Nights }
-                    ].map((m) => (
-                      <span key={m.l} className="block">
-                        <span className="block font-[Outfit] text-[clamp(17px,5.3vw,22px)] font-medium leading-tight tracking-[-0.03em] text-[#eaf0f6] whitespace-nowrap">{formatAccommodationEur(m.v)}</span>
-                        <span className="block mt-1 text-[13px] text-[#97a5b9]">{m.l}</span>
-                      </span>
-                    ))}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Tabella riassuntiva quote (desktop) */}
-        <div className={isDesktop ? 'overflow-x-auto' : 'hidden'}>
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
-                <th className="py-2.5 px-3">Alloggio</th>
-                <th className="py-2.5 px-3 text-right">Totale 17 notti</th>
-                <th className="py-2.5 px-3 text-right text-amber-300">Pietro (2-9 mar · 8 notti)</th>
-                <th className="py-2.5 px-3 text-right text-emerald-400">Ognuno dei 3 (fino al 19 mar)</th>
-                <th className="py-2.5 px-3 text-center">Scheda</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono">
-              {accs.map((acc) => (
-                <tr 
-                  key={acc.id} 
-                  onClick={() => setSelectedAccId(acc.id)}
-                  className={`cursor-pointer transition-colors ${
-                    selectedAccId === acc.id ? 'bg-cyan-950/20 font-bold' : 'hover:bg-slate-800/40'
-                  }`}
-                >
-                  <td className="py-3 px-3 font-sans text-white flex items-center gap-2">
-                    <span className="w-5 h-5 rounded bg-slate-800 text-cyan-300 font-bold text-[10px] flex items-center justify-center font-mono">
-                      {acc.code}
-                    </span>
-                    <span>{acc.name}</span>
-                  </td>
-                  <td className="py-3 px-3 text-right text-slate-200">
-                    {formatAccommodationEur(acc.totalEur17Nights)}
-                  </td>
-                  <td className="py-3 px-3 text-right text-amber-300 font-bold">
-                    {formatAccommodationEur(acc.pietroCost8Nights)}
-                  </td>
-                  <td className="py-3 px-3 text-right text-emerald-400 font-bold">
-                    {formatAccommodationEur(acc.other3Cost17Nights)}
-                  </td>
-                  <td className="py-3 px-3 text-center">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setSelectedAccId(acc.id); }}
-                      className="text-[10px] text-cyan-400 hover:text-cyan-300 font-sans font-medium underline"
-                    >
-                      Dettagli
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Esempio matematico */}
-        <div className={isDesktop ? 'p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1' : 'text-[14px] text-[#97a5b9] leading-relaxed space-y-1'}>
-          <strong className="text-white block flex items-center gap-1.5">
-            Esempio di calcolo per C (748 €, 44 € a notte):
-          </strong>
-          <p>
-            Pietro paga 8 × 44 / 4 = <strong className="text-amber-300">88 €</strong>. Ognuno dei tre paga 88 € per le notti in comune (2-9 marzo) più 9 × 44 / 3 = 132 € per le notti dal 10 al 18, cioè <strong className="text-emerald-400">220 €</strong>. Importi arrotondati all'euro.
-          </p>
-        </div>
-      </div>
-
-      {/* Guide: "Quale Scegliere" (from Page 3 of PDF) */}
-      <div
-        className={
-          isDesktop
-            ? 'pt-6 border-t border-white/[0.06] space-y-4'
-            : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4'
-        }
-      >
-        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-          <h3>Quale Scegliere (Analisi Strategica del Documento)</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-            <h4 className="font-bold text-pink-400 text-sm">
-              • Per movida e nightlife: C (Mapo)
-            </h4>
-            <p className="text-slate-300 leading-relaxed">
-              A pari merito comodità e posizione. Per i tre che restano costa circa <strong>26-31 € a testa in più</strong> rispetto a B e D, ma risparmi tempo e taxi la notte. Hongdae a 1 sola fermata di AREX.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-            <h4 className="font-bold text-emerald-400 text-sm">
-              • Per spendere meno: A (Myeongdong)
-            </h4>
-            <p className="text-slate-300 leading-relaxed">
-              Se i letti bastano per quattro e non temete le scale del 4° piano. Per i tre che restano sono <strong>125 € a testa (Pietro 50 €)</strong>, circa 95 € in meno di Mapo.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-            <h4 className="font-bold text-purple-400 text-sm">
-              • Per dormire meglio e stare in tanti: D (Sinseol-dong)
-            </h4>
-            <p className="text-slate-300 leading-relaxed">
-              3 letti queen size veri e 2 camere separate. Contro: con la serata fuori diventa più scomoda per il rientro notturno dopo l'1:00.
-            </p>
-          </div>
-        </div>
-
-        <div className="p-3.5 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-1.5">
-          <p>
-            • <strong>B (Seoul Station)</strong> ha senso solo se conta molto la stazione; in genere A o C battono B.
-          </p>
-          <p>
-            • <strong>Regola di prenotazione:</strong> se il piano resta 2-19 marzo (17 notti), controllare che le date siano 2-19 marzo (17 notti) al momento della prenotazione. Prima di prenotare chiedere all'host: <em>letti e biancheria, check-in anticipato il 2 marzo (atterraggio alle 11:40), deposito bagagli il 19 se serve</em>.
-          </p>
-        </div>
-      </div>
-
-      {/* Enko Stay Cancellation & Payment Policy (Page 3 of PDF) */}
-      <div
-        className={
-          isDesktop
-            ? 'pt-6 border-t border-white/[0.06] space-y-4 text-xs'
-            : 'bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 text-xs'
-        }
-      >
-        <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm">
-          <h3>Cancellazione e Pagamento (Uguale per Tutti e Quattro)</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-slate-300">
-            <strong className="text-white block text-xs">Regole Ufficiali di Rimborso Enko:</strong>
-            <p>• <strong>Prima dell'approvazione host:</strong> rimborso totale se la prenotazione non viene confermata entro 24 ore.</p>
-            <p>• <strong>Dopo l'approvazione:</strong> rimborso totale entro 24 ore dal pagamento. Poi il rimborso è parziale e dipende dalla data di ingresso.</p>
-            <p>• <strong>Commissione del servizio Enko:</strong> non è rimborsabile dopo le 24 ore.</p>
-            <p>• <strong>Calendario rimborsi (da annuncio Mapo):</strong> rimborso quasi totale fino al 17 gennaio, 10% di penale fino al 31 gennaio, 50% fino al 16 febbraio, 70% fino al 23 febbraio, 100% fino al 2 marzo.</p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-2 text-slate-300">
-            <strong className="text-amber-300 block text-xs">Consigli Strategici & Costi Extra:</strong>
-            <p>• <strong>Consigliato:</strong> chiedere la prenotazione, pagare entro le 24 ore e solo dopo comprare il volo (cancellando tutto gratis se qualcosa non torna).</p>
-            <p>• <strong>Extra luce e utenze:</strong> la luce si paga a parte a fine soggiorno (annuncio A); le utenze hanno una quota fissa con extra oltre il limite.</p>
-            <p>• <strong>Note annuncio C (Mapo):</strong> monolocale con divano letto per 4 persone (spazio stretto), biancheria non fornita (da chiedere all'host), niente prodotti da bagno, check-in dalle 16:00 e check-out alle 11:00.</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <MobileAlloggi
+      accs={accs}
+      myVote={myVote}
+      votersByAcc={votersByAcc}
+      leadingId={leadingVotes > 0 ? leading.id : null}
+      voteError={voteError}
+      busy={isVoting}
+      returnedFromDetail={returnedFromDetail}
+      onVote={handleVote}
+      onOpen={(id) => {
+        setReturnedFromDetail(false);
+        setDetailId(id);
+      }}
+    />
   );
 };

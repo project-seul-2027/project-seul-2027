@@ -59,6 +59,42 @@ export default defineConfig(() => {
         },
       },
       {
+        // Solo in sviluppo locale (localhost:3000): fallback audio TTS ko/zh quando Windows non ha le voci installate
+        name: 'dev-tts-proxy',
+        apply: 'serve' as const,
+        configureServer(server: { middlewares: { use: (path: string, handler: (req: { url?: string }, res: { statusCode: number; setHeader: (k: string, v: string) => void; end: (b?: Buffer | string) => void }) => void) => void } }) {
+          server.middlewares.use('/api/tts', async (req, res) => {
+            try {
+              const url = new URL(req.url ?? '', 'http://localhost');
+              const lang = url.searchParams.get('lang') === 'zh' ? 'zh-CN' : 'ko';
+              const q = (url.searchParams.get('q') ?? '').trim().slice(0, 200);
+              if (!q) {
+                res.statusCode = 400;
+                res.end('Missing q');
+                return;
+              }
+              const upstream = await fetch(
+                `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(lang)}&q=${encodeURIComponent(q)}`,
+                { headers: { 'User-Agent': 'Mozilla/5.0' } }
+              );
+              if (!upstream.ok) {
+                res.statusCode = upstream.status;
+                res.end('TTS upstream error');
+                return;
+              }
+              const buf = Buffer.from(await upstream.arrayBuffer());
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'audio/mpeg');
+              res.setHeader('Cache-Control', 'public, max-age=3600');
+              res.end(buf);
+            } catch {
+              res.statusCode = 502;
+              res.end('TTS proxy error');
+            }
+          });
+        },
+      },
+      {
         name: 'emit-version-json',
         generateBundle() {
           this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD_ID, version: appVersion() }) });

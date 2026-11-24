@@ -4,6 +4,8 @@ import { packingService, describePackingError, PACKING_LIMITS, type PackingSyncS
 import type { PackingCategory, PackingItem, PackingListDoc, PackingLocation } from '../types/packing';
 import { PACKING_CATEGORIES, PACKING_LOCATIONS } from '../types/packing';
 import { useMediaQuery } from '../pwa';
+import { CommonPackingPanel } from './packing/CommonPackingPanel';
+import { useCommonPacking } from '../services/commonPackingService';
 import {
   Luggage,
   CheckCircle2,
@@ -53,8 +55,9 @@ export const PackingListView: React.FC = () => {
   const { user, group } = useAuth();
   const currentUser = user!;
 
-  // Tab principale: "my_list" vs "shared_lists"
-  const [activeSubTab, setActiveSubTab] = useState<'my_list' | 'shared_lists'>('my_list');
+  // Tab principale: "my_list" | "common_items" | "shared_lists"
+  const [activeSubTab, setActiveSubTab] = useState<'my_list' | 'common_items' | 'shared_lists'>('my_list');
+  const { items: commonItems, unassignedCount: commonUnassigned } = useCommonPacking();
 
   // Stato lista personale
   const [myList, setMyList] = useState<PackingListDoc>({
@@ -696,38 +699,64 @@ export const PackingListView: React.FC = () => {
 
       {/* Selezione Scheda: "La mia Valigia" vs "Valigie Condivise con Me" */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3 max-md:border-0 max-md:pb-0 max-md:-mt-3">
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2" role="tablist" aria-label="Valigie">
+        <div className="grid grid-cols-3 sm:flex sm:items-center gap-4 border-b border-white/10 sm:border-0" role="tablist" aria-label="Valigie">
           <button
+            type="button"
             role="tab" aria-selected={activeSubTab === 'my_list'}
             onClick={() => setActiveSubTab('my_list')}
-            className={`w-full sm:w-auto min-w-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`w-full sm:w-auto min-h-11 px-2 sm:px-3.5 py-2 rounded-none sm:rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${
               activeSubTab === 'my_list'
-                ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                ? 'text-white lg:bg-[#52d9e6] lg:text-[#04242a]'
+                : 'text-slate-400 hover:text-slate-200 lg:bg-[#101c29] lg:text-slate-300'
             }`}
           >
-            <Luggage className="w-4 h-4 shrink-0" />
-            <span className="text-left leading-tight">La mia Valigia</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-              activeSubTab === 'my_list' ? 'bg-slate-950/30 text-slate-900' : 'bg-slate-800 text-slate-400'
+            <Luggage className="w-4 h-4 shrink-0 hidden sm:inline" />
+            <span className="truncate">La mia</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full tabular-nums shrink-0 ${
+              activeSubTab === 'my_list' ? 'bg-white/15 text-white lg:bg-[#04242a]/15 lg:text-[#04242a]' : 'bg-white/10 text-slate-300'
             }`}>
               {totalItems}
             </span>
           </button>
 
           <button
+            type="button"
+            role="tab" aria-selected={activeSubTab === 'common_items'}
+            onClick={() => setActiveSubTab('common_items')}
+            className={`w-full sm:w-auto min-h-11 px-2 sm:px-3.5 py-2 rounded-none sm:rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+              activeSubTab === 'common_items'
+                ? 'text-white lg:bg-[#52d9e6] lg:text-[#04242a]'
+                : 'text-slate-400 hover:text-slate-200 lg:bg-[#101c29] lg:text-slate-300'
+            }`}
+            data-testid="packing-tab-common"
+          >
+            <Package className="w-4 h-4 shrink-0 hidden sm:inline" />
+            <span className="truncate">In comune</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full tabular-nums shrink-0 ${
+              activeSubTab === 'common_items'
+                ? 'bg-white/15 text-white lg:bg-[#04242a]/15 lg:text-[#04242a]'
+                : commonUnassigned > 0
+                  ? 'bg-amber-500/20 text-amber-300'
+                  : 'bg-white/10 text-slate-300'
+            }`}>
+              {commonUnassigned > 0 ? commonUnassigned : commonItems.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
             role="tab" aria-selected={activeSubTab === 'shared_lists'}
             onClick={() => setActiveSubTab('shared_lists')}
-            className={`w-full sm:w-auto min-w-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`w-full sm:w-auto min-h-11 px-2 sm:px-3.5 py-2 rounded-none sm:rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${
               activeSubTab === 'shared_lists'
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                ? 'text-white lg:bg-[#52d9e6] lg:text-[#04242a]'
+                : 'text-slate-400 hover:text-slate-200 lg:bg-[#101c29] lg:text-slate-300'
             }`}
           >
-            <Users className="w-4 h-4 shrink-0" />
-            <span className="text-left leading-tight md:hidden">Condivise</span><span className="text-left leading-tight hidden md:inline">Valigie Condivise con Me</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-              activeSubTab === 'shared_lists' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+            <Users className="w-4 h-4 shrink-0 hidden sm:inline" />
+            <span className="truncate">Condivise</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full tabular-nums shrink-0 ${
+              activeSubTab === 'shared_lists' ? 'bg-white/15 text-white lg:bg-[#04242a]/15 lg:text-[#04242a]' : 'bg-white/10 text-slate-300'
             }`}>
               {sharedLists.length}
             </span>
@@ -1032,6 +1061,11 @@ export const PackingListView: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 1B: OGGETTI IN COMUNE DEL GRUPPO                                    */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'common_items' && <CommonPackingPanel />}
 
       {/* ========================================================================= */}
       {/* VISTA 2: VALIGIE CONDIVISE DAGLI ALTRI PARTECIPANTI                       */}

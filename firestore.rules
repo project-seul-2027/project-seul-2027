@@ -183,6 +183,29 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Dati operativi della casa prenotata a Seul (codice porta, Wi-Fi, regole differenziata, check-out)
+    match /appFiles/seoulHome {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && request.resource.data.keys().hasOnly([
+             'confirmedAccId', 'exactAddress', 'exactAddressKo', 'floorAndUnit',
+             'doorPin', 'wifiSsid', 'wifiPass', 'trashRules', 'hostNotes', 'checkoutChecks', 'updatedAt'
+           ])
+        && (request.resource.data.confirmedAccId == null || request.resource.data.confirmedAccId in accommodations())
+        && shortString(request.resource.data.exactAddress, 200)
+        && shortString(request.resource.data.exactAddressKo, 200)
+        && shortString(request.resource.data.floorAndUnit, 80)
+        && shortString(request.resource.data.doorPin, 60)
+        && shortString(request.resource.data.wifiSsid, 80)
+        && shortString(request.resource.data.wifiPass, 100)
+        && shortString(request.resource.data.trashRules, 400)
+        && shortString(request.resource.data.hostNotes, 400)
+        && request.resource.data.checkoutChecks is map
+        && request.resource.data.checkoutChecks.size() <= 20
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
     // Dati condivisi con il gruppo
     match /members/{uid} {
       allow read: if isParticipant();
@@ -685,6 +708,74 @@ service cloud.firestore {
           )
         );
       allow delete: if isParticipant() && resource.data.addedBy == request.auth.uid;
+    }
+
+    // ------------------------------------------------------------------
+    // Coordinamento live: stato tappe/note itinerario, prenotazioni, sondaggi e oggetti in comune
+    // ------------------------------------------------------------------
+
+    match /itineraryLive/{dayId} {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && dayId.matches('^[0-9]{1,2}$')
+        && request.resource.data.keys().hasOnly(['dayId', 'stopStates', 'note', 'noteBySlot', 'addedStops', 'updatedAt'])
+        && request.resource.data.dayId is int && request.resource.data.dayId >= 0 && request.resource.data.dayId <= 30
+        && request.resource.data.stopStates is map && request.resource.data.stopStates.size() <= 60
+        && shortString(request.resource.data.note, 300)
+        && (!('noteBySlot' in request.resource.data) || request.resource.data.noteBySlot in slots())
+        && request.resource.data.addedStops is list && request.resource.data.addedStops.size() <= 20
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && bookingId.size() <= 60
+        && request.resource.data.keys().hasOnly(['id', 'title', 'dueDate', 'tripDayId', 'assigneeSlot', 'status', 'reference', 'url', 'createdBy', 'updatedAt'])
+        && shortString(request.resource.data.id, 60)
+        && shortString(request.resource.data.title, 100) && request.resource.data.title.size() > 0
+        && shortString(request.resource.data.dueDate, 12)
+        && (request.resource.data.tripDayId == null || (request.resource.data.tripDayId is int && request.resource.data.tripDayId >= 0 && request.resource.data.tripDayId <= 30))
+        && (request.resource.data.assigneeSlot == null || request.resource.data.assigneeSlot in slots())
+        && request.resource.data.status in ['todo', 'booked']
+        && shortString(request.resource.data.reference, 240)
+        && shortString(request.resource.data.url, 400)
+        && shortString(request.resource.data.createdBy, 60)
+        && request.resource.data.updatedAt is number;
+      allow delete: if isParticipant();
+    }
+
+    match /polls/{pollId} {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && pollId.size() <= 60
+        && request.resource.data.keys().hasOnly(['id', 'question', 'options', 'votes', 'closed', 'createdBy', 'createdBySlot', 'createdAt', 'updatedAt'])
+        && shortString(request.resource.data.id, 60)
+        && shortString(request.resource.data.question, 120) && request.resource.data.question.size() > 0
+        && request.resource.data.options is list && request.resource.data.options.size() >= 2 && request.resource.data.options.size() <= 4
+        && request.resource.data.votes is map && request.resource.data.votes.keys().hasOnly(slots())
+        && request.resource.data.closed is bool
+        && shortString(request.resource.data.createdBy, 60)
+        && request.resource.data.createdBySlot in slots()
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number;
+      allow delete: if isParticipant();
+    }
+
+    match /commonPacking/{itemId} {
+      allow read: if isParticipant();
+      allow create, update: if isParticipant()
+        && itemId.size() <= 60
+        && request.resource.data.keys().hasOnly(['id', 'title', 'category', 'carrierSlot', 'packed', 'note', 'updatedAt'])
+        && shortString(request.resource.data.id, 60)
+        && shortString(request.resource.data.title, 100) && request.resource.data.title.size() > 0
+        && request.resource.data.category in ['documents', 'clothing', 'electronics', 'health', 'hygiene', 'flight', 'misc']
+        && (request.resource.data.carrierSlot == null || request.resource.data.carrierSlot in slots())
+        && request.resource.data.packed is bool
+        && shortString(request.resource.data.note, 240)
+        && request.resource.data.updatedAt is number;
+      allow delete: if isParticipant();
     }
   }
 }
